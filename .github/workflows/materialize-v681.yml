@@ -1,8 +1,6 @@
 name: Materialize v6.8.1
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -10,7 +8,6 @@ permissions:
 
 jobs:
   materialize:
-    if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v681]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,7 +23,7 @@ jobs:
           grep -q 'function configureTopCamera' src/main.js
           grep -q 'function getCssViewport' src/main.js
           grep -q 'v6.8.1 canvas coordinate fix' style.css
-      - name: Commit
+      - name: Commit if changed
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
