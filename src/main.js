@@ -48,23 +48,35 @@ function getCssViewport(){
 }
 function configureTopCamera(w,h){
   const aspect=w/Math.max(1,h),portrait=h>=w;
-  if(portrait){
-    // Rotate the projected battlefield 90 degrees: world X becomes screen Y.
-    // This matches the portrait device instead of forcing the landscape arena
-    // into a narrow phone viewport.
-    topCamera.up.set(1,0,0);
-    const projectedWidth=A.hh*2+0.7; // world Z span on screen X
-    const projectedHeight=projectedWidth/Math.max(.32,aspect);
-    topCamera.left=-projectedWidth/2;topCamera.right=projectedWidth/2;
-    topCamera.top=projectedHeight/2;topCamera.bottom=-projectedHeight/2;
-  }else{
-    topCamera.up.set(0,0,-1);
-    const projectedWidth=A.hw*2+1.0;
-    const projectedHeight=projectedWidth/Math.max(.55,aspect);
-    topCamera.left=-projectedWidth/2;topCamera.right=projectedWidth/2;
-    topCamera.top=projectedHeight/2;topCamera.bottom=-projectedHeight/2;
-  }
-  topCamera.lookAt(0,0,0);topCamera.updateProjectionMatrix();
+  topCamera.up.set(portrait?1:0,0,portrait?0:-1);
+  // Base fallback framing. During a match updateTopBattleCamera() replaces
+  // this with a player-focused frame, so device resolution never drives zoom.
+  const worldW=portrait?A.hh*2+1:A.hw*2+1;
+  const worldH=portrait?A.hw*2+1:A.hh*2+1;
+  let viewW=worldW,viewH=viewW/Math.max(.2,aspect);
+  if(viewH<worldH){viewH=worldH;viewW=viewH*aspect}
+  topCamera.left=-viewW/2;topCamera.right=viewW/2;
+  topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
+  topCamera.position.set(0,34,.01);topCamera.lookAt(0,0,0);topCamera.updateProjectionMatrix();
+}
+function updateTopBattleCamera(){
+  if(cameraMode!=='top'||players.length<2||!players[0]?.root||!players[1]?.root)return;
+  const rect=renderer.domElement.getBoundingClientRect();
+  const w=Math.max(1,rect.width),h=Math.max(1,rect.height),aspect=w/h,portrait=h>=w;
+  const a=players[0].root.position,b=players[1].root.position;
+  const mx=(a.x+b.x)*.5,mz=(a.z+b.z)*.5;
+  const dx=Math.abs(a.x-b.x),dz=Math.abs(a.z-b.z);
+  // Camera axes change in portrait: screen X = world Z, screen Y = world X.
+  const spanX=(portrait?dz:dx)+5.0;
+  const spanY=(portrait?dx:dz)+6.0;
+  let viewW=Math.max(spanX,spanY*aspect);
+  let viewH=viewW/Math.max(.2,aspect);
+  const minH=portrait?13.5:10.5,maxH=portrait?23.5:17.5;
+  viewH=THREE.MathUtils.clamp(viewH,minH,maxH);viewW=viewH*aspect;
+  topCamera.left=-viewW/2;topCamera.right=viewW/2;
+  topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
+  topCamera.up.set(portrait?1:0,0,portrait?0:-1);
+  topCamera.position.set(mx,34,mz+.01);topCamera.lookAt(mx,0,mz);topCamera.updateProjectionMatrix();
 }
 function renderSplitArena(){
   const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
@@ -306,5 +318,5 @@ const ptr=new Map();$$('.stick-zone').forEach(z=>{const knob=z.querySelector('i'
 
 function update(dt){if(!running)return;time=Math.max(0,time-dt);if(time<=0){if(players[0].score!==players[1].score)finish(players[0].score>players[1].score?0:1);else{time=30;playBgm('sudden');banner('SUDDEN DEATH!',1000)}}players.forEach(p=>{p.cd=Math.max(0,p.cd-dt);p.inv=Math.max(0,p.inv-dt);p.weaponKick=Math.max(0,(p.weaponKick||0)-dt*1.9);if(p.weaponHost)p.weaponHost.position.z=p.weaponKick;p.defCd=Math.max(0,(p.defCd||0)-dt);p.guardTime=Math.max(0,(p.guardTime||0)-dt);p.parryTime=Math.max(0,(p.parryTime||0)-dt);const db=document.querySelector(`.def-btn[data-player="${p.i}"]`);if(db){db.textContent=p.defCd>0?p.defCd.toFixed(1):'DEF';db.classList.toggle('ready',p.defCd<=0)}if(!p.alive)return;const m=p.move.clone();if(m.lengthSq()>1)m.normalize();const q=p.root.position.clone();q.x+=m.x*p.cfg.sp*dt;q.z+=m.y*p.cfg.sp*dt;if(!blocked(q,p.r))p.root.position.copy(q);if(p.aim.lengthSq()>.1)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;if(p.mix){const moving=p.move.lengthSq()>.08;if(p.walk){p.walk.enabled=moving;p.walk.setEffectiveWeight(moving?1:0)}if(p.idle){p.idle.enabled=!moving;p.idle.setEffectiveWeight(moving?0:1)}p.mix.update(dt)}p.root.visible=p.inv>0?Math.floor(p.inv*12)%2===0:true});for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;b.m.position.addScaledVector(b.v,dt);let rm=b.life<=0;const o=!rm&&hitObs(b.m.position);if(o){if(o.breakable){o.hp-=b.dm;burst(b.m.position.clone(),0xd6a05d,6);if(o.hp<=0){arena.remove(o.m);obs=obs.filter(x=>x!==o);burst(b.m.position.clone(),0xc58b4a,16)}}rm=true}else if(!rm&&(Math.abs(b.m.position.x)>A.hw||Math.abs(b.m.position.z)>A.hh))rm=true;if(!rm){const e=players[1-b.owner];const dx=b.m.position.x-e.root.position.x,dz=b.m.position.z-e.root.position.z;if(e.alive&&dx*dx+dz*dz<(e.r+.16)**2)damage(1-b.owner,b.dm,b.owner),rm=true}if(rm){scene.remove(b.m);bullets.splice(i,1)}}for(let i=parts.length-1;i>=0;i--){const x=parts[i];x.life-=dt;if(x.ring){const s=(1.25-x.life/.22)*x.scale+1;x.m.scale.setScalar(Math.max(1,s))}else{x.m.position.addScaledVector(x.v,dt);x.v.y-=6*dt}x.m.material.opacity=Math.max(0,x.life/.3);if(x.life<=0){scene.remove(x.m);parts.splice(i,1)}}for(let i=0;i<2;i++){comboTimer[i]=Math.max(0,comboTimer[i]-dt);if(comboTimer[i]===0)combo[i]=0}lowHpPulse();hud();$('#timer').textContent=Math.ceil(time)}
 function resize(){const vp=getCssViewport(),w=vp.w,h=vp.h;renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';configureTopCamera(w,h);arenaCamera.aspect=w/Math.max(1,h);arenaCamera.updateProjectionMatrix()}addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,80));resize();
-function loop(now){const rawDt=Math.min(.033,(now-last)/1000);last=now;let gameDt=rawDt;if(koSlow>0){koSlow=Math.max(0,koSlow-rawDt);gameDt*=.22}if(hitStop>0){hitStop=Math.max(0,hitStop-rawDt);gameDt=0}else update(gameDt);updateAimGuides();updateSharedCamera(rawDt);shakeTime=Math.max(0,shakeTime-rawDt);const saved=camera.position.clone();if(shakeTime>0&&shakePower>0){const f=shakeTime/.38,amp=shakePower*Math.min(1,f*2.5);camera.position.x+=(Math.random()-.5)*amp;camera.position.y+=(Math.random()-.5)*amp*.55;camera.position.z+=(Math.random()-.5)*amp}renderer.render(scene,camera);camera.position.copy(saved);if(shakeTime<=0)shakePower=0;requestAnimationFrame(loop)}build('square');requestAnimationFrame(loop);
+function loop(now){const rawDt=Math.min(.033,(now-last)/1000);last=now;let gameDt=rawDt;if(koSlow>0){koSlow=Math.max(0,koSlow-rawDt);gameDt*=.22}if(hitStop>0){hitStop=Math.max(0,hitStop-rawDt);gameDt=0}else update(gameDt);updateAimGuides();updateTopBattleCamera();updateSharedCamera(rawDt);shakeTime=Math.max(0,shakeTime-rawDt);const saved=camera.position.clone();if(shakeTime>0&&shakePower>0){const f=shakeTime/.38,amp=shakePower*Math.min(1,f*2.5);camera.position.x+=(Math.random()-.5)*amp;camera.position.y+=(Math.random()-.5)*amp*.55;camera.position.z+=(Math.random()-.5)*amp}renderer.render(scene,camera);camera.position.copy(saved);if(shakeTime<=0)shakePower=0;requestAnimationFrame(loop)}build('square');requestAnimationFrame(loop);
 if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
