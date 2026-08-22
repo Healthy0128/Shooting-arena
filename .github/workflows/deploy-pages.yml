@@ -23,22 +23,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Materialize v6.7.4 combat feel pass
-        if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v674]') }}
+      - name: Diagnose v6.7.4 materializer
+        if: ${{ !contains(github.event.head_commit.message || '', '[v674-debug-log]') }}
         run: |
-          python materialize_v674.py
-          node --check src/main.js
-          grep -q 'v6.7.4' index.html
-          grep -q 'COMBAT FEEL PASS' index.html
-          grep -q 'damagePop' src/main.js
-          grep -q 'addShake' src/main.js
+          set +e
+          python materialize_v674.py > materialize_v674.log 2>&1
+          status=$?
+          set -e
+          printf '\nexit_status=%s\n' "$status" >> materialize_v674.log
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/main.js style.css index.html
-          if ! git diff --cached --quiet; then
-            git commit -m 'Materialize v6.7.4 combat feel pass [materialized-v674]'
-            git push origin HEAD:main
-          fi
+          git add materialize_v674.log
+          git commit -m 'Capture v6.7.4 materializer log [v674-debug-log]'
+          git push origin HEAD:main
 
       - name: Syntax check
         run: node --check src/main.js
@@ -52,6 +49,7 @@ jobs:
             --exclude '_site' \
             --exclude 'deploy' \
             --exclude 'materialize_v674.py' \
+            --exclude 'materialize_v674.log' \
             ./ _site/
           touch _site/.nojekyll
           test -s _site/index.html
