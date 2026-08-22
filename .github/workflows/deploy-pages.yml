@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,34 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Materialize integrated public source
-        if: ${{ !contains(github.event.head_commit.message || '', '[materialized]') }}
-        run: |
-          python public_v670_integrated.py
-          if ! grep -q 'v6.7.0.*portrait' style.css; then
-            cat public_v670.css >> style.css
-          fi
-          python - <<'PY2'
-          from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('Duel Arena v0.6.6.6','Duel Arena v6.7.1')
-          s=s.replace('Duel Arena v6.7.0','Duel Arena v6.7.1')
-          s=s.replace('<strong>v0.6.6.6</strong><span>STAGE GRAPHICS BUILD</span>','<strong>v6.7.1</strong><span>DIRECT PUBLIC BUILD</span>')
-          s=s.replace('<strong>v6.7.0</strong><span>PUBLIC INTEGRATED BUILD</span>','<strong>v6.7.1</strong><span>DIRECT PUBLIC BUILD</span>')
-          p.write_text(s,encoding='utf-8')
-          PY2
-          node --check src/main.js
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/main.js style.css index.html
-          if ! git diff --cached --quiet; then
-            git commit -m 'Materialize v6.7.1 direct public build [materialized]'
-            git push origin HEAD:main
-          fi
 
       - name: Syntax check
         run: node --check src/main.js
@@ -60,8 +32,6 @@ jobs:
             --exclude '.github' \
             --exclude '_site' \
             --exclude 'deploy' \
-            --exclude 'hotfix_*.py' \
-            --exclude 'public_v670_*' \
             ./ _site/
           touch _site/.nojekyll
           test -s _site/index.html
