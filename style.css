@@ -378,3 +378,25 @@ to{opacity:0;transform:translate(-50%,-100px) scale(1.25)}}
 /* v6.7.2 experimental shared 3D camera */
 .camera-buttons button.selected{box-shadow:0 0 0 2px #8edcff88,0 0 18px #55bfff44}
 .camera-note{line-height:1.35}
+
+
+/* v6.7.4 Combat Feel Pass */
+#combat-flash{position:fixed;inset:0;pointer-events:none;z-index:70;opacity:0}
+#combat-flash.hit{animation:combatFlashHit .12s ease-out}
+#combat-flash.heavy{animation:combatFlashHeavy .18s ease-out}
+#combat-flash.super{animation:combatFlashSuper .24s ease-out}
+#combat-flash.ko{animation:combatFlashKo .32s ease-out}
+@keyframes combatFlashHit{0%{opacity:.18;background:#fff}100%{opacity:0;background:transparent}}
+@keyframes combatFlashHeavy{0%{opacity:.28;background:#fff}40%{opacity:.14;background:#ffb36a}100%{opacity:0}}
+@keyframes combatFlashSuper{0%{opacity:.32;background:#b69cff}100%{opacity:0}}
+@keyframes combatFlashKo{0%{opacity:.52;background:#fff}24%{opacity:.28;background:#ff8d72}100%{opacity:0}}
+.combat-damage{position:fixed;z-index:80;pointer-events:none;transform:translate(-50%,-50%);font-weight:1000;font-size:24px;text-shadow:0 3px 10px #000,0 0 8px #fff;animation:combatDamage .6s cubic-bezier(.16,.8,.22,1) forwards}
+.combat-damage.heavy{font-size:32px}
+@keyframes combatDamage{0%{opacity:0;transform:translate(-50%,-25%) scale(.65)}18%{opacity:1;transform:translate(-50%,-70%) scale(1.28)}100%{opacity:0;transform:translate(-50%,-165%) scale(.86)}}
+.combo-pop{position:fixed;top:46%;z-index:81;pointer-events:none;transform:translate(-50%,-50%) rotate(-7deg);font-weight:1000;font-style:italic;font-size:clamp(20px,5vw,38px);text-shadow:0 3px 12px #000;animation:comboPop .42s ease-out forwards}
+@keyframes comboPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5) rotate(-9deg)}30%{opacity:1;transform:translate(-50%,-50%) scale(1.18) rotate(-5deg)}100%{opacity:0;transform:translate(-50%,-85%) scale(.92) rotate(-3deg)}}
+.hud.low-hp{animation:lowHpPulse .72s ease-in-out infinite}
+.hud.low-hp .hp{box-shadow:0 0 18px #ff4b4b}
+@keyframes lowHpPulse{50%{filter:brightness(1.24);transform:translateX(-50%) scale(1.015)}}
+.hud.two.low-hp{animation:lowHpPulseP2 .72s ease-in-out infinite}
+@keyframes lowHpPulseP2{50%{filter:brightness(1.24);transform:translateX(-50%) rotate(180deg) scale(1.015)}}
