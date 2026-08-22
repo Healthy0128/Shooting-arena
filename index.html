@@ -8,34 +8,175 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena 3D</title>
+  <title>Duel Arena v0.6.6.6</title>
   <link rel="stylesheet" href="./style.css" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 <body>
   <main id="game-wrap">
     <canvas id="game"></canvas>
+
     <section id="menu" class="overlay">
       <div class="panel">
-        <h1>DUEL ARENA 3D</h1>
-        <p class="sub">1 DEVICE / 2 PLAYERS · REAL CC0 3D CHARACTERS</p>
-        <p id="asset-status" class="asset-status">CC0 characters + weapon models load when battle starts.</p>
-        <div class="version-strip" aria-label="build information"><span class="version-badge">v0.6.6.6</span><span class="build-badge">STABLE WEB BUILD</span><span class="build-date">2026.08.22</span></div>
-        <details class="build-info"><summary>現在の状態を見る</summary><div class="build-info-body"><div class="status-row"><span class="status-dot done"></span><b>復旧済み</b><span>公開ページ構造をゲームコード互換版へ復元</span></div><div class="status-row"><span class="status-dot done"></span><b>実装済み</b><span>6キャラ / 8アリーナ / SUPER / BGM / PWA</span></div><div class="status-row"><span class="status-dot done"></span><b>3D</b><span>KayKit CC0キャラ対応</span></div></div></details>
-        <div class="select-grid">
-          <div class="side-card"><h2>P1 CHARACTER</h2><div class="char-buttons" data-player="0"><button data-char="ranger" class="selected">RANGER</button><button data-char="crusher">CRUSHER</button><button data-char="dash">DASH</button><button data-char="mage">MAGE</button><button data-char="rogue">ROGUE</button><button data-char="skeleton">BONES</button></div></div>
-          <div class="side-card rotate180"><h2>P2 CHARACTER</h2><div class="char-buttons" data-player="1"><button data-char="ranger" class="selected">RANGER</button><button data-char="crusher">CRUSHER</button><button data-char="dash">DASH</button><button data-char="mage">MAGE</button><button data-char="rogue">ROGUE</button><button data-char="skeleton">BONES</button></div></div>
+
+        <div class="lobby-top">
+          <div>
+            <div class="eyebrow">LOCAL BATTLE LAB</div>
+            <h1>DUEL ARENA</h1>
+            <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
+          </div>
+          <div class="build-badge">
+            <strong>v0.6.6.6</strong><span>STAGE GRAPHICS BUILD</span>
+          </div>
         </div>
-        <div class="arena-select"><h2>ARENA</h2><div class="arena-buttons"><button data-arena="square" class="selected">SQUARE</button><button data-arena="pillars">4 PILLARS</button><button data-arena="ring">RING</button><button data-arena="cross">CROSS</button><button data-arena="hex">HEX</button><button data-arena="fort">TWIN FORT</button><button data-arena="bush">BUSH FIELD</button><button data-arena="crates">CRATE YARD</button></div></div>
-        <button id="start" class="primary">START BATTLE</button>
+
+        <div class="select-grid custom-grid">
+          <div class="side-card loadout-card" data-player="0">
+            <div class="player-chip">PLAYER 1</div>
+            <div class="loadout-summary"></div><button class="random-build" data-player="0" type="button">🎲 RANDOM BUILD</button>
+            <div class="slot-grid">
+              <label>BODY<select data-slot="body">
+                <option value="knight">KNIGHT</option><option value="barbarian">BARBARIAN</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option>
+              </select></label>
+              <label>WEAPON<select data-slot="weapon">
+                <option value="rifle">RIFLE</option><option value="scatter">SCATTER</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option>
+              </select></label>
+              <label>DEFENSE<select data-slot="defense">
+                <option value="roll">ROLL</option><option value="guard">GUARD</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option>
+              </select></label>
+              <label>SUPER<select data-slot="super">
+                <option value="rapid">OVERDRIVE</option><option value="blast">BLAST RING</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option>
+              </select></label>
+              <label>COLOR<select data-slot="color">
+                <option value="cyan">CYAN</option><option value="orange">ORANGE</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
+              </select></label>
+              <label>PASSIVE<select data-slot="passive">
+                <option value="coolant">COOLANT</option>
+                <option value="stabilizer">STABILIZER</option>
+                <option value="sprinter">SPRINTER</option>
+                <option value="armor">ARMOR PLATE</option>
+                <option value="charger">CHARGER</option>
+                <option value="coreHunter">CORE HUNTER</option>
+              </select></label>
+            </div>
+          </div>
+
+          <div class="side-card loadout-card p2-card" data-player="1">
+            <div class="player-chip">PLAYER 2</div>
+            <div class="loadout-summary"></div><button class="random-build" data-player="1" type="button">🎲 RANDOM BUILD</button>
+            <div class="slot-grid">
+              <label>BODY<select data-slot="body">
+                <option value="barbarian">BARBARIAN</option><option value="knight">KNIGHT</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option>
+              </select></label>
+              <label>WEAPON<select data-slot="weapon">
+                <option value="scatter">SCATTER</option><option value="rifle">RIFLE</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option>
+              </select></label>
+              <label>DEFENSE<select data-slot="defense">
+                <option value="guard">GUARD</option><option value="roll">ROLL</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option>
+              </select></label>
+              <label>SUPER<select data-slot="super">
+                <option value="blast">BLAST RING</option><option value="rapid">OVERDRIVE</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option>
+              </select></label>
+              <label>COLOR<select data-slot="color">
+                <option value="orange">ORANGE</option><option value="cyan">CYAN</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
+              </select></label>
+              <label>PASSIVE<select data-slot="passive">
+                <option value="coolant">COOLANT</option>
+                <option value="stabilizer">STABILIZER</option>
+                <option value="sprinter">SPRINTER</option>
+                <option value="armor">ARMOR PLATE</option>
+                <option value="charger">CHARGER</option>
+                <option value="coreHunter">CORE HUNTER</option>
+              </select></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="budget-legend">BUILD LIMIT <strong>10</strong> POINTS · BODY + WEAPON + DEFENSE + SUPER + PASSIVE</div><div class="control-select">
+          <h2>P2 CONTROL</h2>
+          <button id="p2-control-mode" class="control-mode" data-mode="face">対面180°</button>
+          <p class="control-note">上側プレイヤーの移動・照準を180°回転</p>
+        </div>
+
+        <div class="camera-select">
+          <h2>CAMERA</h2>
+          <div class="camera-buttons">
+            <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN FAIR</button>
+            <button id="camera-tilt-test" data-mode="tilt">3D TILT TEST</button>
+          </div>
+          <p class="camera-note">対面プレイでは真上視点を推奨</p>
+        </div>
+
+        <div class="arena-select">
+          <h2>ARENA</h2>
+          <div class="arena-buttons">
+            <button data-arena="square" class="selected">SQUARE</button>
+            <button data-arena="pillars">4 PILLARS</button>
+            <button data-arena="ring">RING</button>
+            <button data-arena="cross">CROSS</button>
+            <button data-arena="hex">HEX</button>
+            <button data-arena="fort">TWIN FORT</button>
+            <button data-arena="bush">BUSH FIELD</button>
+            <button data-arena="crates">CRATE YARD</button>
+          </div>
+        </div>
+
+        <button id="start" class="primary battle-start"><span>⚔</span> ENTER THE ARENA <span>⚔</span></button><p class="kenney-credit">Countdown voice: Kenney · CC0</p><p id="asset-status" class="asset-status">3D assets ready to load</p>
       </div>
     </section>
-    <section id="hud" aria-hidden="true" hidden><div class="hud player two"><div id="p2-name" class="name">RANGER</div><div class="hp"><div id="p2-hp" class="hp-fill"></div></div><div class="super"><div id="p2-super" class="super-fill"></div></div><div id="p2-score" class="score">○ ○ ○</div></div><div id="timer">90</div><div class="hud player one"><div id="p1-name" class="name">RANGER</div><div class="hp"><div id="p1-hp" class="hp-fill"></div></div><div class="super"><div id="p1-super" class="super-fill"></div></div><div id="p1-score" class="score">○ ○ ○</div></div></section>
+
+    <section id="hud" aria-hidden="true" hidden>
+      <div class="hud player two">
+        <div id="p2-name" class="name">RANGER</div>
+        <div class="hp"><div id="p2-hp" class="hp-fill"></div></div>
+        <div class="super"><div id="p2-super" class="super-fill"></div></div>
+        <div id="p2-score" class="score">○ ○ ○</div>
+      </div>
+
+      <div id="timer">90</div>
+
+      <div class="hud player one">
+        <div id="p1-name" class="name">RANGER</div>
+        <div class="hp"><div id="p1-hp" class="hp-fill"></div></div>
+        <div class="super"><div id="p1-super" class="super-fill"></div></div>
+        <div id="p1-score" class="score">○ ○ ○</div>
+      </div>
+    </section>
+
     <div id="banner"></div>
-    <section id="controls" hidden><div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div><div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div><button class="super-btn p2" data-player="1">SUPER</button><div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div><div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div><button class="super-btn p1" data-player="0">SUPER</button></section>
-    <section id="result" class="overlay" hidden><div class="panel result-panel"><h1 id="winner">P1 WIN!</h1><p id="result-score">3 - 1</p><div class="result-buttons"><button id="rematch" class="primary">REMATCH</button><button id="back-menu">CHANGE SETUP</button></div></div></section>
+
+    <section id="controls" hidden>
+      <div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div>
+      <div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div>
+      <button class="def-btn p2" data-player="1">DEF</button>
+      <button class="super-btn p2" data-player="1">SUPER</button>
+
+      <div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div>
+      <div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div>
+      <button class="def-btn p1" data-player="0">DEF</button>
+      <button class="super-btn p1" data-player="0">SUPER</button>
+    </section>
+
+    <section id="result" class="overlay" hidden>
+      <div class="panel result-panel">
+        <h1 id="winner">P1 WIN!</h1>
+        <p id="result-score">3 - 1</p>
+        <div class="result-buttons">
+          <button id="rematch" class="primary">REMATCH</button>
+          <button id="back-menu">CHANGE SETUP</button>
+        </div>
+      </div>
+    </section>
   </main>
-  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"}}</script>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    }
+  }
+  </script>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
