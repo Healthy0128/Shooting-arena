@@ -24,9 +24,12 @@ jobs:
       - name: Prepare site
         run: |
           mkdir -p _site
-          base64 -d deploy/duel-arena-v6.6.6-index.html.gz.b64 | gunzip > _site/index.html
-          cp -f apple-touch-icon.png _site/ 2>/dev/null || true
+          cp index.html _site/index.html
           cp -f manifest.webmanifest _site/ 2>/dev/null || true
+          cp -f apple-touch-icon.png _site/ 2>/dev/null || true
+          cp -f icon-192.png _site/ 2>/dev/null || true
+          cp -f icon-512.png _site/ 2>/dev/null || true
+          if [ -d assets ]; then cp -R assets _site/; fi
           touch _site/.nojekyll
 
       - name: Configure Pages
