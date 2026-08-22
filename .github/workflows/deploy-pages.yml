@@ -24,12 +24,13 @@ jobs:
       - name: Syntax check
         run: node --check src/main.js
 
-      - name: Verify v6.7.7 arsenal and intro build
+      - name: Verify v6.7.8 split chase camera build
         run: |
-          grep -q 'v6.7.7' index.html
-          grep -q 'ARSENAL & MATCH INTRO' index.html
+          grep -q 'v6.7.8' index.html
+          grep -q 'SPLIT CHASE CAMERA' index.html
+          grep -q 'function renderSplitArena' src/main.js
+          grep -q 'const chaseCameras=' src/main.js
           grep -q 'function equipWeapon' src/main.js
-          grep -q 'function projectileMesh' src/main.js
           grep -q 'function runCountdown' src/main.js
           test -s assets/models/characters/Knight.glb
           test -s assets/models/weapons/spear_A.gltf
