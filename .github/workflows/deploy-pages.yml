@@ -22,16 +22,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply v6.1 game patch
-        run: python prepare_v61.py
       - name: Fetch CC0 BGM
         run: python fetch_bgm.py
-      - name: Generate PWA icons
-        run: python generate_icons.py
-      - name: Prepare site
+      - name: Prepare v6.6.6 site
         run: |
           mkdir -p _site
-          rsync -a --exclude '.git' --exclude '.github' --exclude '_site' ./ _site/
+          rsync -a --exclude '.git' --exclude '.github' --exclude '_site' --exclude 'deploy' ./ _site/
+          base64 -d deploy/duel-arena-v6.6.6-index.html.gz.b64 | gunzip > _site/index.html
           touch _site/.nojekyll
       - name: Configure Pages
         uses: actions/configure-pages@v5
