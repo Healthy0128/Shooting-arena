@@ -465,3 +465,10 @@ body.split-arena .def-btn.p2{top:clamp(118px,14vh,180px)}
   body.split-arena .name{font-size:10px}
   body.split-arena .score{letter-spacing:2px}
 }
+
+
+/* v6.8.1 canvas coordinate fix */
+html,body,#game-wrap{width:100%;height:100dvh;min-height:0}
+body{position:fixed;inset:0;overflow:hidden}
+#game{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* v6.8.0 live-vw/live-vh custom properties are intentionally no longer used. */

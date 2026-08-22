@@ -42,9 +42,29 @@ function updateChaseCamera(i,cam,aspect){
   cam.up.set(0,i===1?-1:1,0);
   cam.lookAt(target);
 }
-function getLiveViewport(){
-  const vv=window.visualViewport;
-  return {w:Math.max(1,Math.round(vv?.width||document.documentElement.clientWidth||innerWidth)),h:Math.max(1,Math.round(vv?.height||document.documentElement.clientHeight||innerHeight))};
+function getCssViewport(){
+  const root=document.documentElement;
+  return {w:Math.max(1,Math.round(root.clientWidth||innerWidth)),h:Math.max(1,Math.round(innerHeight||root.clientHeight))};
+}
+function configureTopCamera(w,h){
+  const aspect=w/Math.max(1,h),portrait=h>=w;
+  if(portrait){
+    // Rotate the projected battlefield 90 degrees: world X becomes screen Y.
+    // This matches the portrait device instead of forcing the landscape arena
+    // into a narrow phone viewport.
+    topCamera.up.set(1,0,0);
+    const projectedWidth=A.hh*2+0.7; // world Z span on screen X
+    const projectedHeight=projectedWidth/Math.max(.32,aspect);
+    topCamera.left=-projectedWidth/2;topCamera.right=projectedWidth/2;
+    topCamera.top=projectedHeight/2;topCamera.bottom=-projectedHeight/2;
+  }else{
+    topCamera.up.set(0,0,-1);
+    const projectedWidth=A.hw*2+1.0;
+    const projectedHeight=projectedWidth/Math.max(.55,aspect);
+    topCamera.left=-projectedWidth/2;topCamera.right=projectedWidth/2;
+    topCamera.top=projectedHeight/2;topCamera.bottom=-projectedHeight/2;
+  }
+  topCamera.lookAt(0,0,0);topCamera.updateProjectionMatrix();
 }
 function renderSplitArena(){
   const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
@@ -265,18 +285,26 @@ $('#camera-mode').onclick=()=>setCameraMode('top');$('#camera-tilt-test').onclic
 $$('.loadout-card select').forEach(s=>s.addEventListener('change',syncBuildUI));$$('.random-build').forEach(b=>b.onclick=()=>randomBuild(+b.dataset.player));for(let i=0;i<2;i++){try{const saved=JSON.parse(localStorage.getItem(`duel-build-${i}`)||'null');if(saved)setBuild(i,saved)}catch{}}if(buildCost(readBuild(1))>BUILD_LIMIT)setBuild(1,{body:'barbarian',weapon:'bladegun',defense:'roll',super:'blast',color:'orange',passive:'coolant'});syncBuildUI();$('#start').onclick=()=>{if($('#start').disabled)return;ac().resume?.();start()};$('#rematch').onclick=start;$('#back-menu').onclick=()=>{running=false;stopBgm();$('#result').hidden=true;$('#hud').hidden=true;$('#controls').hidden=true;$('#menu').hidden=false};$$('.def-btn').forEach(b=>b.onpointerdown=e=>{e.preventDefault();defenseMove(+b.dataset.player)});$$('.super-btn').forEach(b=>b.onpointerdown=e=>{e.preventDefault();superMove(+b.dataset.player)});
 
 function screenVectorToWorld(pi,x,y){
-  if(cameraMode!=='arena')return new THREE.Vector2(x,y);
-  if(pi===1){x=-x;y=-y}
-  const cam=chaseCameras[pi];
-  const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);fwd.y=0;
-  if(fwd.lengthSq()<.0001)fwd.set(pi?-1:1,0,0);else fwd.normalize();
-  const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
-  const wx=right.x*x+fwd.x*(-y),wz=right.z*x+fwd.z*(-y);
-  const out=new THREE.Vector2(wx,wz);if(out.lengthSq()>1)out.normalize();return out;
+  if(cameraMode==='arena'){
+    if(pi===1){x=-x;y=-y}
+    const cam=chaseCameras[pi];
+    const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);fwd.y=0;
+    if(fwd.lengthSq()<.0001)fwd.set(pi?-1:1,0,0);else fwd.normalize();
+    const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
+    const wx=right.x*x+fwd.x*(-y),wz=right.z*x+fwd.z*(-y);
+    const out=new THREE.Vector2(wx,wz);if(out.lengthSq()>1)out.normalize();return out;
+  }
+  // Shared TOP-DOWN also follows the actual camera orientation. This keeps
+  // controls correct when the portrait camera is rotated 90 degrees.
+  topCamera.updateMatrixWorld(true);
+  const e=topCamera.matrixWorld.elements;
+  const rightX=e[0],rightZ=e[2],upX=e[4],upZ=e[6];
+  const out=new THREE.Vector2(rightX*x-upX*y,rightZ*x-upZ*y);
+  if(out.lengthSq()>1)out.normalize();return out;
 }
 const ptr=new Map();$$('.stick-zone').forEach(z=>{const knob=z.querySelector('i'),base=z.querySelector('.stick'),pi=+z.dataset.player,kind=z.dataset.kind;const apply=e=>{if(!players[pi])return;const r=base.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);const max=r.width*.33,mag=Math.hypot(dx,dy);let x=dx/max,y=dy/max;if(mag>max){x*=max/mag;y*=max/mag}if(mag<max*.12)x=y=0;const world=screenVectorToWorld(pi,x,y);(kind==='move'?players[pi].move:players[pi].aim).copy(world);knob.style.transform=`translate(calc(-50% + ${Math.max(-max,Math.min(max,dx))}px),calc(-50% + ${Math.max(-max,Math.min(max,dy))}px))`;if(kind==='aim'&&mag>max*.35)shoot(pi)};z.onpointerdown=e=>{e.preventDefault();z.setPointerCapture(e.pointerId);ptr.set(e.pointerId,1);apply(e)};z.onpointermove=e=>ptr.has(e.pointerId)&&apply(e);const end=e=>{ptr.delete(e.pointerId);knob.style.transform='translate(-50%,-50%)';if(players[pi]){if(kind==='move')players[pi].move.set(0,0);else players[pi].aim.set(0,0)}};z.onpointerup=end;z.onpointercancel=end});
 
 function update(dt){if(!running)return;time=Math.max(0,time-dt);if(time<=0){if(players[0].score!==players[1].score)finish(players[0].score>players[1].score?0:1);else{time=30;playBgm('sudden');banner('SUDDEN DEATH!',1000)}}players.forEach(p=>{p.cd=Math.max(0,p.cd-dt);p.inv=Math.max(0,p.inv-dt);p.weaponKick=Math.max(0,(p.weaponKick||0)-dt*1.9);if(p.weaponHost)p.weaponHost.position.z=p.weaponKick;p.defCd=Math.max(0,(p.defCd||0)-dt);p.guardTime=Math.max(0,(p.guardTime||0)-dt);p.parryTime=Math.max(0,(p.parryTime||0)-dt);const db=document.querySelector(`.def-btn[data-player="${p.i}"]`);if(db){db.textContent=p.defCd>0?p.defCd.toFixed(1):'DEF';db.classList.toggle('ready',p.defCd<=0)}if(!p.alive)return;const m=p.move.clone();if(m.lengthSq()>1)m.normalize();const q=p.root.position.clone();q.x+=m.x*p.cfg.sp*dt;q.z+=m.y*p.cfg.sp*dt;if(!blocked(q,p.r))p.root.position.copy(q);if(p.aim.lengthSq()>.1)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;if(p.mix){const moving=p.move.lengthSq()>.08;if(p.walk){p.walk.enabled=moving;p.walk.setEffectiveWeight(moving?1:0)}if(p.idle){p.idle.enabled=!moving;p.idle.setEffectiveWeight(moving?0:1)}p.mix.update(dt)}p.root.visible=p.inv>0?Math.floor(p.inv*12)%2===0:true});for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;b.m.position.addScaledVector(b.v,dt);let rm=b.life<=0;const o=!rm&&hitObs(b.m.position);if(o){if(o.breakable){o.hp-=b.dm;burst(b.m.position.clone(),0xd6a05d,6);if(o.hp<=0){arena.remove(o.m);obs=obs.filter(x=>x!==o);burst(b.m.position.clone(),0xc58b4a,16)}}rm=true}else if(!rm&&(Math.abs(b.m.position.x)>A.hw||Math.abs(b.m.position.z)>A.hh))rm=true;if(!rm){const e=players[1-b.owner];const dx=b.m.position.x-e.root.position.x,dz=b.m.position.z-e.root.position.z;if(e.alive&&dx*dx+dz*dz<(e.r+.16)**2)damage(1-b.owner,b.dm,b.owner),rm=true}if(rm){scene.remove(b.m);bullets.splice(i,1)}}for(let i=parts.length-1;i>=0;i--){const x=parts[i];x.life-=dt;if(x.ring){const s=(1.25-x.life/.22)*x.scale+1;x.m.scale.setScalar(Math.max(1,s))}else{x.m.position.addScaledVector(x.v,dt);x.v.y-=6*dt}x.m.material.opacity=Math.max(0,x.life/.3);if(x.life<=0){scene.remove(x.m);parts.splice(i,1)}}for(let i=0;i<2;i++){comboTimer[i]=Math.max(0,comboTimer[i]-dt);if(comboTimer[i]===0)combo[i]=0}lowHpPulse();hud();$('#timer').textContent=Math.ceil(time)}
-function resize(){const vp=getLiveViewport(),w=vp.w,h=vp.h;renderer.setSize(w,h,false);renderer.domElement.style.width=w+'px';renderer.domElement.style.height=h+'px';document.documentElement.style.setProperty('--live-vw',w+'px');document.documentElement.style.setProperty('--live-vh',h+'px');const portrait=h>=w;const aspect=portrait?Math.max(.78,(w/h)*1.55):w/h;let hw=10.5,hh=hw/aspect;if(hh<7.25){hh=7.25;hw=hh*aspect}topCamera.left=-hw;topCamera.right=hw;topCamera.top=hh;topCamera.bottom=-hh;topCamera.updateProjectionMatrix();arenaCamera.aspect=w/Math.max(1,h);arenaCamera.updateProjectionMatrix()}addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);resize();
+function resize(){const vp=getCssViewport(),w=vp.w,h=vp.h;renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';configureTopCamera(w,h);arenaCamera.aspect=w/Math.max(1,h);arenaCamera.updateProjectionMatrix()}addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,80));resize();
 function loop(now){const rawDt=Math.min(.033,(now-last)/1000);last=now;let gameDt=rawDt;if(koSlow>0){koSlow=Math.max(0,koSlow-rawDt);gameDt*=.22}if(hitStop>0){hitStop=Math.max(0,hitStop-rawDt);gameDt=0}else update(gameDt);updateAimGuides();updateSharedCamera(rawDt);shakeTime=Math.max(0,shakeTime-rawDt);const saved=camera.position.clone();if(shakeTime>0&&shakePower>0){const f=shakeTime/.38,amp=shakePower*Math.min(1,f*2.5);camera.position.x+=(Math.random()-.5)*amp;camera.position.y+=(Math.random()-.5)*amp*.55;camera.position.z+=(Math.random()-.5)*amp}renderer.render(scene,camera);camera.position.copy(saved);if(shakeTime<=0)shakePower=0;requestAnimationFrame(loop)}build('square');requestAnimationFrame(loop);
 if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
