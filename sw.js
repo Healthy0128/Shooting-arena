@@ -1,5 +1,31 @@
-const CACHE='duel-arena-v5-core';
-const CORE=['./','./index.html','./style.css','./src/main.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./apple-touch-icon.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)));self.skipWaiting()});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin===location.origin){e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(resp=>{const copy=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return resp})))}});
+const CACHE='duel-arena-v666-stage-fix-20260822';
+const CORE=['./','./index.html','./style.css','./src/main.js','./manifest.webmanifest'];
+
+self.addEventListener('install',event=>{
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE).catch(()=>{})));
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  event.respondWith((async()=>{
+    try{
+      const response=await fetch(event.request,{cache:'no-store'});
+      if(response&&response.ok){
+        const cache=await caches.open(CACHE);
+        cache.put(event.request,response.clone()).catch(()=>{});
+      }
+      return response;
+    }catch(err){
+      return (await caches.match(event.request)) || (await caches.match('./index.html'));
+    }
+  })());
+});
