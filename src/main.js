@@ -32,12 +32,14 @@ function updateChaseCamera(i,cam,aspect){
   cam.lookAt(target);
 }
 function renderSplitArena(){
-  const canvas=renderer.domElement,w=canvas.width,h=canvas.height,half=Math.floor(h/2),aspect=w/Math.max(1,half);
+  const canvas=renderer.domElement,w=canvas.width,h=canvas.height;
+  const bottomH=Math.round(h*.5),topH=h-bottomH;
+  const bottomAspect=w/Math.max(1,bottomH),topAspect=w/Math.max(1,topH);
   renderer.setScissorTest(true);
-  updateChaseCamera(0,chaseCameras[0],aspect);
-  renderer.setViewport(0,0,w,half);renderer.setScissor(0,0,w,half);_baseRender(scene,chaseCameras[0]);
-  updateChaseCamera(1,chaseCameras[1],aspect);
-  renderer.setViewport(0,half,w,h-half);renderer.setScissor(0,half,w,h-half);_baseRender(scene,chaseCameras[1]);
+  updateChaseCamera(0,chaseCameras[0],bottomAspect);
+  renderer.setViewport(0,0,w,bottomH);renderer.setScissor(0,0,w,bottomH);_baseRender(scene,chaseCameras[0]);
+  updateChaseCamera(1,chaseCameras[1],topAspect);
+  renderer.setViewport(0,bottomH,w,topH);renderer.setScissor(0,bottomH,w,topH);_baseRender(scene,chaseCameras[1]);
   renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);
 }
 renderer.render=(s,c)=>{
@@ -192,6 +194,7 @@ function updateAimGuides(){
 function setCameraMode(mode){
   cameraMode=mode==='arena'?'arena':'top';
   camera=cameraMode==='arena'?arenaCamera:topCamera;
+  document.body.classList.toggle('split-arena',cameraMode==='arena');
   document.querySelector('#camera-mode')?.classList.toggle('selected',cameraMode==='top');
   document.querySelector('#camera-tilt-test')?.classList.toggle('selected',cameraMode==='arena');
 }
@@ -243,7 +246,17 @@ $('.arena-buttons').onclick=e=>{const b=e.target.closest('button[data-arena]');i
 $('#camera-mode').onclick=()=>setCameraMode('top');$('#camera-tilt-test').onclick=()=>setCameraMode('arena');setCameraMode('top');
 $$('.loadout-card select').forEach(s=>s.addEventListener('change',syncBuildUI));$$('.random-build').forEach(b=>b.onclick=()=>randomBuild(+b.dataset.player));for(let i=0;i<2;i++){try{const saved=JSON.parse(localStorage.getItem(`duel-build-${i}`)||'null');if(saved)setBuild(i,saved)}catch{}}if(buildCost(readBuild(1))>BUILD_LIMIT)setBuild(1,{body:'barbarian',weapon:'bladegun',defense:'roll',super:'blast',color:'orange',passive:'coolant'});syncBuildUI();$('#start').onclick=()=>{if($('#start').disabled)return;ac().resume?.();start()};$('#rematch').onclick=start;$('#back-menu').onclick=()=>{running=false;stopBgm();$('#result').hidden=true;$('#hud').hidden=true;$('#controls').hidden=true;$('#menu').hidden=false};$$('.def-btn').forEach(b=>b.onpointerdown=e=>{e.preventDefault();defenseMove(+b.dataset.player)});$$('.super-btn').forEach(b=>b.onpointerdown=e=>{e.preventDefault();superMove(+b.dataset.player)});
 
-const ptr=new Map();$$('.stick-zone').forEach(z=>{const knob=z.querySelector('i'),base=z.querySelector('.stick'),pi=+z.dataset.player,kind=z.dataset.kind;const apply=e=>{if(!players[pi])return;const r=base.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);const max=r.width*.33,mag=Math.hypot(dx,dy);let x=dx/max,y=dy/max;if(mag>max){x*=max/mag;y*=max/mag}if(mag<max*.12)x=y=0;(kind==='move'?players[pi].move:players[pi].aim).set(x,y);knob.style.transform=`translate(calc(-50% + ${Math.max(-max,Math.min(max,dx))}px),calc(-50% + ${Math.max(-max,Math.min(max,dy))}px))`;if(kind==='aim'&&mag>max*.35)shoot(pi)};z.onpointerdown=e=>{e.preventDefault();z.setPointerCapture(e.pointerId);ptr.set(e.pointerId,1);apply(e)};z.onpointermove=e=>ptr.has(e.pointerId)&&apply(e);const end=e=>{ptr.delete(e.pointerId);knob.style.transform='translate(-50%,-50%)';if(players[pi]){if(kind==='move')players[pi].move.set(0,0);else players[pi].aim.set(0,0)}};z.onpointerup=end;z.onpointercancel=end});
+function screenVectorToWorld(pi,x,y){
+  if(cameraMode!=='arena')return new THREE.Vector2(x,y);
+  if(pi===1){x=-x;y=-y}
+  const cam=chaseCameras[pi];
+  const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);fwd.y=0;
+  if(fwd.lengthSq()<.0001)fwd.set(pi?-1:1,0,0);else fwd.normalize();
+  const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize();
+  const wx=right.x*x+fwd.x*(-y),wz=right.z*x+fwd.z*(-y);
+  const out=new THREE.Vector2(wx,wz);if(out.lengthSq()>1)out.normalize();return out;
+}
+const ptr=new Map();$$('.stick-zone').forEach(z=>{const knob=z.querySelector('i'),base=z.querySelector('.stick'),pi=+z.dataset.player,kind=z.dataset.kind;const apply=e=>{if(!players[pi])return;const r=base.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);const max=r.width*.33,mag=Math.hypot(dx,dy);let x=dx/max,y=dy/max;if(mag>max){x*=max/mag;y*=max/mag}if(mag<max*.12)x=y=0;const world=screenVectorToWorld(pi,x,y);(kind==='move'?players[pi].move:players[pi].aim).copy(world);knob.style.transform=`translate(calc(-50% + ${Math.max(-max,Math.min(max,dx))}px),calc(-50% + ${Math.max(-max,Math.min(max,dy))}px))`;if(kind==='aim'&&mag>max*.35)shoot(pi)};z.onpointerdown=e=>{e.preventDefault();z.setPointerCapture(e.pointerId);ptr.set(e.pointerId,1);apply(e)};z.onpointermove=e=>ptr.has(e.pointerId)&&apply(e);const end=e=>{ptr.delete(e.pointerId);knob.style.transform='translate(-50%,-50%)';if(players[pi]){if(kind==='move')players[pi].move.set(0,0);else players[pi].aim.set(0,0)}};z.onpointerup=end;z.onpointercancel=end});
 
 function update(dt){if(!running)return;time=Math.max(0,time-dt);if(time<=0){if(players[0].score!==players[1].score)finish(players[0].score>players[1].score?0:1);else{time=30;playBgm('sudden');banner('SUDDEN DEATH!',1000)}}players.forEach(p=>{p.cd=Math.max(0,p.cd-dt);p.inv=Math.max(0,p.inv-dt);p.weaponKick=Math.max(0,(p.weaponKick||0)-dt*1.9);if(p.weaponHost)p.weaponHost.position.z=p.weaponKick;p.defCd=Math.max(0,(p.defCd||0)-dt);p.guardTime=Math.max(0,(p.guardTime||0)-dt);p.parryTime=Math.max(0,(p.parryTime||0)-dt);const db=document.querySelector(`.def-btn[data-player="${p.i}"]`);if(db){db.textContent=p.defCd>0?p.defCd.toFixed(1):'DEF';db.classList.toggle('ready',p.defCd<=0)}if(!p.alive)return;const m=p.move.clone();if(m.lengthSq()>1)m.normalize();const q=p.root.position.clone();q.x+=m.x*p.cfg.sp*dt;q.z+=m.y*p.cfg.sp*dt;if(!blocked(q,p.r))p.root.position.copy(q);if(p.aim.lengthSq()>.1)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;if(p.mix){const moving=p.move.lengthSq()>.08;if(p.walk){p.walk.enabled=moving;p.walk.setEffectiveWeight(moving?1:0)}if(p.idle){p.idle.enabled=!moving;p.idle.setEffectiveWeight(moving?0:1)}p.mix.update(dt)}p.root.visible=p.inv>0?Math.floor(p.inv*12)%2===0:true});for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;b.m.position.addScaledVector(b.v,dt);let rm=b.life<=0;const o=!rm&&hitObs(b.m.position);if(o){if(o.breakable){o.hp-=b.dm;burst(b.m.position.clone(),0xd6a05d,6);if(o.hp<=0){arena.remove(o.m);obs=obs.filter(x=>x!==o);burst(b.m.position.clone(),0xc58b4a,16)}}rm=true}else if(!rm&&(Math.abs(b.m.position.x)>A.hw||Math.abs(b.m.position.z)>A.hh))rm=true;if(!rm){const e=players[1-b.owner];const dx=b.m.position.x-e.root.position.x,dz=b.m.position.z-e.root.position.z;if(e.alive&&dx*dx+dz*dz<(e.r+.16)**2)damage(1-b.owner,b.dm,b.owner),rm=true}if(rm){scene.remove(b.m);bullets.splice(i,1)}}for(let i=parts.length-1;i>=0;i--){const x=parts[i];x.life-=dt;if(x.ring){const s=(1.25-x.life/.22)*x.scale+1;x.m.scale.setScalar(Math.max(1,s))}else{x.m.position.addScaledVector(x.v,dt);x.v.y-=6*dt}x.m.material.opacity=Math.max(0,x.life/.3);if(x.life<=0){scene.remove(x.m);parts.splice(i,1)}}for(let i=0;i<2;i++){comboTimer[i]=Math.max(0,comboTimer[i]-dt);if(comboTimer[i]===0)combo[i]=0}lowHpPulse();hud();$('#timer').textContent=Math.ceil(time)}
 function resize(){renderer.setSize(innerWidth,innerHeight,false);const portrait=innerHeight>=innerWidth;const aspect=portrait?Math.max(.78,(innerWidth/innerHeight)*1.55):innerWidth/innerHeight;let hw=10.5,hh=hw/aspect;if(hh<7.25){hh=7.25;hw=hh*aspect}topCamera.left=-hw;topCamera.right=hw;topCamera.top=hh;topCamera.bottom=-hh;topCamera.updateProjectionMatrix();arenaCamera.aspect=innerWidth/Math.max(1,innerHeight);arenaCamera.updateProjectionMatrix()}addEventListener('resize',resize);resize();

@@ -400,3 +400,38 @@ to{opacity:0;transform:translate(-50%,-100px) scale(1.25)}}
 @keyframes lowHpPulse{50%{filter:brightness(1.24);transform:translateX(-50%) scale(1.015)}}
 .hud.two.low-hp{animation:lowHpPulseP2 .72s ease-in-out infinite}
 @keyframes lowHpPulseP2{50%{filter:brightness(1.24);transform:translateX(-50%) rotate(180deg) scale(1.015)}}
+
+
+/* v6.7.9 split view fix — each player owns exactly 50% of the screen */
+body.split-arena #game-wrap::after{
+  content:"";position:absolute;left:0;right:0;top:50%;height:2px;transform:translateY(-1px);
+  background:linear-gradient(90deg,transparent,#ffffff55 14%,#ffffffaa 50%,#ffffff55 86%,transparent);
+  pointer-events:none;z-index:8;
+}
+body.split-arena .stick-zone{
+  width:50%;height:50%;max-width:none;max-height:none;
+}
+body.split-arena .stick-zone.p1{top:50%;bottom:auto}
+body.split-arena .stick-zone.p2{top:0;bottom:auto}
+body.split-arena .stick-zone.move{left:0;right:auto}
+body.split-arena .stick-zone.aim{right:0;left:auto}
+body.split-arena .stick-zone.p2.move{left:auto;right:0}
+body.split-arena .stick-zone.p2.aim{right:auto;left:0}
+body.split-arena .stick{
+  width:clamp(76px,22vw,118px);height:clamp(76px,22vw,118px);
+}
+body.split-arena .stick i{
+  width:42%;height:42%;
+}
+body.split-arena .hud.one{bottom:max(2%,env(safe-area-inset-bottom))}
+body.split-arena .hud.two{top:max(2%,env(safe-area-inset-top))}
+body.split-arena .super-btn.p1{bottom:7%}
+body.split-arena .super-btn.p2{top:7%}
+body.split-arena .def-btn.p1{bottom:13%}
+body.split-arena .def-btn.p2{top:13%}
+body.split-arena #timer{top:50%}
+@media (max-width:430px){
+  body.split-arena .hud{width:64vw;grid-template-columns:68px 1fr 1fr 72px;padding:7px 9px;font-size:11px}
+  body.split-arena .super-btn{width:84px;height:44px}
+  body.split-arena .def-btn{width:76px;height:38px}
+}
