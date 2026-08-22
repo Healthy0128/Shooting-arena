@@ -1,0 +1,130 @@
+name: Materialize v6.7.6 Assets
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assets:
+    if: ${{ !contains(github.event.head_commit.message || '', '[assets-v676]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch KayKit character assets
+        run: |
+          set -euxo pipefail
+          rm -rf /tmp/kayadv /tmp/kayskel /tmp/kayprops
+          git clone --depth 1 https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0.git /tmp/kayadv
+          git clone --depth 1 https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0.git /tmp/kayskel
+          mkdir -p assets/models/characters
+          cp /tmp/kayadv/addons/kaykit_character_pack_adventures/Characters/gltf/Knight.glb assets/models/characters/
+          cp /tmp/kayadv/addons/kaykit_character_pack_adventures/Characters/gltf/Barbarian.glb assets/models/characters/
+          cp /tmp/kayadv/addons/kaykit_character_pack_adventures/Characters/gltf/Mage.glb assets/models/characters/
+          cp /tmp/kayadv/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue.glb assets/models/characters/
+          cp /tmp/kayadv/addons/kaykit_character_pack_adventures/Characters/gltf/Rogue_Hooded.glb assets/models/characters/
+          cp /tmp/kayskel/addons/kaykit_character_pack_skeletons/Characters/gltf/Skeleton_Warrior.glb assets/models/characters/
+
+      - name: Fetch KayKit stage and weapon assets
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/GeorgeQLe/assets-kaykit-3d-props.git /tmp/kayprops
+          cd /tmp/kayprops
+          git sparse-checkout set assets/kaykit/prototype-bits-1.1/Assets/gltf assets/kaykit/fantasy-weapons-bits-1.0/Assets/gltf
+          cd "$GITHUB_WORKSPACE"
+          mkdir -p assets/models/stage assets/models/weapons
+          cp -R /tmp/kayprops/assets/kaykit/prototype-bits-1.1/Assets/gltf/. assets/models/stage/
+          cp -R /tmp/kayprops/assets/kaykit/fantasy-weapons-bits-1.0/Assets/gltf/. assets/models/weapons/
+
+      - name: Fetch CC0 BGM
+        run: |
+          set -euxo pipefail
+          mkdir -p assets/audio/bgm
+          curl -L --fail --retry 3 'https://opengameart.org/sites/default/files/empacotatron_loop.ogg' -o assets/audio/bgm/01_empacotatron_loop.ogg
+          curl -L --fail --retry 3 'https://opengameart.org/sites/default/files/trance_boss_battle_bpm150_0.ogg' -o assets/audio/bgm/02_trance_boss_battle.ogg
+          curl -L --fail --retry 3 'https://opengameart.org/sites/default/files/space_boss_battle_bpm175_0.ogg' -o assets/audio/bgm/03_space_boss_battle.ogg
+
+      - name: Fetch Kenney countdown voice when available
+        run: |
+          set -euxo pipefail
+          mkdir -p assets/audio/voice
+          base='https://gamesounds.xyz/Kenney%27s%20Sound%20Pack/Synth%20Voice%201'
+          for f in count_3.ogg count_2.ogg count_1.ogg go.ogg; do
+            curl -L --fail --retry 2 "$base/$f" -o "assets/audio/voice/$f" || rm -f "assets/audio/voice/$f"
+          done
+
+      - name: Write asset credits and use local character files
+        run: |
+          cat > ASSET_SOURCES.md <<'EOF'
+          # Asset Sources — v6.7.6
+
+          All third-party assets below are redistributed from their public source repositories/pages for this game build.
+
+          ## Characters
+          - KayKit Character Pack Adventures 1.0 — CC0
+            - Knight, Barbarian, Mage, Rogue, Rogue Hooded
+            - https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
+          - KayKit Character Pack Skeletons 1.0 — CC0
+            - Skeleton Warrior
+            - https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
+
+          ## Stage / weapons
+          - KayKit Prototype Bits 1.1 — CC0
+          - KayKit Fantasy Weapons Bits 1.0 — CC0
+          - Mirror used for game-ready glTF files:
+            - https://github.com/GeorgeQLe/assets-kaykit-3d-props
+
+          ## BGM
+          - Empacotatron — Fupi — CC0 — OpenGameArt
+          - Trance Boss Battle — MintoDog — CC0 — OpenGameArt
+          - Space Boss Battle — MintoDog — CC0 — OpenGameArt
+
+          ## Voice
+          - Kenney Synth Voice 1 — CC0, when successfully downloaded from gamesounds.xyz mirror.
+          EOF
+
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/main.js')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace("const ADV='https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Characters/gltf/';", "const ADV='./assets/models/characters/';")
+          s=s.replace("const SK='https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0/main/addons/kaykit_character_pack_skeletons/Characters/gltf/';", "const SK='./assets/models/characters/';")
+          p.write_text(s,encoding='utf-8')
+
+          h=Path('index.html')
+          x=h.read_text(encoding='utf-8')
+          x=x.replace('Duel Arena v6.7.5','Duel Arena v6.7.6')
+          x=x.replace('<strong>v6.7.5</strong><span>CUSTOM LOADOUT LIVE</span>','<strong>v6.7.6</strong><span>ASSET FOUNDATION</span>')
+          h.write_text(x,encoding='utf-8')
+          PY
+
+      - name: Validate assets
+        run: |
+          set -euxo pipefail
+          test -s assets/models/characters/Knight.glb
+          test -s assets/models/characters/Barbarian.glb
+          test -s assets/models/characters/Mage.glb
+          test -s assets/models/characters/Rogue.glb
+          test -s assets/models/characters/Rogue_Hooded.glb
+          test -s assets/models/characters/Skeleton_Warrior.glb
+          test -s assets/audio/bgm/01_empacotatron_loop.ogg
+          test -s assets/audio/bgm/02_trance_boss_battle.ogg
+          test -s assets/audio/bgm/03_space_boss_battle.ogg
+          find assets/models/stage -type f | grep -q .
+          find assets/models/weapons -type f | grep -q .
+          node --check src/main.js
+
+      - name: Commit materialized assets
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets ASSET_SOURCES.md src/main.js index.html
+          git commit -m 'Materialize v6.7.6 game assets [assets-v676]'
+          git push origin HEAD:main
