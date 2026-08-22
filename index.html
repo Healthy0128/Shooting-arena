@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.7.1</title>
+  <title>Duel Arena v6.7.2</title>
   <link rel="stylesheet" href="./style.css" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
@@ -26,7 +26,7 @@
             <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
           </div>
           <div class="build-badge">
-            <strong>v6.7.1</strong><span>DIRECT PUBLIC BUILD</span>
+            <strong>v6.7.2</strong><span>EXPERIMENTAL 3D CAMERA</span>
           </div>
         </div>
 
@@ -94,17 +94,17 @@
 
         <div class="budget-legend">BUILD LIMIT <strong>10</strong> POINTS · BODY + WEAPON + DEFENSE + SUPER + PASSIVE</div><div class="control-select">
           <h2>P2 CONTROL</h2>
-          <button id="p2-control-mode" class="control-mode" data-mode="face">対面180°</button>
-          <p class="control-note">上側プレイヤーの移動・照準を180°回転</p>
+          <button id="p2-control-mode" class="control-mode" data-mode="face">対面UI 180°</button>
+          <p class="control-note">上側はUIだけ180°。移動・照準入力は通常方向</p>
         </div>
 
         <div class="camera-select">
           <h2>CAMERA</h2>
           <div class="camera-buttons">
-            <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN FAIR</button>
-            <button id="camera-tilt-test" data-mode="tilt">3D TILT TEST</button>
+            <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN</button>
+            <button id="camera-tilt-test" data-mode="tilt">3D ARENA</button>
           </div>
-          <p class="camera-note">対面プレイでは真上視点を推奨</p>
+          <p class="camera-note">3D ARENA: 2人の中点を追従＋距離で自動ズーム</p>
         </div>
 
         <div class="arena-select">

@@ -374,3 +374,7 @@ to{opacity:0;transform:translate(-50%,-100px) scale(1.25)}}
 @media (orientation:landscape) and (max-height:700px){
   body:after{content:'縦向きで遊ぶことを推奨';position:fixed;left:50%;top:10px;z-index:100;transform:translateX(-50%);padding:8px 14px;border-radius:999px;background:#080c13df;color:#fff;font-size:12px;font-weight:900;pointer-events:none}
 }
+
+/* v6.7.2 experimental shared 3D camera */
+.camera-buttons button.selected{box-shadow:0 0 0 2px #8edcff88,0 0 18px #55bfff44}
+.camera-note{line-height:1.35}
