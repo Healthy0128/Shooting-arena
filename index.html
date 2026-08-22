@@ -8,5 +8,32 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v0.6.6.6</title>
-  <style>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./style.css" />
+  <title>Duel Arena</title>
+  <script type="importmap">
+  {"imports":{"three":"https://unpkg.com/three@0.164.1/build/three.module.js","three/addons/":"https://unpkg.com/three@0.164.1/examples/jsm/"}}
+  </script>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <h1>DUEL ARENA</h1><p class="sub">LOCAL 1v1 · TOP-DOWN 3D</p>
+      <div class="version-badge"><strong>v0.6.6.6</strong><span>STABLE WEB BUILD</span></div>
+      <div class="pick-grid">
+        <section><h2>PLAYER 1</h2><div class="char-buttons" data-player="0"><button data-char="ranger" class="selected">RANGER</button><button data-char="crusher">CRUSHER</button><button data-char="dash">DASH</button><button data-char="mage">MAGE</button><button data-char="rogue">ROGUE</button><button data-char="skeleton">BONES</button></div></section>
+        <section><h2>PLAYER 2</h2><div class="char-buttons" data-player="1"><button data-char="ranger" class="selected">RANGER</button><button data-char="crusher">CRUSHER</button><button data-char="dash">DASH</button><button data-char="mage">MAGE</button><button data-char="rogue">ROGUE</button><button data-char="skeleton">BONES</button></div></section>
+      </div>
+      <h2>ARENA</h2><div class="arena-buttons"><button data-arena="square" class="selected">SQUARE</button><button data-arena="pillars">PILLARS</button><button data-arena="ring">RING</button><button data-arena="cross">CROSS</button><button data-arena="hex">HEX</button><button data-arena="fort">FORT</button><button data-arena="bush">BUSH</button><button data-arena="crates">CRATES</button></div>
+      <button id="start" class="start-btn">START BATTLE</button><p id="asset-status" class="tiny">KayKit CC0 3D models load during battle</p>
+    </div>
+  </div>
+  <div id="hud" hidden><div class="hud p2"><b id="p2-name">P2</b><div class="hp"><i id="p2-hp"></i></div><div class="super-meter"><i id="p2-super"></i></div><span id="p2-score">○ ○ ○</span></div><div id="timer">90</div><div class="hud p1"><b id="p1-name">P1</b><div class="hp"><i id="p1-hp"></i></div><div class="super-meter"><i id="p1-super"></i></div><span id="p1-score">○ ○ ○</span></div></div>
+  <div id="controls" hidden><div class="control p2"><div class="stick move" data-player="1"><i></i></div><button class="super-btn" data-player="1">SUPER</button><div class="stick aim" data-player="1"><i></i></div></div><div class="control p1"><div class="stick move" data-player="0"><i></i></div><button class="super-btn" data-player="0">SUPER</button><div class="stick aim" data-player="0"><i></i></div></div></div>
+  <div id="banner"></div>
+  <div id="result" class="overlay" hidden><div class="panel result"><h2 id="winner">P1 WIN!</h2><p id="result-score">3 - 0</p><button id="rematch" class="start-btn">REMATCH</button><button id="back" class="ghost">BACK TO MENU</button></div></div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body></html>
