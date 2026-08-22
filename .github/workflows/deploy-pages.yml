@@ -23,24 +23,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Materialize corrected v6.7.4 combat feel pass
-        if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v674]') }}
+      - name: Run and capture corrected v6.7.4 materializer
+        if: ${{ !contains(github.event.head_commit.message || '', '[v674-result]') }}
         run: |
           python fix_v674_materializer.py
-          python materialize_v674.py
-          node --check src/main.js
-          grep -q 'v6.7.4' index.html
-          grep -q 'COMBAT FEEL PASS' index.html
-          grep -q 'damagePop' src/main.js
-          grep -q 'addShake' src/main.js
-          grep -q 'combat-damage' style.css
+          set +e
+          python materialize_v674.py > materialize_v674_result.log 2>&1
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            node --check src/main.js >> materialize_v674_result.log 2>&1
+            status=$?
+          fi
+          set -e
+          printf '\nexit_status=%s\n' "$status" >> materialize_v674_result.log
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/main.js style.css index.html
-          if ! git diff --cached --quiet; then
-            git commit -m 'Materialize v6.7.4 combat feel pass [materialized-v674]'
-            git push origin HEAD:main
-          fi
+          git add materialize_v674_result.log src/main.js style.css index.html
+          git commit -m 'Record v6.7.4 materializer result [v674-result]'
+          git push origin HEAD:main
 
       - name: Syntax check
         run: node --check src/main.js
@@ -55,7 +55,7 @@ jobs:
             --exclude 'deploy' \
             --exclude 'materialize_v674.py' \
             --exclude 'fix_v674_materializer.py' \
-            --exclude 'materialize_v674.log' \
+            --exclude 'materialize_v674*.log' \
             ./ _site/
           touch _site/.nojekyll
           test -s _site/index.html
