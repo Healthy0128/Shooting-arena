@@ -12,8 +12,8 @@ let camera=topCamera,cameraMode='top';
 const cameraTarget=new THREE.Vector3();
 scene.add(new THREE.HemisphereLight(0xeaf2ff,0x202534,2.1)); const sun=new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(7,14,8); scene.add(sun);
 
-const ADV='https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0/main/addons/kaykit_character_pack_adventures/Characters/gltf/';
-const SK='https://raw.githubusercontent.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0/main/addons/kaykit_character_pack_skeletons/Characters/gltf/';
+const ADV='./assets/models/characters/';
+const SK='./assets/models/characters/';
 const C={
  ranger:{n:'RANGER',hp:100,sp:4.8,cd:.22,dm:20,bs:13,col:0x35a7ff,super:'rapid',model:ADV+'Knight.glb'},
  crusher:{n:'CRUSHER',hp:135,sp:4,cd:.62,dm:13,bs:11.5,pel:5,spr:.26,col:0xff8a3d,super:'blast',model:ADV+'Barbarian.glb'},
