@@ -21,6 +21,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Apply public gameplay hotfixes
+        run: python hotfix_public_controls.py
+
       - name: Prepare site
         run: |
           mkdir -p _site
