@@ -435,3 +435,33 @@ body.split-arena #timer{top:50%}
   body.split-arena .super-btn{width:84px;height:44px}
   body.split-arena .def-btn{width:76px;height:38px}
 }
+
+
+/* v6.8.0 resolution adaptive split */
+html,body,#game-wrap{
+  width:var(--live-vw,100vw);
+  height:var(--live-vh,100dvh);
+  min-height:0;
+}
+#game{position:absolute;inset:0;width:100%;height:100%}
+body.split-arena .stick-zone{
+  width:50%;height:50%;max-width:none;max-height:none;
+}
+body.split-arena .stick{
+  width:clamp(72px,21vw,112px);
+  height:clamp(72px,21vw,112px);
+}
+body.split-arena .stick-zone.p1 .stick{top:60%}
+body.split-arena .stick-zone.p2 .stick{top:40%}
+body.split-arena .hud{width:min(68vw,520px)}
+body.split-arena .hud.one{bottom:clamp(8px,1.6vh,18px)}
+body.split-arena .hud.two{top:clamp(8px,1.6vh,18px)}
+body.split-arena .super-btn.p1{bottom:clamp(70px,8.5vh,118px)}
+body.split-arena .super-btn.p2{top:clamp(70px,8.5vh,118px)}
+body.split-arena .def-btn.p1{bottom:clamp(118px,14vh,180px)}
+body.split-arena .def-btn.p2{top:clamp(118px,14vh,180px)}
+@media (max-width:430px){
+  body.split-arena .hud{width:72vw;grid-template-columns:62px 1fr 1fr 66px;gap:5px;padding:6px 8px}
+  body.split-arena .name{font-size:10px}
+  body.split-arena .score{letter-spacing:2px}
+}
