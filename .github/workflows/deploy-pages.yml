@@ -24,13 +24,15 @@ jobs:
       - name: Syntax check
         run: node --check src/main.js
 
-      - name: Verify v6.7.9 split view fix build
+      - name: Verify v6.8.0 resolution adaptive split build
         run: |
-          grep -q 'v6.7.9' index.html
-          grep -q 'SPLIT VIEW FIX' index.html
+          grep -q 'v6.8.0' index.html
+          grep -q 'RESOLUTION ADAPTIVE SPLIT' index.html
           grep -q 'function renderSplitArena' src/main.js
+          grep -q 'function getLiveViewport' src/main.js
+          grep -q 'renderer.getDrawingBufferSize' src/main.js
           grep -q 'function screenVectorToWorld' src/main.js
-          grep -q 'split-arena' style.css
+          grep -q 'v6.8.0 resolution adaptive split' style.css
           grep -q 'const chaseCameras=' src/main.js
           grep -q 'function equipWeapon' src/main.js
           grep -q 'function runCountdown' src/main.js
