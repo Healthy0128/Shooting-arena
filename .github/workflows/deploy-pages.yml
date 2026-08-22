@@ -24,6 +24,12 @@ jobs:
       - name: Apply public gameplay hotfixes
         run: python hotfix_public_controls.py
 
+      - name: Apply v6.6.8 stage graphics restore
+        run: python hotfix_v668_graphics.py
+
+      - name: Syntax check
+        run: node --check src/main.js
+
       - name: Prepare site
         run: |
           mkdir -p _site
