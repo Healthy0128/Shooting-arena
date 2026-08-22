@@ -24,18 +24,20 @@ jobs:
       - name: Syntax check
         run: node --check src/main.js
 
-      - name: Verify v6.7.6 asset foundation build
+      - name: Verify v6.7.7 arsenal and intro build
         run: |
-          grep -q 'v6.7.6' index.html
-          grep -q 'ASSET FOUNDATION' index.html
-          grep -q "const ADV='./assets/models/characters/'" src/main.js
-          grep -q "const SK='./assets/models/characters/'" src/main.js
+          grep -q 'v6.7.7' index.html
+          grep -q 'ARSENAL & MATCH INTRO' index.html
+          grep -q 'function equipWeapon' src/main.js
+          grep -q 'function projectileMesh' src/main.js
+          grep -q 'function runCountdown' src/main.js
           test -s assets/models/characters/Knight.glb
-          test -s assets/models/characters/Barbarian.glb
-          test -s assets/models/characters/Mage.glb
-          test -s assets/models/characters/Rogue.glb
-          test -s assets/models/characters/Rogue_Hooded.glb
-          test -s assets/models/characters/Skeleton_Warrior.glb
+          test -s assets/models/weapons/spear_A.gltf
+          test -s assets/models/weapons/hammer_D.gltf
+          test -s assets/models/weapons/dagger_A.gltf
+          test -s assets/models/weapons/staff_A.gltf
+          test -s assets/models/weapons/sword_A.gltf
+          test -s assets/models/weapons/axe_D.gltf
           test -s assets/audio/bgm/01_empacotatron_loop.ogg
           test -s assets/audio/bgm/02_trance_boss_battle.ogg
           test -s assets/audio/bgm/03_space_boss_battle.ogg
