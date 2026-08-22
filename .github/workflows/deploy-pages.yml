@@ -24,13 +24,16 @@ jobs:
       - name: Prepare site
         run: |
           mkdir -p _site
-          cp index.html _site/index.html
-          cp -f manifest.webmanifest _site/ 2>/dev/null || true
-          cp -f apple-touch-icon.png _site/ 2>/dev/null || true
-          cp -f icon-192.png _site/ 2>/dev/null || true
-          cp -f icon-512.png _site/ 2>/dev/null || true
-          if [ -d assets ]; then cp -R assets _site/; fi
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '_site' \
+            --exclude 'deploy' \
+            ./ _site/
           touch _site/.nojekyll
+          test -s _site/index.html
+          test -s _site/style.css
+          test -s _site/src/main.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
