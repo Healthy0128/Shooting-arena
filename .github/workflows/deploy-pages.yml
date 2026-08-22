@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -20,29 +20,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Materialize v6.7.5 custom loadout
-        if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v675]') }}
+      - name: Syntax check
+        run: node --check src/main.js
+
+      - name: Verify v6.7.5 custom loadout build
         run: |
-          python materialize_v675.py
-          node --check src/main.js
           grep -q 'v6.7.5' index.html
           grep -q 'CUSTOM LOADOUT LIVE' index.html
           grep -q 'function defenseMove' src/main.js
           grep -q 'function configFromBuild' src/main.js
           grep -q 'BUILD_LIMIT=10' src/main.js
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/main.js index.html
-          if ! git diff --cached --quiet; then
-            git commit -m 'Materialize v6.7.5 custom loadout [materialized-v675]'
-            git push origin HEAD:main
-          fi
-
-      - name: Syntax check
-        run: node --check src/main.js
 
       - name: Prepare direct site
         run: |
@@ -52,7 +40,6 @@ jobs:
             --exclude '.github' \
             --exclude '_site' \
             --exclude 'deploy' \
-            --exclude 'materialize_v675.py' \
             ./ _site/
           touch _site/.nojekyll
           test -s _site/index.html
