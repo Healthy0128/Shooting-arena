@@ -24,13 +24,25 @@ jobs:
       - name: Syntax check
         run: node --check src/main.js
 
-      - name: Verify v6.7.5 custom loadout build
+      - name: Verify v6.7.6 asset foundation build
         run: |
-          grep -q 'v6.7.5' index.html
-          grep -q 'CUSTOM LOADOUT LIVE' index.html
-          grep -q 'function defenseMove' src/main.js
-          grep -q 'function configFromBuild' src/main.js
-          grep -q 'BUILD_LIMIT=10' src/main.js
+          grep -q 'v6.7.6' index.html
+          grep -q 'ASSET FOUNDATION' index.html
+          grep -q "const ADV='./assets/models/characters/'" src/main.js
+          grep -q "const SK='./assets/models/characters/'" src/main.js
+          test -s assets/models/characters/Knight.glb
+          test -s assets/models/characters/Barbarian.glb
+          test -s assets/models/characters/Mage.glb
+          test -s assets/models/characters/Rogue.glb
+          test -s assets/models/characters/Rogue_Hooded.glb
+          test -s assets/models/characters/Skeleton_Warrior.glb
+          test -s assets/audio/bgm/01_empacotatron_loop.ogg
+          test -s assets/audio/bgm/02_trance_boss_battle.ogg
+          test -s assets/audio/bgm/03_space_boss_battle.ogg
+          test -s assets/audio/voice/count_3.ogg
+          test -s assets/audio/voice/count_2.ogg
+          test -s assets/audio/voice/count_1.ogg
+          test -s assets/audio/voice/go.ogg
 
       - name: Prepare direct site
         run: |
