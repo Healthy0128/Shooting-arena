@@ -1,0 +1,34 @@
+name: Materialize v6.7.7
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v677]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply v6.7.7
+        run: python materialize_v677.py
+      - name: Validate
+        run: |
+          node --check src/main.js
+          grep -q 'v6.7.7' index.html
+          grep -q 'ARSENAL & MATCH INTRO' index.html
+          grep -q 'function equipWeapon' src/main.js
+          grep -q 'function runCountdown' src/main.js
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.js index.html
+          git commit -m 'Materialize v6.7.7 arsenal and intro [materialized-v677]'
+          git push origin HEAD:main
