@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -20,16 +20,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Materialize v6.7.4 combat feel pass
+        if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v674]') }}
+        run: |
+          python materialize_v674.py
+          node --check src/main.js
+          grep -q 'v6.7.4' index.html
+          grep -q 'COMBAT FEEL PASS' index.html
+          grep -q 'damagePop' src/main.js
+          grep -q 'addShake' src/main.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.js style.css index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Materialize v6.7.4 combat feel pass [materialized-v674]'
+            git push origin HEAD:main
+          fi
 
       - name: Syntax check
         run: node --check src/main.js
-
-      - name: Verify v6.7.3 horizontal battle axis
-        run: |
-          grep -q 'v6.7.3' index.html
-          grep -q 'HORIZONTAL BATTLE AXIS' index.html
-          grep -q 'root.position.set(i?4.5:-4.5,0,0)' src/main.js
-          grep -q 'updateSharedCamera' src/main.js
 
       - name: Prepare direct site
         run: |
@@ -39,6 +51,7 @@ jobs:
             --exclude '.github' \
             --exclude '_site' \
             --exclude 'deploy' \
+            --exclude 'materialize_v674.py' \
             ./ _site/
           touch _site/.nojekyll
           test -s _site/index.html
