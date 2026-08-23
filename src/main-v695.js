@@ -1,9 +1,8 @@
 import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
 // v6.9.5 CLEAN SPLIT CORE
-// The checked local build is stored byte-for-byte as one ZIP split into four
-// repository blobs. This loader only restores that source; it does not patch,
-// search/replace, or execute any older camera implementation.
+// Load the checked local build byte-for-byte. No regex patching and no legacy
+// camera implementation is executed.
 const PARTS=[
   '../.v695-payload/part-000',
   '../.v695-payload/part-001',
@@ -22,17 +21,34 @@ const bytes=new Uint8Array(binary.length);
 for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
 
 const zip=await JSZip.loadAsync(bytes);
-const entry=zip.file('duel-arena-v6.9.5-clean-local/src/main.js');
-if(!entry)throw new Error('v6.9.5 canonical src/main.js not found in payload');
-const source=await entry.async('string');
+const root='duel-arena-v6.9.5-clean-local/';
+const mainEntry=zip.file(root+'src/main.js');
+const styleEntry=zip.file(root+'style.css');
+if(!mainEntry||!styleEntry)throw new Error('v6.9.5 canonical source files missing in payload');
 
-// Safety guard: refuse to run if the archive is not the cleaned camera core.
+const [source,canonicalCss]=await Promise.all([
+  mainEntry.async('string'),
+  styleEntry.async('string')
+]);
+
 for(const forbidden of ['updateSharedCamera','fitTopCamera','p2FaceControls','serviceWorker.register']){
   if(source.includes(forbidden))throw new Error(`v6.9.5 rejected stale source: ${forbidden}`);
 }
-if(!source.includes('SPLIT_VIEWS')||!source.includes('syncRendererSize')){
+if(!source.includes('SPLIT_VIEWS')||!source.includes('syncRendererSize')||!source.includes('getBoundingClientRect')){
   throw new Error('v6.9.5 canonical camera core markers missing');
 }
+
+// Make the checked local CSS the only active stylesheet. This removes old
+// 100vh/100dvh and split-line override layers from previous builds.
+document.querySelectorAll('link[rel="stylesheet"]').forEach(link=>{link.disabled=true;});
+const style=document.createElement('style');
+style.id='v695-canonical-style';
+style.textContent=canonicalCss;
+document.head.appendChild(style);
+
+document.title='Duel Arena v6.9.5';
+const badge=document.querySelector('.build-badge');
+if(badge)badge.innerHTML='<strong>v6.9.5</strong><span>CLEAN SPLIT CORE</span>';
 
 const blob=new Blob([source],{type:'text/javascript'});
 const url=URL.createObjectURL(blob);
