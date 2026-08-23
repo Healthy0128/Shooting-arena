@@ -1,0 +1,34 @@
+const banner=document.querySelector('#banner');
+
+export function showBanner(text,ms=650){
+  banner.textContent=text;banner.classList.add('show');
+  setTimeout(()=>banner.classList.remove('show'),ms);
+}
+
+function accuracyOf(p){return p.stats.shots>0?Math.round((p.stats.hits/p.stats.shots)*100):0}
+function statRow(label,a,b,suffix=''){
+  return `<div class="result-stat"><span>${Math.round(a)}${suffix}</span><b>${label}</b><span>${Math.round(b)}${suffix}</span></div>`;
+}
+
+export function renderMatchResult(winner,players){
+  let panel=document.querySelector('#match-result-card');
+  if(!panel){
+    panel=document.createElement('div');panel.id='match-result-card';panel.className='match-result-card';document.body.appendChild(panel);
+  }
+  const a=players[0],b=players[1];
+  panel.innerHTML=`
+    <div class="result-crown">WINNER</div>
+    <div class="result-winner">PLAYER ${winner+1}</div>
+    <div class="result-score">${a.score} <small>—</small> ${b.score}</div>
+    <div class="result-head"><span>P1</span><b>MATCH STATS</b><span>P2</span></div>
+    ${statRow('DAMAGE',a.stats.damageDealt,b.stats.damageDealt)}
+    ${statRow('HITS',a.stats.hits,b.stats.hits)}
+    ${statRow('ACCURACY',accuracyOf(a),accuracyOf(b),'%')}
+    ${statRow('SUPER',a.stats.supers,b.stats.supers)}
+    ${statRow('DEFENSE',a.stats.defenses,b.stats.defenses)}
+    ${statRow('CORE',a.stats.cores,b.stats.cores)}
+    ${statRow('PARRY',a.stats.parries,b.stats.parries)}`;
+  panel.classList.add('show');
+}
+
+export function hideMatchResult(){document.querySelector('#match-result-card')?.classList.remove('show')}
