@@ -57,10 +57,14 @@ export const PASSIVES={
   }
 };
 
+const PASSIVE_COSTS=Object.fromEntries(
+  Object.entries(PASSIVES).map(([key,passive])=>[key,passive.cost])
+);
+
 export const BUILD_COSTS={
   body:{knight:2,barbarian:3,rogueHood:2,mage:2,rogue:2,skeleton:3},
   weapon:{rifle:2,scatter:3,rapid:3,arcane:3,bladegun:2,cannon:4},
   defense:{roll:2,guard:3,step:2,barrier:3,evade:3,parry:4},
   super:{rapid:2,blast:2,dash:2,nova:3,fan:2,boneStorm:3},
-  passive:{coolant:1,stabilizer:1,sprinter:1,armor:2,charger:2,coreHunter:1}
+  passive:PASSIVE_COSTS
 };
