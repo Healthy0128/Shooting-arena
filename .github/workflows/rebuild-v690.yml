@@ -1,15 +1,14 @@
-name: Rebuild canonical v6.9.0
+name: Rebuild canonical v6.9.0 final
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [v690-canonical-final]
 
 permissions:
   contents: write
 
 concurrency:
-  group: rebuild-v690
+  group: rebuild-v690-final
   cancel-in-progress: false
 
 jobs:
@@ -70,10 +69,10 @@ jobs:
           test -s assets/audio/voice/count_3.ogg
           test -s assets/audio/voice/go.ogg
 
-      - name: Commit canonical source
+      - name: Commit canonical source to staging branch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'Rebuild canonical v6.9.0 clean source [canonical-v690]'
-          git push origin HEAD:main
+          git push origin HEAD:v690-canonical-final
