@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { ARENA, SPAWN_X } from './arena-config.js?v=695';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -25,9 +26,6 @@ const sun = new THREE.DirectionalLight(0xffffff,2.2);
 sun.position.set(7,14,8);
 scene.add(sun);
 
-const ARENA={halfW:16.5,halfH:10.5};
-
-const SPAWN_X=12.0;
 let arenaRoot = new THREE.Group();
 scene.add(arenaRoot);
 let obstacles=[];
@@ -1939,4 +1937,3 @@ function loop(now){
 }
 buildArena('square');requestAnimationFrame(loop);
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}));}
-
