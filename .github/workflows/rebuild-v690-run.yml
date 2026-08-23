@@ -1,0 +1,97 @@
+name: Build canonical v6.9.0 ready branch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: canonical-v690-final
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    if: ${{ contains(github.event.head_commit.message || '', '[run-v690-final]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch canonical payload branch
+        run: git fetch origin v690-clean-upload:refs/remotes/origin/v690-clean-upload
+
+      - name: Reconstruct local canonical package
+        run: |
+          set -euo pipefail
+          : > /tmp/v690.b64
+          for n in 00 01 02 03 04 05 06 07; do
+            git show "origin/v690-clean-upload:.v690pkg/chunk${n}" >> /tmp/v690.b64
+          done
+          test "$(wc -c < /tmp/v690.b64)" -eq 60332
+          base64 -d /tmp/v690.b64 > /tmp/v690.tar.gz
+          tar -tzf /tmp/v690.tar.gz >/dev/null
+
+      - name: Remove obsolete source and deployment machinery
+        run: |
+          set -euo pipefail
+          rm -f \
+            materialize_v681.py materialize_v682.py materialize_v683.py materialize_v684.py \
+            prepare_v61.py generate_icons.py ASSET_SOURCES.md sw.js .stage-v690-trigger
+          rm -rf deploy rebuild-v690 .v690-clean .v690-upload .v690pkg
+          rm -f \
+            .github/workflows/materialize-v681.yml \
+            .github/workflows/materialize-v682.yml \
+            .github/workflows/materialize-v683.yml \
+            .github/workflows/materialize-v684.yml \
+            .github/workflows/stage-v690.yml \
+            .github/workflows/rebuild-v690.yml \
+            .github/workflows/rebuild-v690-run.yml
+
+      - name: Install canonical local source
+        run: tar -xzf /tmp/v690.tar.gz -C .
+
+      - name: Validate canonical v6.9.0
+        run: |
+          set -euo pipefail
+          node --check src/main.js
+          python -m json.tool game-config.json >/dev/null
+          grep -q 'v6.9.0' index.html
+          grep -q 'CLEAN CAMERA CORE' index.html
+          grep -q 'function updateTopCamera' src/main.js
+          grep -q 'function updateChaseCamera' src/main.js
+          grep -q 'function renderSplitArena' src/main.js
+          grep -q 'function screenVectorToWorld' src/main.js
+          ! grep -q 'tiltCamera' src/main.js
+          ! grep -q 'fitTopCamera' src/main.js
+          ! grep -q 'updateSharedCamera' src/main.js
+          ! grep -q 'p2FaceControls' src/main.js
+          ! grep -q 'SPAWN_Z' src/main.js
+          ! grep -q 'serviceWorker.register' src/main.js
+          ! grep -q 'arenaCamera' src/main.js
+          ! grep -q 'cameraTarget' src/main.js
+          test ! -e sw.js
+          test ! -d deploy
+          test -s .github/workflows/deploy-pages.yml
+          test -s assets/models/characters/Knight.glb
+          test -s assets/models/characters/Barbarian.glb
+          test -s assets/models/characters/Mage.glb
+          test -s assets/models/characters/Rogue.glb
+          test -s assets/models/characters/Rogue_Hooded.glb
+          test -s assets/models/characters/Skeleton_Warrior.glb
+          test -s assets/models/weapons/spear_A.gltf
+          test -s assets/audio/bgm/01_empacotatron_loop.ogg
+          test -s assets/audio/voice/count_3.ogg
+          test -s assets/audio/voice/go.ogg
+
+      - name: Commit canonical source to ready branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Rebuild canonical v6.9.0 clean source [canonical-v690]'
+          git push origin HEAD:refs/heads/v690-canonical-ready
