@@ -1,0 +1,63 @@
+name: Cleanup v695 loader
+
+on:
+  push:
+    branches:
+      - cleanup/v695-flatten
+
+permissions:
+  contents: write
+
+jobs:
+  flatten:
+    if: ${{ !contains(github.event.head_commit.message, '[flattened-v695]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore canonical main.js from payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .v695-payload/part-* | tr -d '\r\n\t ' | base64 -d > /tmp/v695.zip
+          unzip -p /tmp/v695.zip 'duel-arena-v6.9.5-clean-local/src/main.js' > src/main.js
+          test -s src/main.js
+          grep -q 'SPLIT_VIEWS' src/main.js
+          grep -q 'syncRendererSize' src/main.js
+      - name: Simplify startup path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old='<script type="module" src="./src/main-v695.js?v=695"></script>'
+          new='<script type="module" src="./src/main.js?v=695"></script>'
+          if old not in s:
+              raise SystemExit('expected v695 loader script tag not found')
+          p.write_text(s.replace(old,new))
+          PY
+          rm -f src/main-v695.js
+          rm -rf .v695-payload
+          rm -f .v695-trigger .v695-pr-trigger .v695-exact-trigger .v696-trigger .cleanup-trigger
+      - name: Verify cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/main.js
+          test ! -e src/main-v695.js
+          test ! -e .v695-payload
+          grep -q './src/main.js?v=695' index.html
+          ! grep -R --exclude-dir=.git -n 'main-v695\|\.v695-payload' .
+      - name: Commit flattened source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Flatten v6.9.5 startup and remove payload loader [flattened-v695]'
+          git push
