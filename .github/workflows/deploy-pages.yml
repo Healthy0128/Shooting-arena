@@ -37,8 +37,13 @@ jobs:
           test "$(grep -c "from './loadout-config.js?v=695'" src/game.js)" -eq 1
           grep -q 'id="match-result-stats"' index.html
           grep -q 'id="build-limit-value"' index.html
-          grep -q "import { BUILD_LIMIT } from './loadout-config.js?v=695';" src/ui.js
+          test "$(grep -o 'data-default=' index.html | wc -l)" -eq 12
+          grep -q "from './loadout-config.js?v=695';" src/ui.js
+          grep -q 'BUILD_LIMIT' src/ui.js
+          grep -q 'LOADOUT_OPTIONS' src/ui.js
+          grep -q '^export const LOADOUT_OPTIONS=' src/loadout-config.js
           ! grep -q 'BUILD LIMIT <strong>10</strong>' index.html
+          ! grep -q '<option ' index.html
           ! grep -q 'match-result-card' src/ui.js
           ! grep -q '\.match-result-card' style.css
           ! grep -q '^function hitWall' src/game.js
