@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -22,37 +22,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Validate clean v6.9.5 canonical build
+      - name: Materialize v6.9.6 if staged
+        run: |
+          set -euo pipefail
+          if [ -f migrate_v696.py ]; then
+            python migrate_v696.py
+            node --check src/main.js
+            python -m json.tool game-config.json >/dev/null
+            grep -q 'v6.9.6' index.html
+            grep -q 'game-p1' index.html
+            grep -q 'game-p2' index.html
+            grep -q 'splitRenderers' src/main.js
+            ! test -d .v695-payload
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A
+            git commit -m 'Canonical v6.9.6 dual canvas split' || true
+            git push origin HEAD:main || true
+          fi
+
+      - name: Validate deploy source
         run: |
           set -euo pipefail
           node --check src/main.js
           python -m json.tool game-config.json >/dev/null
-          grep -q 'v6.9.5' index.html
-          grep -q 'CLEAN SPLIT CORE' index.html
-          grep -q 'src/main.js?v=695' index.html
-          grep -q 'JSZip' src/main.js
-          for p in .v695-payload/part-000 .v695-payload/part-001 .v695-payload/part-002 .v695-payload/part-003; do test -s "$p"; done
-          cat .v695-payload/part-000 .v695-payload/part-001 .v695-payload/part-002 .v695-payload/part-003 | base64 -d > /tmp/v695.zip
-          unzip -p /tmp/v695.zip duel-arena-v6.9.5-clean-local/src/main.js > /tmp/canonical-main.js
-          node --check /tmp/canonical-main.js
-          grep -q 'SPLIT_VIEWS' /tmp/canonical-main.js
-          grep -q 'syncRendererSize' /tmp/canonical-main.js
-          grep -q 'getBoundingClientRect' /tmp/canonical-main.js
-          ! grep -q 'updateSharedCamera' /tmp/canonical-main.js
-          ! grep -q 'fitTopCamera' /tmp/canonical-main.js
-          ! grep -q 'p2FaceControls' /tmp/canonical-main.js
-          ! grep -q 'serviceWorker.register' /tmp/canonical-main.js
+          grep -q 'v6.9.6' index.html
+          grep -q 'game-p1' index.html
+          grep -q 'game-p2' index.html
+          grep -q 'splitRenderers' src/main.js
 
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
           mkdir _site
-          rsync -a --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude '_site/' \
-            ./ _site/
+          rsync -a --delete --exclude '.git/' --exclude '.github/' --exclude '_site/' ./ _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
