@@ -27,6 +27,7 @@ jobs:
           set -euo pipefail
           node --check src/main.js
           node --check src/game.js
+          node --check src/arena-config.js
           grep -q './src/main.js?v=695' index.html
           grep -q 'function renderSplitArena' src/game.js
           grep -q 'function updateTopCamera' src/game.js
