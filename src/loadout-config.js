@@ -79,6 +79,11 @@ export const LOADOUT_OPTIONS={
   passive:Object.fromEntries(Object.entries(PASSIVES).map(([key,passive])=>[key,passive.name]))
 };
 
+export const DEFAULT_LOADOUTS=[
+  {body:'knight',weapon:'rifle',defense:'roll',super:'rapid',color:'cyan',passive:'coolant'},
+  {body:'barbarian',weapon:'scatter',defense:'guard',super:'blast',color:'orange',passive:'coolant'}
+];
+
 const PASSIVE_COSTS=Object.fromEntries(
   Object.entries(PASSIVES).map(([key,passive])=>[key,passive.cost])
 );

@@ -65,14 +65,16 @@ jobs:
           check "match result stats host exists" grep -Fq 'id="match-result-stats"' index.html
           check "build limit host exists" grep -Fq 'id="build-limit-value"' index.html
 
-          echo "CHECK: 12 loadout defaults"
-          test "$(grep -Fo 'data-default=' index.html | wc -l | tr -d ' ')" -eq 12 || { echo '::error::12 loadout defaults'; exit 1; }
-          echo "PASS: 12 loadout defaults"
+          echo "CHECK: no HTML-owned loadout defaults"
+          test "$(grep -Fo 'data-default=' index.html | wc -l | tr -d ' ')" -eq 0 || { echo '::error::HTML-owned loadout defaults returned'; exit 1; }
+          echo "PASS: no HTML-owned loadout defaults"
 
           check "ui reads loadout config" grep -Fq "from './loadout-config.js?v=695';" src/ui.js
           check "ui uses BUILD_LIMIT" grep -Fq 'BUILD_LIMIT' src/ui.js
           check "ui uses LOADOUT_OPTIONS" grep -Fq 'LOADOUT_OPTIONS' src/ui.js
+          check "ui uses DEFAULT_LOADOUTS" grep -Fq 'DEFAULT_LOADOUTS' src/ui.js
           check "loadout options are exported" grep -Fq 'export const LOADOUT_OPTIONS=' src/loadout-config.js
+          check "default loadouts are exported" grep -Fq 'export const DEFAULT_LOADOUTS=' src/loadout-config.js
 
           echo "CHECK: no hard-coded build limit in HTML"
           if grep -Fq 'BUILD LIMIT <strong>10</strong>' index.html; then echo '::error::hard-coded build limit returned'; exit 1; fi

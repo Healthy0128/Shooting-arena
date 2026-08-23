@@ -1,23 +1,29 @@
-import { BUILD_LIMIT, LOADOUT_OPTIONS } from './loadout-config.js?v=695';
+import { BUILD_LIMIT, LOADOUT_OPTIONS, DEFAULT_LOADOUTS } from './loadout-config.js?v=695';
 
 const banner=document.querySelector('#banner');
 const resultStats=document.querySelector('#match-result-stats');
 const buildLimitValue=document.querySelector('#build-limit-value');
 let bannerTimer=null;
 
-document.querySelectorAll('.loadout-card select[data-slot]').forEach(select=>{
-  const options=LOADOUT_OPTIONS[select.dataset.slot];
-  const entries=Object.entries(options);
-  const defaultIndex=entries.findIndex(([value])=>value===select.dataset.default);
-  if(defaultIndex>0)entries.unshift(entries.splice(defaultIndex,1)[0]);
-  const nodes=entries.map(([value,label])=>{
-    const option=document.createElement('option');
-    option.value=value;
-    option.textContent=label;
-    return option;
+document.querySelectorAll('.loadout-card').forEach(card=>{
+  const player=Number(card.dataset.player);
+  const defaults=DEFAULT_LOADOUTS[player]||DEFAULT_LOADOUTS[0];
+  card.querySelectorAll('select[data-slot]').forEach(select=>{
+    const slot=select.dataset.slot;
+    const options=LOADOUT_OPTIONS[slot];
+    const entries=Object.entries(options);
+    const defaultValue=defaults[slot];
+    const defaultIndex=entries.findIndex(([value])=>value===defaultValue);
+    if(defaultIndex>0)entries.unshift(entries.splice(defaultIndex,1)[0]);
+    const nodes=entries.map(([value,label])=>{
+      const option=document.createElement('option');
+      option.value=value;
+      option.textContent=label;
+      return option;
+    });
+    select.replaceChildren(...nodes);
+    if(defaultValue in options)select.value=defaultValue;
   });
-  select.replaceChildren(...nodes);
-  if(select.dataset.default in options)select.value=select.dataset.default;
 });
 
 buildLimitValue.textContent=BUILD_LIMIT;
