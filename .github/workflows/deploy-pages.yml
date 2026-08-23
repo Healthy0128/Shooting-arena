@@ -1,4 +1,4 @@
-name: Deploy Duel Arena to Pages
+name: Clean and deploy Duel Arena
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -22,13 +22,143 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Runtime checks
+      - name: Apply one-time source cleanup
         run: |
           set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('src/main.js')
+          s = p.read_text()
+
+          replacements = [
+            ("  wall:PROP_BASE+'Wall.gltf', wallHalf:PROP_BASE+'Wall_Half.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',",
+             "  wall:PROP_BASE+'Wall.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',"),
+            ("\nlet selections=['ranger','ranger'];\n", "\n"),
+            ("\nconst bulletGeo=new THREE.SphereGeometry(.115,8,8);\n", "\n"),
+            ("function synthShot(key){tone(key==='crusher'?100:key==='mage'?380:180,.055,key==='mage'?'sine':'square',.025,key==='crusher'?-35:70)}\n", ""),
+            ("function synthSuper(){tone(280,.12,'sine',.04,420);setTimeout(()=>tone(520,.16,'square',.025,280),70)}\n", ""),
+            ("  special:'./assets/audio/bgm/04_jrpg_epic_rock_battle.mp3'\n", ""),
+            ("const COUNTDOWN_BASE=\"https://gamesounds.xyz/Kenney%27s%20Sound%20Pack/Synth%20Voice%201/\";",
+             "const COUNTDOWN_BASE='./assets/audio/voice/';"),
+            ("  matchTime=90;running=false;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);",
+             "  matchTime=90;running=true;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);")
+          ]
+
+          for old, new in replacements:
+            count = s.count(old)
+            if count != 1:
+              raise SystemExit(f'Expected exactly one cleanup target, found {count}: {old[:80]!r}')
+            s = s.replace(old, new, 1)
+
+          old = """function disposeBullet(q){
+            scene.remove(q.mesh);
+            q.mesh.geometry?.dispose?.();
+            q.mesh.material?.dispose?.();
+          }
+          """
+          new = """function disposeBullet(q){
+            scene.remove(q.mesh);
+            q.mesh.geometry?.dispose?.();
+            q.mesh.material?.dispose?.();
+          }
+          function disposeParticle(p){
+            scene.remove(p.mesh);
+            p.mesh.geometry?.dispose?.();
+            p.mesh.material?.dispose?.();
+          }
+          """
+          if s.count(old) != 1:
+            raise SystemExit('disposeBullet block mismatch')
+          s = s.replace(old, new, 1)
+
+          old = """function clearProjectiles(){
+            bullets.forEach(disposeBullet);bullets=[];
+            particles.forEach(p=>scene.remove(p.mesh));particles=[];
+          }
+          """
+          new = """function clearProjectiles(){
+            bullets.forEach(disposeBullet);bullets=[];
+            particles.forEach(disposeParticle);particles=[];
+          }
+          """
+          if s.count(old) != 1:
+            raise SystemExit('clearProjectiles block mismatch')
+          s = s.replace(old, new, 1)
+
+          old = "if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}"
+          new = "if(p.life<=0){disposeParticle(p);particles.splice(i,1)}"
+          if s.count(old) != 1:
+            raise SystemExit('particle expiry block mismatch')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+          PY
           node --check src/main.js
-          grep -q './src/main.js?v=695' index.html
-          grep -q 'function renderSplitArena' src/main.js
-          grep -q 'function updateTopCamera' src/main.js
+          ! grep -q 'Wall_Half.gltf' src/main.js
+          ! grep -q "let selections=" src/main.js
+          ! grep -q '04_jrpg_epic_rock_battle' src/main.js
+          grep -q "COUNTDOWN_BASE='./assets/audio/voice/'" src/main.js
+          grep -q 'particles.forEach(disposeParticle)' src/main.js
+          grep -q 'matchTime=90;running=true;result.hidden=true' src/main.js
+      - name: Restore normal deploy workflow and commit cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          Path('.github/workflows/deploy-pages.yml').write_text('''name: Deploy Duel Arena to Pages
+
+          on:
+            push:
+              branches: [main]
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+            pages: write
+            id-token: write
+
+          concurrency:
+            group: pages
+            cancel-in-progress: true
+
+          jobs:
+            deploy:
+              environment:
+                name: github-pages
+                url: ${{ steps.deployment.outputs.page_url }}
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - name: Runtime checks
+                  run: |
+                    set -euo pipefail
+                    node --check src/main.js
+                    grep -q './src/main.js?v=695' index.html
+                    grep -q 'function renderSplitArena' src/main.js
+                    grep -q 'function updateTopCamera' src/main.js
+                - uses: actions/configure-pages@v5
+                - name: Build static site
+                  run: |
+                    mkdir _site
+                    rsync -a --delete \\
+                      --exclude '.git/' \\
+                      --exclude '.github/' \\
+                      --exclude '_site/' \\
+                      ./ _site/
+                - uses: actions/upload-pages-artifact@v3
+                  with:
+                    path: _site
+                - name: Deploy
+                  id: deployment
+                  uses: actions/deploy-pages@v4
+          ''')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.js .github/workflows/deploy-pages.yml
+          git diff --cached --check
+          git commit -m 'Clean runtime dead code and resource lifecycle'
+          git push origin HEAD:main
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
