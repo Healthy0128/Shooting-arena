@@ -56,6 +56,12 @@ jobs:
           test "$(grep -Fc "from './loadout-config.js?v=695'" src/game.js)" -eq 1 || { echo '::error::loadout import count'; exit 1; }
           echo "PASS: loadout import count"
 
+          check "arena import exists" grep -Fq "from './arena-config.js?v=695';" src/game.js
+          check "ARENA is exported" grep -Fq 'export const ARENA=' src/arena-config.js
+          check "SPAWN_X is exported" grep -Fq 'export const SPAWN_X=' src/arena-config.js
+          check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
+          check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
+
           check "match result stats host exists" grep -Fq 'id="match-result-stats"' index.html
           check "build limit host exists" grep -Fq 'id="build-limit-value"' index.html
 
