@@ -33,6 +33,9 @@ jobs:
           grep -q './src/main.js?v=695' index.html
           grep -q 'function renderSplitArena' src/game.js
           grep -q 'function updateTopCamera' src/game.js
+          test "$(grep -c "from './ui.js?v=695'" src/game.js)" -eq 1
+          test "$(grep -c "from './loadout-config.js?v=695'" src/game.js)" -eq 1
+          ! grep -q '^function hitWall' src/game.js
           ! grep -q '^function showBanner' src/game.js
           ! grep -q '^function renderMatchResult' src/game.js
           ! grep -q '^function hideMatchResult' src/game.js
