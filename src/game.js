@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
 import { ARENA, SPAWN_X } from './arena-config.js?v=695';
+import { showBanner, renderMatchResult, hideMatchResult } from './ui.js?v=695';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -1229,11 +1230,7 @@ function canMoveTo(pos,r){
   });
 }
 
-const banner=$('#banner'), result=$('#result');
-function showBanner(text,ms=650){
-  banner.textContent=text;banner.classList.add('show');
-  setTimeout(()=>banner.classList.remove('show'),ms);
-}
+const result=$('#result');
 
 function resetPlayer(i){
   const p=players[i];p.hp=p.maxHp;p.alive=true;p.invuln=1.15;p.heat=0;p.overheated=false;p.recovery=0;p.fireHeld=false;p.powerBuff=0;
@@ -1351,36 +1348,10 @@ function ko(victim,attacker){
   else matchLater(()=>resetPlayer(victim),1100);
 }
 
-function accuracyOf(p){return p.stats.shots>0?Math.round((p.stats.hits/p.stats.shots)*100):0}
-function statRow(label,a,b,suffix=''){
-  return `<div class="result-stat"><span>${Math.round(a)}${suffix}</span><b>${label}</b><span>${Math.round(b)}${suffix}</span></div>`;
-}
-function renderMatchResult(winner){
-  let panel=document.querySelector('#match-result-card');
-  if(!panel){
-    panel=document.createElement('div');panel.id='match-result-card';panel.className='match-result-card';document.body.appendChild(panel);
-  }
-  const a=players[0],b=players[1];
-  panel.innerHTML=`
-    <div class="result-crown">WINNER</div>
-    <div class="result-winner">PLAYER ${winner+1}</div>
-    <div class="result-score">${a.score} <small>—</small> ${b.score}</div>
-    <div class="result-head"><span>P1</span><b>MATCH STATS</b><span>P2</span></div>
-    ${statRow('DAMAGE',a.stats.damageDealt,b.stats.damageDealt)}
-    ${statRow('HITS',a.stats.hits,b.stats.hits)}
-    ${statRow('ACCURACY',accuracyOf(a),accuracyOf(b),'%')}
-    ${statRow('SUPER',a.stats.supers,b.stats.supers)}
-    ${statRow('DEFENSE',a.stats.defenses,b.stats.defenses)}
-    ${statRow('CORE',a.stats.cores,b.stats.cores)}
-    ${statRow('PARRY',a.stats.parries,b.stats.parries)}`;
-  panel.classList.add('show');
-}
-function hideMatchResult(){document.querySelector('#match-result-card')?.classList.remove('show')}
-
 function finish(w){
   matchGeneration++;
   running=false;stopBGM();stopRealBGM();
-  renderMatchResult(w);
+  renderMatchResult(w,players);
   $('#winner').textContent=`P${w+1} WIN!`;
   $('#result-score').textContent=`${players[0].score} - ${players[1].score}`;
   result.hidden=false;
