@@ -1,4 +1,5 @@
 const banner=document.querySelector('#banner');
+const resultStats=document.querySelector('#match-result-stats');
 
 export function showBanner(text,ms=650){
   banner.textContent=text;banner.classList.add('show');
@@ -10,16 +11,9 @@ function statRow(label,a,b,suffix=''){
   return `<div class="result-stat"><span>${Math.round(a)}${suffix}</span><b>${label}</b><span>${Math.round(b)}${suffix}</span></div>`;
 }
 
-export function renderMatchResult(winner,players){
-  let panel=document.querySelector('#match-result-card');
-  if(!panel){
-    panel=document.createElement('div');panel.id='match-result-card';panel.className='match-result-card';document.body.appendChild(panel);
-  }
+export function renderMatchResult(_winner,players){
   const a=players[0],b=players[1];
-  panel.innerHTML=`
-    <div class="result-crown">WINNER</div>
-    <div class="result-winner">PLAYER ${winner+1}</div>
-    <div class="result-score">${a.score} <small>—</small> ${b.score}</div>
+  resultStats.innerHTML=`
     <div class="result-head"><span>P1</span><b>MATCH STATS</b><span>P2</span></div>
     ${statRow('DAMAGE',a.stats.damageDealt,b.stats.damageDealt)}
     ${statRow('HITS',a.stats.hits,b.stats.hits)}
@@ -28,7 +22,6 @@ export function renderMatchResult(winner,players){
     ${statRow('DEFENSE',a.stats.defenses,b.stats.defenses)}
     ${statRow('CORE',a.stats.cores,b.stats.cores)}
     ${statRow('PARRY',a.stats.parries,b.stats.parries)}`;
-  panel.classList.add('show');
 }
 
-export function hideMatchResult(){document.querySelector('#match-result-card')?.classList.remove('show')}
+export function hideMatchResult(){resultStats.replaceChildren()}
