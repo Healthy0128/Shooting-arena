@@ -1,0 +1,37 @@
+name: Materialize v6.8.3
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ !contains(github.event.head_commit.message || '', '[materialized-v683]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply v6.8.3
+        run: python materialize_v683.py
+      - name: Validate
+        run: |
+          node --check src/main.js
+          grep -q 'v6.8.3' index.html
+          grep -q 'WIDE CENTER FRAMING' index.html
+          grep -q 'const safeY=portrait?.50:.66' src/main.js
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/main.js index.html
+          if git diff --cached --quiet; then
+            echo 'Already materialized'
+            exit 0
+          fi
+          git commit -m 'Materialize v6.8.3 wide center framing [materialized-v683]'
+          git push origin HEAD:main
