@@ -20,7 +20,12 @@ jobs:
       - name: Reconstruct canonical package
         run: |
           set -euo pipefail
-          cat .v690pkg/chunk* > /tmp/v690.b64
+          : > /tmp/v690.b64
+          for n in 00 01 02 03 04 05 06; do
+            head -c 8000 ".v690pkg/chunk${n}" >> /tmp/v690.b64
+          done
+          cat .v690pkg/chunk07 >> /tmp/v690.b64
+          test "$(wc -c < /tmp/v690.b64)" -eq 59732
           base64 -d /tmp/v690.b64 > /tmp/v690.tar.gz
           tar -tzf /tmp/v690.tar.gz >/dev/null
 
