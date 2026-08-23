@@ -33,6 +33,17 @@ jobs:
           grep -q './src/main.js?v=695' index.html
           grep -q 'function renderSplitArena' src/game.js
           grep -q 'function updateTopCamera' src/game.js
+          ! grep -q '^function showBanner' src/game.js
+          ! grep -q '^function renderMatchResult' src/game.js
+          ! grep -q '^function hideMatchResult' src/game.js
+          ! grep -q '^const CHARACTERS' src/game.js
+          ! grep -q '^const BODY_SOURCE' src/game.js
+          ! grep -q '^const BODY_META' src/game.js
+          ! grep -q '^const WEAPON_SOURCE' src/game.js
+          ! grep -q '^const COLOR_VALUES' src/game.js
+          ! grep -q '^const BUILD_LIMIT' src/game.js
+          ! grep -q '^const PASSIVES' src/game.js
+          ! grep -q '^const BUILD_COSTS' src/game.js
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
