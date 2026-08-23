@@ -22,29 +22,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate v6.9.4 canvas viewport sync
+
+      - name: Validate clean v6.9.5 canonical build
         run: |
           set -euo pipefail
           node --check src/main.js
-          node --check src/main-v694.js
           python -m json.tool game-config.json >/dev/null
-          grep -q 'v6.9.4' index.html
-          grep -q 'CANVAS VIEWPORT SYNC' index.html
-          grep -q 'main-v694.js' index.html
-          grep -q 'style-v694.css' index.html
-          grep -q 'canvas.getBoundingClientRect()' src/main-v694.js
-          grep -q 'renderer.setSize(w,h,false)' src/main-v694.js
-          grep -q 'SPLIT_VIEWS' src/main-v694.js
-          grep -q '100dvh' style-v694.css
-          test ! -e src/main-v693.js
-          ! grep -q 'serviceWorker.register' src/main.js
-          ! grep -q 'updateSharedCamera' src/main.js
-          ! grep -q 'tiltCamera' src/main.js
-          ! grep -q 'fitTopCamera' src/main.js
-          ! grep -q 'p2FaceControls' src/main.js
-          ! grep -q 'SPAWN_Z' src/main.js
-          ! grep -q 'arenaCamera' src/main.js
-          ! grep -q 'cameraTarget' src/main.js
+          grep -q 'v6.9.5' index.html
+          grep -q 'CLEAN SPLIT CORE' index.html
+          grep -q 'src/main.js?v=695' index.html
+          grep -q 'JSZip' src/main.js
+          for p in .v695-payload/part-000 .v695-payload/part-001 .v695-payload/part-002 .v695-payload/part-003; do test -s "$p"; done
+          cat .v695-payload/part-000 .v695-payload/part-001 .v695-payload/part-002 .v695-payload/part-003 | base64 -d > /tmp/v695.zip
+          unzip -p /tmp/v695.zip duel-arena-v6.9.5-clean-local/src/main.js > /tmp/canonical-main.js
+          node --check /tmp/canonical-main.js
+          grep -q 'SPLIT_VIEWS' /tmp/canonical-main.js
+          grep -q 'syncRendererSize' /tmp/canonical-main.js
+          grep -q 'getBoundingClientRect' /tmp/canonical-main.js
+          ! grep -q 'updateSharedCamera' /tmp/canonical-main.js
+          ! grep -q 'fitTopCamera' /tmp/canonical-main.js
+          ! grep -q 'p2FaceControls' /tmp/canonical-main.js
+          ! grep -q 'serviceWorker.register' /tmp/canonical-main.js
+
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
