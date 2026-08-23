@@ -12,12 +12,12 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 ## 現在の構成
 
-- `index.html` — 画面UIとゲームエントリ
+- `index.html` — 画面UIとゲームエントリ。ロードアウト候補や初期値は持たず、構造だけを定義
 - `src/main.js` — 安定した起動用エントリポイント
 - `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
-- `src/arena-config.js` — アリーナ共通定数（`ARENA` / `SPAWN_X`）。ステージ静的設定はまだ `game.js` 側
-- `src/ui.js` — バナー表示と試合結果統計。既存の `#result` 画面を利用し、別結果カードは作らない
-- `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。対応表や共通値は可能な限り1か所を正として派生生成
+- `src/arena-config.js` — アリーナ共通定数（`ARENA` / `SPAWN_X`）。`PROPS` / `STAGE_THEMES` は原子移動できるまで `game.js` が唯一の所有者
+- `src/ui.js` — ロードアウトUI初期化、ビルド上限表示、バナー表示、試合結果統計
+- `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。候補一覧、初期ロードアウト、BUILD LIMITもここを正とする
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
 - `assets/models/weapons/` — 使用中の6武器と依存ファイル
@@ -38,22 +38,27 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - 構文・重複・参照関係を確認してから `main` に反映する
 - 既に分離済みの責務を `game.js` に再定義しない。CIでも再発を検出する
 - 同じ設定値を複数の表へ手書きせず、可能なら1つの設定から派生させる
+- 原子移動できない責務は、新旧を並存させず旧側を唯一の所有者として維持する
 
 ### 分割進捗
 
 1. **アリーナ設定 — 進行中**
    - `ARENA` / `SPAWN_X` は `arena-config.js` へ移動済み
-   - `PROPS` / `STAGE_THEMES` は安全な純粋移動を検証中
+   - `PROPS` / `STAGE_THEMES` は `game.js` が現在の唯一の所有者
+   - `game.js` から同一変更で削除できる時だけ `arena-config.js` へ移す
 2. **キャラクター・装備・ビルド設定 — 完了**
    - `loadout-config.js` へ分離済み
    - `BODY_SOURCE`、`WEAPON_SOURCE`、キャラ由来色、PASSIVEコストの二重管理を解消済み
+   - ロードアウト候補、初期ロードアウト、BUILD LIMITも設定側へ一本化済み
 3. **UI表示処理 — 第1段階完了**
    - バナーと試合結果統計を `ui.js` へ分離済み
    - 旧結果オーバーレイと追加結果カードの二重実装を統合済み
+   - ロードアウト候補生成と初期値反映も `ui.js` が担当
    - HUD / ワールドステータスはまだ `game.js` 側
 4. **入力処理 — 候補作成・未反映**
-   - `input.js` は依存注入型の候補を検証済み
-   - 旧入力実装と同一変更で置換できるまで `main` には追加しない
+   - `input.js` は依存注入型の候補を再設計・検証済み
+   - `screenVectorToWorld()` はcamera境界として `game.js` に残す
+   - タッチ／キー入力だけを移し、旧入力実装と同一変更で置換できるまで `main` には追加しない
 5. **カメラ・レンダリング — 未着手**
 6. **ステージ生成 — 未着手**
 7. **プレイヤー・戦闘処理 — 未着手**
@@ -126,6 +131,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `src/loadout-config.js` の構文
 - `index.html` が正しいエントリポイントを参照していること
 - 分離済み定義が `src/game.js` に重複していないこと
+- 移動途中の責務が新旧両方に重複していないこと
 - 分離済みモジュールのimportが1回だけ存在すること
 - 現在のカメラ／レンダリング経路に必要な主要関数が存在すること
 

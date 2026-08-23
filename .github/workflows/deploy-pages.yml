@@ -59,8 +59,12 @@ jobs:
           check "arena import exists" grep -Fq "from './arena-config.js?v=695';" src/game.js
           check "ARENA is exported" grep -Fq 'export const ARENA=' src/arena-config.js
           check "SPAWN_X is exported" grep -Fq 'export const SPAWN_X=' src/arena-config.js
-          check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
-          check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
+          check "PROPS currently owned by game.js" grep -Fq 'const PROPS=' src/game.js
+          check "STAGE_THEMES currently owned by game.js" grep -Fq 'const STAGE_THEMES=' src/game.js
+
+          echo "CHECK: no duplicate stage config in arena-config.js"
+          if grep -Fq 'export const PROPS=' src/arena-config.js || grep -Fq 'export const STAGE_THEMES=' src/arena-config.js; then echo '::error::stage config duplicated before atomic move'; exit 1; fi
+          echo "PASS: no duplicate stage config in arena-config.js"
 
           check "match result stats host exists" grep -Fq 'id="match-result-stats"' index.html
           check "build limit host exists" grep -Fq 'id="build-limit-value"' index.html
