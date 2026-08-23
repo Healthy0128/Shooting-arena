@@ -1,0 +1,85 @@
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const canvas = $('#game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1118);
+scene.fog = new THREE.Fog(0x0d1118, 36, 62);
+
+const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
+topCamera.position.set(0,38,.01);topCamera.up.set(1,0,0);topCamera.lookAt(0,0,0);
+const chaseCameras=[new THREE.PerspectiveCamera(58,1,.1,120),new THREE.PerspectiveCamera(58,1,.1,120)];
+let camera=topCamera;
+let cameraMode='top';
+const _baseRender=renderer.render.bind(renderer);
+
+scene.add(new THREE.HemisphereLight(0xeaf2ff,0x202534,2.1));
+const sun = new THREE.DirectionalLight(0xffffff,2.2);
+sun.position.set(7,14,8);
+scene.add(sun);
+
+const ARENA={halfW:16.5,halfH:10.5};
+
+const SPAWN_X=12.0;
+let arenaRoot = new THREE.Group();
+scene.add(arenaRoot);
+let obstacles=[];
+let destructibles=[];
+let bushes=[];
+
+const GLB_BASE_ADV = './assets/models/characters/';
+const GLB_BASE_SKEL = './assets/models/characters/';
+
+const WEAPON_BASE = './assets/models/weapons/';
+
+const PROP_BASE = './assets/models/stage/';
+const PROPS={
+  wall:PROP_BASE+'Wall.gltf', wallHalf:PROP_BASE+'Wall_Half.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',
+  pillarA:PROP_BASE+'Pillar_A.gltf', pillarB:PROP_BASE+'Pillar_B.gltf',
+  ammo:PROP_BASE+'Ammo_Box.gltf', boxA:PROP_BASE+'Box_A.gltf', boxB:PROP_BASE+'Box_B.gltf', boxC:PROP_BASE+'Box_C.gltf',
+  barrelA:PROP_BASE+'Barrel_A.gltf', barrelB:PROP_BASE+'Barrel_B.gltf', barrelC:PROP_BASE+'Barrel_C.gltf',
+  floor:PROP_BASE+'Floor.gltf', floorDirt:PROP_BASE+'Floor_Dirt.gltf',
+  locker:PROP_BASE+'Locker.gltf', workbench:PROP_BASE+'Workbench.gltf', pallet:PROP_BASE+'Pallet_Large.gltf'
+};
+
+const STAGE_THEMES={
+  square:{bg:0x0d1520,fog:0x0d1520,floor:0x34445b,edge:0x1a2535,accent:0x59b8ff,accentSoft:0xa7dcff,rim:0x55708d,glow:0x7fd7ff,floorProp:PROPS.floor},
+  pillars:{bg:0x15161f,fog:0x15161f,floor:0x4a4549,edge:0x2a262b,accent:0xe5ba68,accentSoft:0xf8deb2,rim:0x75685f,glow:0xffd27a,floorProp:PROPS.floor},
+  ring:{bg:0x191117,fog:0x191117,floor:0x433542,edge:0x251a25,accent:0xff6f96,accentSoft:0xffc1d5,rim:0x7d5067,glow:0xff97b6,floorProp:PROPS.floor},
+  cross:{bg:0x101922,fog:0x101922,floor:0x31404d,edge:0x18222b,accent:0x4fd6d6,accentSoft:0xc6ffff,rim:0x608e95,glow:0x8affff,floorProp:PROPS.floor},
+  hex:{bg:0x120f1f,fog:0x120f1f,floor:0x2f2948,edge:0x1b1630,accent:0x9f74ff,accentSoft:0xd8c3ff,rim:0x6f62ad,glow:0xbc97ff,floorProp:PROPS.floor},
+  fort:{bg:0x181613,fog:0x181613,floor:0x5a4e44,edge:0x312820,accent:0xd6b789,accentSoft:0xf4e1c3,rim:0x8b7152,glow:0xffd9a0,floorProp:PROPS.floorDirt},
+  bush:{bg:0x0e1812,fog:0x0e1812,floor:0x39523d,edge:0x223126,accent:0x72d98c,accentSoft:0xd6ffe1,rim:0x568061,glow:0x9effb0,floorProp:PROPS.floorDirt},
+  crates:{bg:0x171412,fog:0x171412,floor:0x4d443d,edge:0x28231f,accent:0xffa85e,accentSoft:0xffddbc,rim:0x866c55,glow:0xffc178,floorProp:PROPS.floor}
+};
+
+function getArenaTheme(type){
+  return STAGE_THEMES[type]||STAGE_THEMES.square;
+}
+
+
+
+const CHARACTERS = {
+  ranger:{recovery:.08,defense:'roll',weaponStyle:'rifle',bulletRadius:.14,bulletLife:1.75,recoil:.10,name:'RANGER', hp:100, speed:4.8, fireCd:.22, damage:20, bulletSpeed:13, spread:0, color:0x35a7ff, super:'rapid', model:GLB_BASE_ADV+'Knight.glb', weaponModel:WEAPON_BASE+'sword_A.gltf', weaponScale:.85},
+  crusher:{recovery:.34,defense:'guard',weaponStyle:'scatter',bulletRadius:.12,bulletLife:1.15,recoil:.22,name:'CRUSHER', hp:135, speed:4.0, fireCd:.62, damage:13, pellets:5, bulletSpeed:11.5, spread:.26, color:0xff8a3d, super:'blast', model:GLB_BASE_ADV+'Barbarian.glb', weaponModel:WEAPON_BASE+'axe_A.gltf', weaponScale:.9},
+  dash:{recovery:.035,defense:'step',weaponStyle:'rapid',bulletRadius:.10,bulletLife:1.45,recoil:.06,name:'DASH', hp:82, speed:6.2, fireCd:.17, damage:13, bulletSpeed:14.5, spread:.03, color:0x9c6cff, super:'dash', model:GLB_BASE_ADV+'Rogue_Hooded.glb', weaponModel:WEAPON_BASE+'dagger_A.gltf', weaponScale:.9},
+  mage:{recovery:.18,defense:'barrier',weaponStyle:'arcane',bulletRadius:.20,bulletLife:2.0,recoil:.08,name:'MAGE', hp:88, speed:4.6, fireCd:.34, damage:24, bulletSpeed:10.5, spread:.02, color:0x5be0d0, super:'nova', model:GLB_BASE_ADV+'Mage.glb', weaponModel:WEAPON_BASE+'staff_A.gltf', weaponScale:.78},
+  rogue:{recovery:.07,defense:'evade',weaponStyle:'bladegun',bulletRadius:.13,bulletLife:1.55,recoil:.09,name:'ROGUE', hp:92, speed:5.7, fireCd:.19, damage:15, bulletSpeed:14, spread:.06, color:0xffd45a, super:'fan', model:GLB_BASE_ADV+'Rogue.glb', weaponModel:WEAPON_BASE+'sword_B.gltf', weaponScale:.8},
+  skeleton:{recovery:.42,defense:'parry',weaponStyle:'cannon',bulletRadius:.24,bulletLife:1.70,recoil:.28,name:'BONES', hp:112, speed:4.35, fireCd:.42, damage:28, bulletSpeed:11.8, spread:.01, color:0xded6c1, super:'boneStorm', model:GLB_BASE_SKEL+'Skeleton_Warrior.glb', weaponModel:WEAPON_BASE+'axe_B.gltf', weaponScale:.9}
+};
+const BODY_SOURCE={knight:'ranger',barbarian:'crusher',rogueHood:'dash',mage:'mage',rogue:'rogue',skeleton:'skeleton'};
+const BODY_META={
+  knight:{label:'BALANCED',weight:'medium',hpMul:1.00,speedMul:1.00,radius:.58,knockbackResist:.12,recoilResist:.10,dashMul:1.00},
+  barbarian:{label:'HEAVY',weight:'heavy',hpMul:1.16,speedMul:.88,radius:.66,knockbackResist:.34,recoilResist:.28,dashMul:.84},
+  rogueHood:{label:'LIGHT',weight:'light',hpMul:.88,speedMul:1.16,radius:.52,knockbackResist:-.10,recoilResist:-.06,dashMul:1.16},
+  mage:{label:'TECH',weight:'medium',hpMul:.94,speedMul:.98,radius:.56,knockbackResist:.04,recoilResist:.06,dashMul:1.00},
+  rogue:{label:'AGILE',weight:'light',hpMul:.92,speedMul:1.10,radius:.53,knockbackResist:-.06,recoilResist:-.02,dashMul:1.10},
+  skeleton:{label:'ARMORED',weight:'heavy',hpMul:1.10,speedMul:.92,radius:.62,knockbackResist:.24,recoilResist:.18,dashMul:.90}
+};
