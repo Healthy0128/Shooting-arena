@@ -3,19 +3,106 @@ name: Deploy Duel Arena to Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  cleanup-runtime:
+    if: github.event_name == 'pull_request' && github.head_ref == 'cleanup/resource-ownership'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/resource-ownership
+      - name: Clean dead fields and resource ownership
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def once(text, old, new, label):
+              n=text.count(old)
+              if n!=1: raise SystemExit(f'{label}: expected 1, got {n}')
+              return text.replace(old,new,1)
+
+          p=Path('src/main.js')
+          s=p.read_text()
+
+          old="""function clearGroup(g){
+  // Cached GLTF clones share geometry/material resources. Removing a stage must
+  // not dispose those shared resources or later stage/model loads can render broken.
+  while(g.children.length)g.remove(g.children[g.children.length-1]);
+}"""
+          new="""function disposeMaterial(material,materials){
+  const list=Array.isArray(material)?material:[material];
+  list.forEach(m=>{if(m&&!materials.has(m)){materials.add(m);m.dispose?.()}});
+}
+function disposeOwnedTree(root,geometries=new Set(),materials=new Set()){
+  if(root.userData?.sharedAsset){root.parent?.remove(root);return}
+  [...root.children].forEach(child=>disposeOwnedTree(child,geometries,materials));
+  if(root.geometry&&!geometries.has(root.geometry)){geometries.add(root.geometry);root.geometry.dispose?.()}
+  if(root.material)disposeMaterial(root.material,materials);
+  root.parent?.remove(root);
+}
+function clearGroup(g){
+  const geometries=new Set(),materials=new Set();
+  [...g.children].forEach(child=>disposeOwnedTree(child,geometries,materials));
+}"""
+          s=once(s,old,new,'owned disposer')
+
+          s=once(s,"    const model=gltf.scene.clone(true);\n    const s=opts.scale??1;","    const model=gltf.scene.clone(true);\n    model.userData.sharedAsset=true;\n    const s=opts.scale??1;",'mark prop shared')
+          s=once(s,"    holder.add(model);\n    if(opts.fallback)opts.fallback.visible=false;","    holder.add(model);\n    if(opts.fallback)disposeOwnedTree(opts.fallback);",'dispose prop fallback')
+          s=once(s,"    const model=gltf.scene.clone(true);\n    model.scale.setScalar(player.cfg.weaponScale||.8);","    const model=gltf.scene.clone(true);\n    model.userData.sharedAsset=true;\n    model.scale.setScalar(player.cfg.weaponScale||.8);",'mark weapon shared')
+          s=once(s,"    player.weaponPrimitive.visible=false;\n    player.weaponPivot.add(model);\n    player.weaponReal=model;","    disposeOwnedTree(player.weaponPrimitive);\n    player.weaponPrimitive=null;\n    player.weaponPivot.add(model);",'dispose weapon fallback')
+          s=once(s,"    const model=cloneSkeleton(gltf.scene);\n    model.scale.setScalar(.72);","    const model=cloneSkeleton(gltf.scene);\n    model.userData.sharedAsset=true;\n    model.scale.setScalar(.72);",'mark character shared')
+          s=once(s,"    player.primitive.visible=false;\n    player.modelHost.add(model);","    clearGroup(player.primitive);\n    player.primitive.visible=false;\n    player.modelHost.add(model);",'dispose character fallback')
+
+          s=once(s,"    m.position.set(Math.cos(a)*r*.45,.52,Math.sin(a)*r*.45);m.rotation.y=a;group.add(m);\n  }\n  group.position.set(x,0,z);","    m.position.set(Math.cos(a)*r*.45,.52,Math.sin(a)*r*.45);m.rotation.y=a;group.add(m);\n  }\n  mat.dispose();\n  group.position.set(x,0,z);",'dispose bush template material')
+          s=once(s,"    arenaRoot.remove(o.mesh);\n    obstacles=obstacles.filter(x=>x!==o);","    disposeOwnedTree(o.mesh);\n    obstacles=obstacles.filter(x=>x!==o);",'dispose destroyed obstacle')
+          s=once(s,"function removePlayers(){\n  players.forEach(p=>scene.remove(p.root));players=[];\n}","function removePlayers(){\n  players.forEach(p=>{p.mixer?.stopAllAction();disposeOwnedTree(p.root)});\n  players=[];\n}",'dispose players')
+
+          hitwall="""function hitWall(pos,r=.15){
+  if(Math.abs(pos.x)>ARENA.halfW-r||Math.abs(pos.z)>ARENA.halfH-r)return true;
+  return obstacles.some(o=>{
+    if(o.circle){
+      const dx=pos.x-o.x,dz=pos.z-o.z;return dx*dx+dz*dz<(o.r+r)*(o.r+r);
+    }
+    return Math.abs(pos.x-o.x)<o.hw+r&&Math.abs(pos.z-o.z)<o.hd+r;
+  });
+}
+"""
+          s=once(s,hitwall,"",'dead hitWall')
+          s=once(s,"    bodyKey:val('body')||'knight',\n","",'dead bodyKey property')
+          s=once(s,"  const player={i,key,cfg,root,primitive,modelHost,weaponPivot,weaponPrimitive:gun,weaponReal:null,hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,overheated:false,fireHeld:false,powerBuff:0,\n    defenseCd:0,guard:100,guarding:false,barrier:0,parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,","  const player={i,cfg,root,primitive,modelHost,weaponPivot,weaponPrimitive:gun,hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,overheated:false,fireHeld:false,powerBuff:0,\n    defenseCd:0,guard:100,guarding:false,barrier:0,parryActive:0,parryChain:0,guardShield,barrierShell,parryRing,flashTime:0,",'dead player fields')
+
+          s,n=re.subn(r"\n    cost:[12],(?=\n    desc:)","",s)
+          if n!=6: raise SystemExit(f'passive cost cleanup: expected 6, got {n}')
+
+          p.write_text(s)
+          PY
+          node --check src/main.js
+          ! grep -q "function hitWall\|bodyKey:\|weaponReal\|dashFx\|defenseFx," src/main.js
+          git diff --check
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.js
+          git commit -m "Clarify Three.js resource ownership"
+          git push origin HEAD:cleanup/resource-ownership
+
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -33,11 +120,7 @@ jobs:
       - name: Build static site
         run: |
           mkdir _site
-          rsync -a --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude '_site/' \
-            ./ _site/
+          rsync -a --delete --exclude '.git/' --exclude '.github/' --exclude '_site/' ./ _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
