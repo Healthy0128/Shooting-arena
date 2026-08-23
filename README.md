@@ -16,6 +16,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `src/main.js` — 安定した起動用エントリポイント
 - `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
 - `src/arena-config.js` — アリーナ共通定数（`ARENA` / `SPAWN_X`）
+- `src/ui.js` — バナー表示と試合結果表示
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
 - `assets/models/weapons/` — 使用中の6武器と依存ファイル
@@ -108,6 +109,8 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 - `src/main.js` の構文
 - `src/game.js` の構文
+- `src/arena-config.js` の構文
+- `src/ui.js` の構文
 - `index.html` が正しいエントリポイントを参照していること
 - 現在のカメラ／レンダリング経路に必要な主要関数が存在すること
 
