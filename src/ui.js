@@ -1,6 +1,11 @@
+import { BUILD_LIMIT } from './loadout-config.js?v=695';
+
 const banner=document.querySelector('#banner');
 const resultStats=document.querySelector('#match-result-stats');
+const buildLimitValue=document.querySelector('#build-limit-value');
 let bannerTimer=null;
+
+buildLimitValue.textContent=BUILD_LIMIT;
 
 export function showBanner(text,ms=650){
   banner.textContent=text;banner.classList.add('show');
