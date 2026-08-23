@@ -1,0 +1,54 @@
+name: Deploy Duel Arena to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate v6.9.0 canonical source
+        run: |
+          set -euo pipefail
+          node --check src/main.js
+          python -m json.tool game-config.json >/dev/null
+          grep -q 'v6.9.0' index.html
+          grep -q 'CLEAN CAMERA CORE' index.html
+          ! grep -q 'serviceWorker.register' src/main.js
+          ! grep -q 'updateSharedCamera' src/main.js
+          ! grep -q 'tiltCamera' src/main.js
+          ! grep -q 'fitTopCamera' src/main.js
+          ! grep -q 'p2FaceControls' src/main.js
+          ! grep -q 'SPAWN_Z' src/main.js
+          ! grep -q 'arenaCamera' src/main.js
+          ! grep -q 'cameraTarget' src/main.js
+      - uses: actions/configure-pages@v5
+      - name: Build static site
+        run: |
+          mkdir _site
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '_site/' \
+            ./ _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
