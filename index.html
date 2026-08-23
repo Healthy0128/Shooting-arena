@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.9.2</title>
+  <title>Duel Arena v6.9.3</title>
   <link rel="stylesheet" href="./style.css?v=690" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
@@ -18,7 +18,6 @@
 
     <section id="menu" class="overlay">
       <div class="panel">
-
         <div class="lobby-top">
           <div>
             <div class="eyebrow">LOCAL BATTLE LAB</div>
@@ -26,7 +25,7 @@
             <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
           </div>
           <div class="build-badge">
-            <strong>v6.9.2</strong><span>DIRECT CHASE FIX</span>
+            <strong>v6.9.3</strong><span>NORMALIZED SPLIT VIEW</span>
           </div>
         </div>
 
@@ -51,12 +50,7 @@
                 <option value="cyan">CYAN</option><option value="orange">ORANGE</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
               </select></label>
               <label>PASSIVE<select data-slot="passive">
-                <option value="coolant">COOLANT</option>
-                <option value="stabilizer">STABILIZER</option>
-                <option value="sprinter">SPRINTER</option>
-                <option value="armor">ARMOR PLATE</option>
-                <option value="charger">CHARGER</option>
-                <option value="coreHunter">CORE HUNTER</option>
+                <option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option>
               </select></label>
             </div>
           </div>
@@ -81,18 +75,14 @@
                 <option value="orange">ORANGE</option><option value="cyan">CYAN</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
               </select></label>
               <label>PASSIVE<select data-slot="passive">
-                <option value="coolant">COOLANT</option>
-                <option value="stabilizer">STABILIZER</option>
-                <option value="sprinter">SPRINTER</option>
-                <option value="armor">ARMOR PLATE</option>
-                <option value="charger">CHARGER</option>
-                <option value="coreHunter">CORE HUNTER</option>
+                <option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option>
               </select></label>
             </div>
           </div>
         </div>
 
-        <div class="budget-legend">BUILD LIMIT <strong>10</strong> POINTS · BODY + WEAPON + DEFENSE + SUPER + PASSIVE</div><div class="control-select">
+        <div class="budget-legend">BUILD LIMIT <strong>10</strong> POINTS · BODY + WEAPON + DEFENSE + SUPER + PASSIVE</div>
+        <div class="control-select">
           <h2>P2 CONTROL</h2>
           <button id="p2-control-mode" class="control-mode" data-mode="face" disabled>対面UI 180°（固定）</button>
           <p class="control-note">上側はUIだけ180°。移動・照準は各プレイヤーの見た目基準</p>
@@ -104,7 +94,7 @@
             <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN</button>
             <button id="camera-tilt-test" data-mode="arena">3D SPLIT CHASE</button>
           </div>
-          <p class="camera-note">TOP-DOWNは共有画面 / 3Dは各キャラの真後ろから斜め見下ろし</p>
+          <p class="camera-note">TOP-DOWNは共有画面 / 3Dは上下50%ずつ・各キャラを常に中央に固定</p>
         </div>
 
         <div class="arena-select">
@@ -121,7 +111,9 @@
           </div>
         </div>
 
-        <button id="start" class="primary battle-start"><span>⚔</span> ENTER THE ARENA <span>⚔</span></button><p class="kenney-credit">Countdown voice: Kenney · CC0</p><p id="asset-status" class="asset-status">3D assets ready to load</p>
+        <button id="start" class="primary battle-start"><span>⚔</span> ENTER THE ARENA <span>⚔</span></button>
+        <p class="kenney-credit">Countdown voice: Kenney · CC0</p>
+        <p id="asset-status" class="asset-status">3D assets ready to load</p>
       </div>
     </section>
 
@@ -132,9 +124,7 @@
         <div class="super"><div id="p2-super" class="super-fill"></div></div>
         <div id="p2-score" class="score">○ ○ ○</div>
       </div>
-
       <div id="timer">90</div>
-
       <div class="hud player one">
         <div id="p1-name" class="name">RANGER</div>
         <div class="hp"><div id="p1-hp" class="hp-fill"></div></div>
@@ -150,7 +140,6 @@
       <div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div>
       <button class="def-btn p2" data-player="1">DEF</button>
       <button class="super-btn p2" data-player="1">SUPER</button>
-
       <div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div>
       <div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div>
       <button class="def-btn p1" data-player="0">DEF</button>
@@ -177,6 +166,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main-v692.js?v=692"></script>
+  <script type="module" src="./src/main-v693.js?v=693"></script>
 </body>
 </html>
