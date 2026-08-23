@@ -31,17 +31,15 @@ const SPAWN_X=12.0;
 let arenaRoot = new THREE.Group();
 scene.add(arenaRoot);
 let obstacles=[];
-let destructibles=[];
 let bushes=[];
 
 const GLB_BASE_ADV = './assets/models/characters/';
-const GLB_BASE_SKEL = './assets/models/characters/';
 
 const WEAPON_BASE = './assets/models/weapons/';
 
 const PROP_BASE = './assets/models/stage/';
 const PROPS={
-  wall:PROP_BASE+'Wall.gltf', wallHalf:PROP_BASE+'Wall_Half.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',
+  wall:PROP_BASE+'Wall.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',
   pillarA:PROP_BASE+'Pillar_A.gltf', pillarB:PROP_BASE+'Pillar_B.gltf',
   ammo:PROP_BASE+'Ammo_Box.gltf', boxA:PROP_BASE+'Box_A.gltf', boxB:PROP_BASE+'Box_B.gltf', boxC:PROP_BASE+'Box_C.gltf',
   barrelA:PROP_BASE+'Barrel_A.gltf', barrelB:PROP_BASE+'Barrel_B.gltf', barrelC:PROP_BASE+'Barrel_C.gltf',
@@ -72,7 +70,7 @@ const CHARACTERS = {
   dash:{recovery:.035,defense:'step',weaponStyle:'rapid',bulletRadius:.10,bulletLife:1.45,recoil:.06,name:'DASH', hp:82, speed:6.2, fireCd:.17, damage:13, bulletSpeed:14.5, spread:.03, color:0x9c6cff, super:'dash', model:GLB_BASE_ADV+'Rogue_Hooded.glb', weaponModel:WEAPON_BASE+'dagger_A.gltf', weaponScale:.9},
   mage:{recovery:.18,defense:'barrier',weaponStyle:'arcane',bulletRadius:.20,bulletLife:2.0,recoil:.08,name:'MAGE', hp:88, speed:4.6, fireCd:.34, damage:24, bulletSpeed:10.5, spread:.02, color:0x5be0d0, super:'nova', model:GLB_BASE_ADV+'Mage.glb', weaponModel:WEAPON_BASE+'staff_A.gltf', weaponScale:.78},
   rogue:{recovery:.07,defense:'evade',weaponStyle:'bladegun',bulletRadius:.13,bulletLife:1.55,recoil:.09,name:'ROGUE', hp:92, speed:5.7, fireCd:.19, damage:15, bulletSpeed:14, spread:.06, color:0xffd45a, super:'fan', model:GLB_BASE_ADV+'Rogue.glb', weaponModel:WEAPON_BASE+'sword_B.gltf', weaponScale:.8},
-  skeleton:{recovery:.42,defense:'parry',weaponStyle:'cannon',bulletRadius:.24,bulletLife:1.70,recoil:.28,name:'BONES', hp:112, speed:4.35, fireCd:.42, damage:28, bulletSpeed:11.8, spread:.01, color:0xded6c1, super:'boneStorm', model:GLB_BASE_SKEL+'Skeleton_Warrior.glb', weaponModel:WEAPON_BASE+'axe_B.gltf', weaponScale:.9}
+  skeleton:{recovery:.42,defense:'parry',weaponStyle:'cannon',bulletRadius:.24,bulletLife:1.70,recoil:.28,name:'BONES', hp:112, speed:4.35, fireCd:.42, damage:28, bulletSpeed:11.8, spread:.01, color:0xded6c1, super:'boneStorm', model:GLB_BASE_ADV+'Skeleton_Warrior.glb', weaponModel:WEAPON_BASE+'axe_B.gltf', weaponScale:.9}
 };
 const BODY_SOURCE={knight:'ranger',barbarian:'crusher',rogueHood:'dash',mage:'mage',rogue:'rogue',skeleton:'skeleton'};
 const BODY_META={
@@ -355,7 +353,6 @@ async function attachRealModel(player){
   }
 }
 
-let selections=['ranger','ranger'];
 
 let arenaSelection='square';
 let players=[];
@@ -376,7 +373,7 @@ function addRealBox(x,z,w,d,h=1.35,opts={}){
   const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
   const fallback=makeFallbackBox(w,h,d,opts.color||0x66758e);fallback.position.y=h/2;holder.add(fallback);
   const collider={x,z,hw:w/2,hd:d/2,mesh:holder,destructible:!!opts.destructible,hp:opts.hp??0};
-  obstacles.push(collider);if(collider.destructible)destructibles.push(collider);
+  obstacles.push(collider);
   const url=opts.url||PROPS.wall;
   // KayKit assets are modular: scale visible mesh toward collider size while collision remains simple/fast.
   attachPropVisual(url,holder,{scale:opts.scale||[Math.max(.55,w/2),Math.max(.55,h/1.4),Math.max(.55,d/2)],rotY:opts.rotY||0,oy:opts.oy||0,fallback},arenaBuildId);
@@ -609,7 +606,7 @@ function addFloorVisual(type){
 }
 
 function buildArena(type){
-  arenaBuildId++;clearGroup(arenaRoot);obstacles=[];destructibles=[];bushes=[];
+  arenaBuildId++;clearGroup(arenaRoot);obstacles=[];bushes=[];
   const theme=getArenaTheme(type);
   addFloorVisual(type);
   addArenaPerimeter(theme);
@@ -771,7 +768,6 @@ function disposeBullet(q){
   q.mesh.material?.dispose?.();
 }
 
-const bulletGeo=new THREE.SphereGeometry(.115,8,8);
 const bulletMats=[
   new THREE.MeshBasicMaterial({color:0x74d5ff}),
   new THREE.MeshBasicMaterial({color:0xff7b92})
@@ -792,16 +788,13 @@ function tone(freq,dur=.06,type='square',gain=.025,slide=0){
     o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+dur);
   }catch{}
 }
-function synthShot(key){tone(key==='crusher'?100:key==='mage'?380:180,.055,key==='mage'?'sine':'square',.025,key==='crusher'?-35:70)}
 function synthHit(){tone(85,.07,'sawtooth',.04,-30)}
 function synthKO(){tone(150,.16,'sawtooth',.055,-100);setTimeout(()=>tone(72,.22,'square',.04,-20),90)}
-function synthSuper(){tone(280,.12,'sine',.04,420);setTimeout(()=>tone(520,.16,'square',.025,280),70)}
 
 const bgmFiles={
   normal:'./assets/audio/bgm/01_empacotatron_loop.ogg',
   sudden:'./assets/audio/bgm/02_trance_boss_battle.ogg',
-  space:'./assets/audio/bgm/03_space_boss_battle.ogg',
-  special:'./assets/audio/bgm/04_jrpg_epic_rock_battle.mp3'
+  space:'./assets/audio/bgm/03_space_boss_battle.ogg'
 };
 let realBGM=null,realBGMMode=null;
 function playRealBGM(mode='normal'){
@@ -1260,7 +1253,7 @@ function resetPlayer(i){
   if(p.barrierShell)p.barrierShell.visible=false;
   if(p.parryRing)p.parryRing.visible=false;
   p.fireCd=.18;p.root.visible=true;
-  p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.aim.set(i===0?1:-1,0);
+  p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.move.set(0,0);p.aim.set(i===0?1:-1,0);
 }
 function damagePop(amount){
   const el=document.createElement('div');
@@ -1280,7 +1273,6 @@ function damageObstacle(o,amount,pos){
   if(o.hp<=0){
     arenaRoot.remove(o.mesh);
     obstacles=obstacles.filter(x=>x!==o);
-    destructibles=destructibles.filter(x=>x!==o);
     particleBurst(pos.clone().setY(.6),0xc58b4a,18,.09);
     tone(70,.12,'sawtooth',.035,-25);
   }
@@ -1409,10 +1401,10 @@ function removePlayers(){
 }
 function clearProjectiles(){
   bullets.forEach(disposeBullet);bullets=[];
-  particles.forEach(p=>scene.remove(p.mesh));particles=[];
+  particles.forEach(p=>{scene.remove(p.mesh);p.mesh.geometry?.dispose?.();p.mesh.material?.dispose?.()});particles=[];
 }
 
-const COUNTDOWN_BASE="https://gamesounds.xyz/Kenney%27s%20Sound%20Pack/Synth%20Voice%201/";
+const COUNTDOWN_BASE='./assets/audio/voice/';
 function playCountdownVoice(name){
   const a=new Audio(COUNTDOWN_BASE+name+'.ogg');a.volume=.9;
   a.play().catch(()=>tone(name==='go'?700:440,.1,'square',.03,name==='go'?200:0));
@@ -1466,7 +1458,7 @@ function fullReset(){
   clearPowerCore();powerCoreTimer=7;powerCoreOneSecondCue=false;
   clearProjectiles();
   players.forEach((p,i)=>{p.score=0;p.super=0;p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0};resetPlayer(i)});
-  matchTime=90;running=false;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);
+  matchTime=90;running=true;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);
 }
 $('#rematch').addEventListener('click',fullReset);
 $('#back-menu').addEventListener('click',()=>{
@@ -1877,7 +1869,7 @@ function update(dt){
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];p.life-=dt;p.mesh.position.addScaledVector(p.vel,dt);p.vel.y-=6*dt;
     if(p.mesh.material?.opacity!==undefined)p.mesh.material.opacity=Math.max(0,p.life/p.max);
-    if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}
+    if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry?.dispose?.();p.mesh.material?.dispose?.();particles.splice(i,1)}
   }
 
   updateHUD();updateWorldStatus();$('#timer').textContent=Math.ceil(matchTime);
