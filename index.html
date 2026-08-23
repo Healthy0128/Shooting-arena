@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.8.4</title>
-  <link rel="stylesheet" href="./style.css?v=684" />
+  <title>Duel Arena v6.9.0</title>
+  <link rel="stylesheet" href="./style.css?v=690" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 <body>
@@ -26,7 +26,7 @@
             <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
           </div>
           <div class="build-badge">
-            <strong>v6.8.4</strong><span>CAMERA RESET</span>
+            <strong>v6.9.0</strong><span>CLEAN CAMERA CORE</span>
           </div>
         </div>
 
@@ -94,17 +94,18 @@
 
         <div class="budget-legend">BUILD LIMIT <strong>10</strong> POINTS · BODY + WEAPON + DEFENSE + SUPER + PASSIVE</div><div class="control-select">
           <h2>P2 CONTROL</h2>
-          <button id="p2-control-mode" class="control-mode" data-mode="face">対面UI 180°</button>
-          <p class="control-note">上側はUIだけ180°。移動・照準入力は通常方向</p>
+          <button id="p2-control-mode" class="control-mode" data-mode="face" disabled>対面UI 180°（固定）</button>
+          <p class="control-note">上側はUIだけ180°。移動・照準は各プレイヤーの見た目基準</p>
         </div>
+
 
         <div class="camera-select">
           <h2>CAMERA</h2>
           <div class="camera-buttons">
             <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN</button>
-            <button id="camera-tilt-test" data-mode="tilt">3D ARENA</button>
+            <button id="camera-tilt-test" data-mode="arena">3D SPLIT CHASE</button>
           </div>
-          <p class="camera-note">3D ARENA: 左右対戦＋中点追従＋距離で自動ズーム</p>
+          <p class="camera-note">TOP-DOWNは共有画面 / 3Dは上下2分割の専用追従カメラ</p>
         </div>
 
         <div class="arena-select">
@@ -177,6 +178,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main.js?v=684"></script>
+  <script type="module" src="./src/main.js?v=690"></script>
 </body>
 </html>
