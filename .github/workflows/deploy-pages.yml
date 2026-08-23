@@ -3,19 +3,120 @@ name: Deploy Duel Arena to Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  cleanup-runtime:
+    if: github.event_name == 'pull_request' && github.head_ref == 'cleanup/runtime-simplify'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/runtime-simplify
+      - name: Apply verified no-feature cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, got {count}')
+              return text.replace(old, new, 1)
+
+          p = Path('src/main.js')
+          s = p.read_text()
+
+          s = replace_once(s,
+              "const GLB_BASE_ADV = './assets/models/characters/';\nconst GLB_BASE_SKEL = './assets/models/characters/';",
+              "const GLB_BASE_ADV = './assets/models/characters/';",
+              'duplicate character base')
+          s = replace_once(s,
+              "wall:PROP_BASE+'Wall.gltf', wallHalf:PROP_BASE+'Wall_Half.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',",
+              "wall:PROP_BASE+'Wall.gltf', wallDecorated:PROP_BASE+'Wall_Decorated.gltf',",
+              'unused wallHalf prop')
+          s = replace_once(s,
+              "model:GLB_BASE_SKEL+'Skeleton_Warrior.glb'",
+              "model:GLB_BASE_ADV+'Skeleton_Warrior.glb'",
+              'duplicate skeleton base use')
+          s = replace_once(s, "\nlet selections=['ranger','ranger'];\n", "\n", 'dead selections')
+          s = replace_once(s, "let destructibles=[];\n", "", 'dead destructibles declaration')
+          s = replace_once(s, "obstacles.push(collider);if(collider.destructible)destructibles.push(collider);", "obstacles.push(collider);", 'dead destructibles push')
+          s = replace_once(s, "arenaBuildId++;clearGroup(arenaRoot);obstacles=[];destructibles=[];bushes=[];", "arenaBuildId++;clearGroup(arenaRoot);obstacles=[];bushes=[];", 'dead destructibles reset')
+          s = replace_once(s, "    destructibles=destructibles.filter(x=>x!==o);\n", "", 'dead destructibles filter')
+          s = replace_once(s, "\nconst bulletGeo=new THREE.SphereGeometry(.115,8,8);", "", 'dead bulletGeo')
+          s = replace_once(s, "function synthShot(key){tone(key==='crusher'?100:key==='mage'?380:180,.055,key==='mage'?'sine':'square',.025,key==='crusher'?-35:70)}\n", "", 'dead synthShot')
+          s = replace_once(s, "function synthSuper(){tone(280,.12,'sine',.04,420);setTimeout(()=>tone(520,.16,'square',.025,280),70)}\n", "", 'dead synthSuper')
+          s = replace_once(s, "  space:'./assets/audio/bgm/03_space_boss_battle.ogg',\n  special:'./assets/audio/bgm/04_jrpg_epic_rock_battle.mp3'\n", "  space:'./assets/audio/bgm/03_space_boss_battle.ogg'\n", 'missing special BGM')
+          s = replace_once(s,
+              "const COUNTDOWN_BASE=\"https://gamesounds.xyz/Kenney%27s%20Sound%20Pack/Synth%20Voice%201/\";",
+              "const COUNTDOWN_BASE='./assets/audio/voice/';",
+              'external countdown base')
+          s = replace_once(s,
+              "  p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.aim.set(i===0?1:-1,0);",
+              "  p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.move.set(0,0);p.aim.set(i===0?1:-1,0);",
+              'reset move vector')
+          s = replace_once(s,
+              "  particles.forEach(p=>scene.remove(p.mesh));particles=[];",
+              "  particles.forEach(p=>{scene.remove(p.mesh);p.mesh.geometry?.dispose?.();p.mesh.material?.dispose?.()});particles=[];",
+              'projectile particle cleanup')
+          s = replace_once(s,
+              "  matchTime=90;running=false;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);",
+              "  matchTime=90;running=true;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);",
+              'rematch running state')
+          s = replace_once(s,
+              "    if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1)}",
+              "    if(p.life<=0){scene.remove(p.mesh);p.mesh.geometry?.dispose?.();p.mesh.material?.dispose?.();particles.splice(i,1)}",
+              'expired particle cleanup')
+
+          p.write_text(s)
+
+          css = Path('style.css')
+          c = css.read_text()
+          cleanup = [
+              (".rotate180{transform:rotate(180deg)}", "", 'dead rotate180'),
+              (".char-buttons,.arena-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}", ".arena-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}", 'dead char-buttons group'),
+              (".char-buttons button,.arena-buttons button,.result-buttons button,#back-menu", ".arena-buttons button,.result-buttons button,#back-menu", 'dead char button rule'),
+              (".char-buttons button.selected,.arena-buttons button.selected", ".arena-buttons button.selected", 'dead char selected rule'),
+              ("\n.char-buttons{grid-template-columns:repeat(3,1fr)}", "", 'dead char grid'),
+              ("\n.model-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;opacity:.5}", "", 'dead model badge'),
+              (".char-buttons,.arena-buttons{grid-template-columns:repeat(2,1fr)}", ".arena-buttons{grid-template-columns:repeat(2,1fr)}", 'dead mobile char grid'),
+              (".char-buttons button,.arena-buttons button{padding:10px 6px;font-size:11px}", ".arena-buttons button{padding:10px 6px;font-size:11px}", 'dead mobile char button'),
+              ("\n@keyframes popDamage{from{opacity:1;transform:translate(-50%,-50%) scale(.8)}\nto{opacity:0;transform:translate(-50%,-100px) scale(1.25)}}\n", "\n", 'dead popDamage'),
+              ("\n.world-hp-name{\n  font-size:9px;font-weight:1000;letter-spacing:.04em;\n  text-shadow:0 2px 5px #000;margin-bottom:2px;\n}\n", "\n", 'dead world hp name'),
+              ("\n.world-hp{position:fixed;z-index:30;pointer-events:none;transform:translate(-50%,-145%);width:88px;text-align:center;transition:opacity .08s linear;}\n", "\n", 'dead world hp'),
+              ("\n.world-def{margin-top:2px;font-size:8px;font-weight:1000;text-shadow:0 1px 5px #000;opacity:.82;text-align:center;}\n", "\n", 'dead world def'),
+          ]
+          for old, new, label in cleanup:
+              c = replace_once(c, old, new, label)
+          css.write_text(c)
+          PY
+
+          node --check src/main.js
+          ! grep -q "wallHalf\|selections=\|destructibles\|bulletGeo\|synthShot\|synthSuper\|04_jrpg\|gamesounds.xyz\|model-badge\|popDamage\|world-hp-name" src/main.js style.css
+
+      - name: Commit cleanup to PR branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.js style.css
+          git diff --cached --check
+          git commit -m "Simplify runtime dead code and cleanup lifecycle"
+          git push origin HEAD:cleanup/runtime-simplify
+
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
