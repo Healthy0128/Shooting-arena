@@ -59,12 +59,14 @@ jobs:
           check "arena import exists" grep -Fq "from './arena-config.js?v=695';" src/game.js
           check "ARENA is exported" grep -Fq 'export const ARENA=' src/arena-config.js
           check "SPAWN_X is exported" grep -Fq 'export const SPAWN_X=' src/arena-config.js
-          check "PROPS currently owned by game.js" grep -Fq 'const PROPS=' src/game.js
-          check "STAGE_THEMES currently owned by game.js" grep -Fq 'const STAGE_THEMES=' src/game.js
+          check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
+          check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
 
-          echo "CHECK: no duplicate stage config in arena-config.js"
-          if grep -Fq 'export const PROPS=' src/arena-config.js || grep -Fq 'export const STAGE_THEMES=' src/arena-config.js; then echo '::error::stage config duplicated before atomic move'; exit 1; fi
-          echo "PASS: no duplicate stage config in arena-config.js"
+          for symbol in PROP_BASE PROPS STAGE_THEMES; do
+            echo "CHECK: no local $symbol stage config in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol stage config returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol stage config in game.js"
+          done
 
           check "match result stats host exists" grep -Fq 'id="match-result-stats"' index.html
           check "build limit host exists" grep -Fq 'id="build-limit-value"' index.html
