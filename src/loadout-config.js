@@ -20,7 +20,9 @@ export const BODY_META={
   skeleton:{label:'ARMORED',weight:'heavy',hpMul:1.10,speedMul:.92,radius:.62,knockbackResist:.24,recoilResist:.18,dashMul:.90}
 };
 
-export const WEAPON_SOURCE={rifle:'ranger',scatter:'crusher',rapid:'dash',arcane:'mage',bladegun:'rogue',cannon:'skeleton'};
+export const WEAPON_SOURCE=Object.fromEntries(
+  Object.entries(CHARACTERS).map(([key,character])=>[character.weaponStyle,key])
+);
 export const COLOR_VALUES={cyan:0x35a7ff,orange:0xff8a3d,violet:0x9c6cff,mint:0x5be0d0,gold:0xffd45a,bone:0xded6c1,pink:0xff6fae,lime:0xa7ef62};
 export const BUILD_LIMIT=10;
 
