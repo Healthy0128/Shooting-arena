@@ -35,6 +35,9 @@ jobs:
           grep -q 'function updateTopCamera' src/game.js
           test "$(grep -c "from './ui.js?v=695'" src/game.js)" -eq 1
           test "$(grep -c "from './loadout-config.js?v=695'" src/game.js)" -eq 1
+          grep -q 'id="match-result-stats"' index.html
+          ! grep -q 'match-result-card' src/ui.js
+          ! grep -q '\.match-result-card' style.css
           ! grep -q '^function hitWall' src/game.js
           ! grep -q '^function showBanner' src/game.js
           ! grep -q '^function renderMatchResult' src/game.js
