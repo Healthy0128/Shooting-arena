@@ -1,9 +1,14 @@
 const banner=document.querySelector('#banner');
 const resultStats=document.querySelector('#match-result-stats');
+let bannerTimer=null;
 
 export function showBanner(text,ms=650){
   banner.textContent=text;banner.classList.add('show');
-  setTimeout(()=>banner.classList.remove('show'),ms);
+  if(bannerTimer)clearTimeout(bannerTimer);
+  bannerTimer=setTimeout(()=>{
+    banner.classList.remove('show');
+    bannerTimer=null;
+  },ms);
 }
 
 function accuracyOf(p){return p.stats.shots>0?Math.round((p.stats.hits/p.stats.shots)*100):0}
