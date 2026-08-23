@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.9.3</title>
-  <link rel="stylesheet" href="./style.css?v=690" />
+  <title>Duel Arena v6.9.4</title>
+  <link rel="stylesheet" href="./style.css?v=694" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 <body>
@@ -25,7 +25,7 @@
             <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
           </div>
           <div class="build-badge">
-            <strong>v6.9.3</strong><span>NORMALIZED SPLIT VIEW</span>
+            <strong>v6.9.4</strong><span>CANVAS VIEWPORT SYNC</span>
           </div>
         </div>
 
@@ -34,24 +34,12 @@
             <div class="player-chip">PLAYER 1</div>
             <div class="loadout-summary"></div><button class="random-build" data-player="0" type="button">🎲 RANDOM BUILD</button>
             <div class="slot-grid">
-              <label>BODY<select data-slot="body">
-                <option value="knight">KNIGHT</option><option value="barbarian">BARBARIAN</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option>
-              </select></label>
-              <label>WEAPON<select data-slot="weapon">
-                <option value="rifle">RIFLE</option><option value="scatter">SCATTER</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option>
-              </select></label>
-              <label>DEFENSE<select data-slot="defense">
-                <option value="roll">ROLL</option><option value="guard">GUARD</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option>
-              </select></label>
-              <label>SUPER<select data-slot="super">
-                <option value="rapid">OVERDRIVE</option><option value="blast">BLAST RING</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option>
-              </select></label>
-              <label>COLOR<select data-slot="color">
-                <option value="cyan">CYAN</option><option value="orange">ORANGE</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
-              </select></label>
-              <label>PASSIVE<select data-slot="passive">
-                <option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option>
-              </select></label>
+              <label>BODY<select data-slot="body"><option value="knight">KNIGHT</option><option value="barbarian">BARBARIAN</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option></select></label>
+              <label>WEAPON<select data-slot="weapon"><option value="rifle">RIFLE</option><option value="scatter">SCATTER</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option></select></label>
+              <label>DEFENSE<select data-slot="defense"><option value="roll">ROLL</option><option value="guard">GUARD</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option></select></label>
+              <label>SUPER<select data-slot="super"><option value="rapid">OVERDRIVE</option><option value="blast">BLAST RING</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option></select></label>
+              <label>COLOR<select data-slot="color"><option value="cyan">CYAN</option><option value="orange">ORANGE</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option></select></label>
+              <label>PASSIVE<select data-slot="passive"><option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option></select></label>
             </div>
           </div>
 
@@ -59,24 +47,12 @@
             <div class="player-chip">PLAYER 2</div>
             <div class="loadout-summary"></div><button class="random-build" data-player="1" type="button">🎲 RANDOM BUILD</button>
             <div class="slot-grid">
-              <label>BODY<select data-slot="body">
-                <option value="barbarian">BARBARIAN</option><option value="knight">KNIGHT</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option>
-              </select></label>
-              <label>WEAPON<select data-slot="weapon">
-                <option value="scatter">SCATTER</option><option value="rifle">RIFLE</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option>
-              </select></label>
-              <label>DEFENSE<select data-slot="defense">
-                <option value="guard">GUARD</option><option value="roll">ROLL</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option>
-              </select></label>
-              <label>SUPER<select data-slot="super">
-                <option value="blast">BLAST RING</option><option value="rapid">OVERDRIVE</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option>
-              </select></label>
-              <label>COLOR<select data-slot="color">
-                <option value="orange">ORANGE</option><option value="cyan">CYAN</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option>
-              </select></label>
-              <label>PASSIVE<select data-slot="passive">
-                <option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option>
-              </select></label>
+              <label>BODY<select data-slot="body"><option value="barbarian">BARBARIAN</option><option value="knight">KNIGHT</option><option value="rogueHood">HOODED</option><option value="mage">MAGE</option><option value="rogue">ROGUE</option><option value="skeleton">BONES</option></select></label>
+              <label>WEAPON<select data-slot="weapon"><option value="scatter">SCATTER</option><option value="rifle">RIFLE</option><option value="rapid">RAPID</option><option value="arcane">ARCANE</option><option value="bladegun">BLADE GUN</option><option value="cannon">CANNON</option></select></label>
+              <label>DEFENSE<select data-slot="defense"><option value="guard">GUARD</option><option value="roll">ROLL</option><option value="step">STEP</option><option value="barrier">BARRIER</option><option value="evade">EVADE</option><option value="parry">PARRY</option></select></label>
+              <label>SUPER<select data-slot="super"><option value="blast">BLAST RING</option><option value="rapid">OVERDRIVE</option><option value="dash">PHANTOM DASH</option><option value="nova">NOVA</option><option value="fan">BLADE FAN</option><option value="boneStorm">STORM</option></select></label>
+              <label>COLOR<select data-slot="color"><option value="orange">ORANGE</option><option value="cyan">CYAN</option><option value="violet">VIOLET</option><option value="mint">MINT</option><option value="gold">GOLD</option><option value="bone">BONE</option><option value="pink">PINK</option><option value="lime">LIME</option></select></label>
+              <label>PASSIVE<select data-slot="passive"><option value="coolant">COOLANT</option><option value="stabilizer">STABILIZER</option><option value="sprinter">SPRINTER</option><option value="armor">ARMOR PLATE</option><option value="charger">CHARGER</option><option value="coreHunter">CORE HUNTER</option></select></label>
             </div>
           </div>
         </div>
@@ -100,14 +76,7 @@
         <div class="arena-select">
           <h2>ARENA</h2>
           <div class="arena-buttons">
-            <button data-arena="square" class="selected">SQUARE</button>
-            <button data-arena="pillars">4 PILLARS</button>
-            <button data-arena="ring">RING</button>
-            <button data-arena="cross">CROSS</button>
-            <button data-arena="hex">HEX</button>
-            <button data-arena="fort">TWIN FORT</button>
-            <button data-arena="bush">BUSH FIELD</button>
-            <button data-arena="crates">CRATE YARD</button>
+            <button data-arena="square" class="selected">SQUARE</button><button data-arena="pillars">4 PILLARS</button><button data-arena="ring">RING</button><button data-arena="cross">CROSS</button><button data-arena="hex">HEX</button><button data-arena="fort">TWIN FORT</button><button data-arena="bush">BUSH FIELD</button><button data-arena="crates">CRATE YARD</button>
           </div>
         </div>
 
@@ -118,54 +87,22 @@
     </section>
 
     <section id="hud" aria-hidden="true" hidden>
-      <div class="hud player two">
-        <div id="p2-name" class="name">RANGER</div>
-        <div class="hp"><div id="p2-hp" class="hp-fill"></div></div>
-        <div class="super"><div id="p2-super" class="super-fill"></div></div>
-        <div id="p2-score" class="score">○ ○ ○</div>
-      </div>
+      <div class="hud player two"><div id="p2-name" class="name">RANGER</div><div class="hp"><div id="p2-hp" class="hp-fill"></div></div><div class="super"><div id="p2-super" class="super-fill"></div></div><div id="p2-score" class="score">○ ○ ○</div></div>
       <div id="timer">90</div>
-      <div class="hud player one">
-        <div id="p1-name" class="name">RANGER</div>
-        <div class="hp"><div id="p1-hp" class="hp-fill"></div></div>
-        <div class="super"><div id="p1-super" class="super-fill"></div></div>
-        <div id="p1-score" class="score">○ ○ ○</div>
-      </div>
+      <div class="hud player one"><div id="p1-name" class="name">RANGER</div><div class="hp"><div id="p1-hp" class="hp-fill"></div></div><div class="super"><div id="p1-super" class="super-fill"></div></div><div id="p1-score" class="score">○ ○ ○</div></div>
     </section>
 
     <div id="banner"></div>
 
     <section id="controls" hidden>
-      <div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div>
-      <div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div>
-      <button class="def-btn p2" data-player="1">DEF</button>
-      <button class="super-btn p2" data-player="1">SUPER</button>
-      <div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div>
-      <div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div>
-      <button class="def-btn p1" data-player="0">DEF</button>
-      <button class="super-btn p1" data-player="0">SUPER</button>
+      <div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div><div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div><button class="def-btn p2" data-player="1">DEF</button><button class="super-btn p2" data-player="1">SUPER</button>
+      <div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div><div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div><button class="def-btn p1" data-player="0">DEF</button><button class="super-btn p1" data-player="0">SUPER</button>
     </section>
 
-    <section id="result" class="overlay" hidden>
-      <div class="panel result-panel">
-        <h1 id="winner">P1 WIN!</h1>
-        <p id="result-score">3 - 1</p>
-        <div class="result-buttons">
-          <button id="rematch" class="primary">REMATCH</button>
-          <button id="back-menu">CHANGE SETUP</button>
-        </div>
-      </div>
-    </section>
+    <section id="result" class="overlay" hidden><div class="panel result-panel"><h1 id="winner">P1 WIN!</h1><p id="result-score">3 - 1</p><div class="result-buttons"><button id="rematch" class="primary">REMATCH</button><button id="back-menu">CHANGE SETUP</button></div></div></section>
   </main>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
-    }
-  }
-  </script>
-  <script type="module" src="./src/main-v693.js?v=693"></script>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"}}</script>
+  <script type="module" src="./src/main-v694.js?v=694"></script>
 </body>
 </html>
