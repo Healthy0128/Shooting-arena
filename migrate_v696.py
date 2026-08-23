@@ -1,7 +1,32 @@
 from pathlib import Path
-import re
+from io import BytesIO
+import base64, zipfile, re, shutil
 
 root=Path('.')
+
+# Materialize the clean v6.9.5 source from the existing repository payload FIRST.
+# This removes the browser-side ZIP loader and gives us real canonical files to edit.
+payload=root/'.v695-payload'
+parts=sorted(payload.glob('part-*'))
+if not parts:
+    raise SystemExit('v6.9.5 payload parts not found')
+b64=''.join(p.read_text().strip() for p in parts)
+raw=base64.b64decode(b64)
+with zipfile.ZipFile(BytesIO(raw)) as z:
+    names=z.namelist()
+    prefix=names[0].split('/')[0]+'/' if names and '/' in names[0] else ''
+    wanted=[
+        'index.html','style.css','src/main.js','game-config.json','manifest.webmanifest',
+        'README.md','BGM_LICENSES.md','THIRD_PARTY_ASSETS.md','tracks.json','.gitignore'
+    ]
+    for rel in wanted:
+        name=prefix+rel
+        if name not in names:
+            continue
+        out=root/rel
+        out.parent.mkdir(parents=True,exist_ok=True)
+        out.write_bytes(z.read(name))
+
 js=root/'src/main.js'
 html=root/'index.html'
 css=root/'style.css'
@@ -153,9 +178,9 @@ syncRendererSize();syncSplitRendererSize(0);syncSplitRendererSize(1);updateTopCa
 h=html.read_text()
 if 'id="game-p2"' not in h:
     h=h.replace('<canvas id="game"></canvas>','<canvas id="game"></canvas>\n    <canvas id="game-p2" class="split-view split-p2" aria-hidden="true"></canvas>\n    <canvas id="game-p1" class="split-view split-p1" aria-hidden="true"></canvas>',1)
-h=h.replace('v6.9.5','v6.9.6').replace('CANONICAL 50/50 CAMERA','DUAL CANVAS SPLIT')
-h=re.sub(r'href="\./style-v694\.css\?v=\d+"','href="./style.css?v=696"',h)
-h=re.sub(r'src="\./src/main-v695\.js\?v=\d+"','src="./src/main.js?v=696"',h)
+h=h.replace('v6.9.5','v6.9.6').replace('CLEAN SPLIT CORE','DUAL CANVAS SPLIT').replace('CANONICAL 50/50 CAMERA','DUAL CANVAS SPLIT')
+h=re.sub(r'href="\./style(?:-v694)?\.css\?v=\d+"','href="./style.css?v=696"',h)
+h=re.sub(r'src="\./src/main(?:-v695)?\.js\?v=\d+"','src="./src/main.js?v=696"',h)
 html.write_text(h)
 
 c=css.read_text()
@@ -164,12 +189,12 @@ if marker not in c:
     c += '''\n/* v6.9.6 — dual-canvas split: CSS owns the exact 50/50 boundary. */\nhtml,body{width:100%;height:100%;margin:0;overflow:hidden;background:#0d1118}\nbody{position:fixed;inset:0;width:100dvw;height:100dvh}\n#game-wrap{position:fixed;inset:0;width:100dvw;height:100dvh;overflow:hidden;background:#0d1118}\n#game{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}\n.split-view{position:fixed;left:0;width:100%;height:50%;display:none;z-index:1;touch-action:none;pointer-events:none;background:#0d1118}\n.split-p2{top:0;transform:rotate(180deg);transform-origin:center center}\n.split-p1{top:50%}\nbody.split-arena #game{visibility:hidden}\nbody.split-arena .split-view{display:block}\nbody.split-arena::before{content:"";position:fixed;left:0;right:0;top:50%;height:1px;background:#ffffff55;z-index:18;pointer-events:none}\n'''
 css.write_text(c)
 
-wf.write_text('''name: Deploy Duel Arena to Pages\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Validate v6.9.6 dual canvas build\n        run: |\n          set -euo pipefail\n          node --check src/main.js\n          python -m json.tool game-config.json >/dev/null\n          grep -q 'v6.9.6' index.html\n          grep -q 'game-p1' index.html\n          grep -q 'game-p2' index.html\n          grep -q 'splitRenderers' src/main.js\n          grep -q 'No viewport/scissor splitting' src/main.js\n          ! test -e src/main-v694.js\n          ! test -e src/main-v695.js\n      - uses: actions/configure-pages@v5\n      - name: Build static site\n        run: |\n          mkdir _site\n          rsync -a --delete --exclude '.git/' --exclude '.github/' --exclude '_site/' ./ _site/\n      - uses: actions/upload-pages-artifact@v3\n        with:\n          path: _site\n      - name: Deploy\n        id: deployment\n        uses: actions/deploy-pages@v4\n''')
+wf.write_text('''name: Deploy Duel Arena to Pages\n\non:\n  push:\n    branches: [main]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: pages\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Validate v6.9.6 dual canvas build\n        run: |\n          set -euo pipefail\n          node --check src/main.js\n          python -m json.tool game-config.json >/dev/null\n          grep -q 'v6.9.6' index.html\n          grep -q 'game-p1' index.html\n          grep -q 'game-p2' index.html\n          grep -q 'splitRenderers' src/main.js\n          grep -q 'No viewport/scissor splitting' src/main.js\n          ! test -e src/main-v694.js\n          ! test -e src/main-v695.js\n          ! test -d .v695-payload\n      - uses: actions/configure-pages@v5\n      - name: Build static site\n        run: |\n          mkdir _site\n          rsync -a --delete --exclude '.git/' --exclude '.github/' --exclude '_site/' ./ _site/\n      - uses: actions/upload-pages-artifact@v3\n        with:\n          path: _site\n      - name: Deploy\n        id: deployment\n        uses: actions/deploy-pages@v4\n''')
 
-for p in ['src/main-v695.js','style-v694.css','.v695-exact-trigger','.v695-pr-trigger','.v695-trigger']:
+for p in ['src/main-v695.js','style-v694.css','.v695-exact-trigger','.v695-pr-trigger','.v695-trigger','.v695-payload']:
     q=root/p
-    if q.exists(): q.unlink()
-# remove one-time migration files from final commit
+    if q.is_dir(): shutil.rmtree(q)
+    elif q.exists(): q.unlink()
 for p in ['migrate_v696.py','.v696-trigger','.github/workflows/migrate-v696.yml']:
     q=root/p
     if q.exists(): q.unlink()
