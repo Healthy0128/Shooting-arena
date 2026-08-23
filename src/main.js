@@ -1,57 +1,33 @@
 import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
-// v6.9.5 CLEAN SPLIT CORE
-// Load the checked local build byte-for-byte. No regex patching and no legacy
-// camera implementation is executed.
-const PARTS=[
-  '../.v695-payload/part-000',
-  '../.v695-payload/part-001',
-  '../.v695-payload/part-002',
-  '../.v695-payload/part-003'
-];
-
-const texts=await Promise.all(PARTS.map(async path=>{
-  const r=await fetch(path+'?v=695',{cache:'no-store'});
-  if(!r.ok)throw new Error(`v6.9.5 payload load failed: ${path} ${r.status}`);
-  return r.text();
-}));
+// v6.9.6 DUAL CANVAS SPLIT
+// Load the clean v6.9.5 canonical source, replace only the split-screen camera layer,
+// then execute the resulting single source once. No legacy main-v69x wrappers are used.
+const PARTS=['../.v695-payload/part-000','../.v695-payload/part-001','../.v695-payload/part-002','../.v695-payload/part-003'];
+const texts=await Promise.all(PARTS.map(async p=>{const r=await fetch(p+'?v=696',{cache:'no-store'});if(!r.ok)throw new Error(`payload ${p} ${r.status}`);return r.text()}));
 const b64=texts.join('').replace(/\s+/g,'');
-const binary=atob(b64);
-const bytes=new Uint8Array(binary.length);
-for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-
+const binary=atob(b64);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
 const zip=await JSZip.loadAsync(bytes);
 const root='duel-arena-v6.9.5-clean-local/';
-const mainEntry=zip.file(root+'src/main.js');
-const styleEntry=zip.file(root+'style.css');
-if(!mainEntry||!styleEntry)throw new Error('v6.9.5 canonical source files missing in payload');
+let src=await zip.file(root+'src/main.js').async('text');
 
-const [source,canonicalCss]=await Promise.all([
-  mainEntry.async('string'),
-  styleEntry.async('string')
-]);
+const rendererInit=`const canvas = $('#game');\nconst renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });\nrenderer.setPixelRatio(Math.min(devicePixelRatio,1.5));\nrenderer.outputColorSpace = THREE.SRGBColorSpace;`;
+const rendererDual=`const canvas = $('#game');\nconst splitCanvases=[$('#game-p1'),$('#game-p2')];\nconst renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });\nrenderer.setPixelRatio(Math.min(devicePixelRatio,1.5));\nrenderer.outputColorSpace = THREE.SRGBColorSpace;\nconst splitRenderers=splitCanvases.map(c=>{\n  const r=new THREE.WebGLRenderer({canvas:c,antialias:true,powerPreference:'high-performance'});\n  r.setPixelRatio(Math.min(devicePixelRatio,1.5));\n  r.outputColorSpace=THREE.SRGBColorSpace;\n  return r;\n});`;
+if(!src.includes(rendererInit))throw new Error('renderer block not found');
+src=src.replace(rendererInit,rendererDual);
 
-for(const forbidden of ['updateSharedCamera','fitTopCamera','p2FaceControls','serviceWorker.register']){
-  if(source.includes(forbidden))throw new Error(`v6.9.5 rejected stale source: ${forbidden}`);
-}
-if(!source.includes('SPLIT_VIEWS')||!source.includes('syncRendererSize')||!source.includes('getBoundingClientRect')){
-  throw new Error('v6.9.5 canonical camera core markers missing');
-}
+src=src.replace(/function screenVectorToWorld\(player,x,y\)\{[\s\S]*?\n\}\n\nconst activePointers/,`function screenVectorToWorld(player,x,y){\n  if(cameraMode==='arena'){\n    const cam=chaseCameras[player];\n    const right=new THREE.Vector3(1,0,0).applyQuaternion(cam.quaternion);\n    const up=new THREE.Vector3(0,1,0).applyQuaternion(cam.quaternion);\n    right.y=0;up.y=0;\n    if(right.lengthSq()<1e-6)right.set(0,0,1);else right.normalize();\n    if(up.lengthSq()<1e-6){cam.getWorldDirection(up);up.y=0;if(up.lengthSq()<1e-6)up.set(player===0?1:-1,0,0);else up.normalize()}else up.normalize();\n    const world=right.multiplyScalar(x).add(up.multiplyScalar(-y));\n    if(world.lengthSq()>1)world.normalize();\n    return new THREE.Vector2(world.x,world.z);\n  }\n  const {w,h}=getLayoutSize(),portrait=h>=w;\n  return portrait?new THREE.Vector2(-y,x):new THREE.Vector2(x,y);\n}\n\nconst activePointers`);
 
-document.querySelectorAll('link[rel="stylesheet"]').forEach(link=>{link.disabled=true;});
-const style=document.createElement('style');
-style.id='v695-canonical-style';
-style.textContent=canonicalCss;
-document.head.appendChild(style);
+const start=src.indexOf('function syncRendererSize(){');
+const end=src.indexOf('function setCameraMode(mode){',start);
+if(start<0||end<0)throw new Error('camera core not found');
+const cameraCore=`function syncRendererSize(){\n  const rect=canvas.getBoundingClientRect();\n  const cssW=Math.max(1,Math.round(rect.width)),cssH=Math.max(1,Math.round(rect.height));\n  const dpr=Math.min(window.devicePixelRatio||1,1.5);\n  if(canvas.width!==Math.round(cssW*dpr)||canvas.height!==Math.round(cssH*dpr)){renderer.setPixelRatio(dpr);renderer.setSize(cssW,cssH,false)}\n}\nfunction syncSplitRendererSize(i){\n  const c=splitCanvases[i],r=splitRenderers[i],rect=c.getBoundingClientRect();\n  const w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height)),dpr=Math.min(window.devicePixelRatio||1,1.5);\n  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){r.setPixelRatio(dpr);r.setSize(w,h,false)}\n  return {w,h};\n}\nfunction updateTopCamera(){\n  if(cameraMode!=='top')return;\n  const {w,h}=getLayoutSize(),aspect=w/Math.max(1,h),portrait=h>=w;\n  topCamera.up.set(portrait?1:0,0,portrait?0:-1);\n  if(players.length===2&&players[0]?.root&&players[1]?.root){\n    const a=players[0].root.position,b=players[1].root.position,mx=(a.x+b.x)*.5,mz=(a.z+b.z)*.5,dx=Math.abs(a.x-b.x),dz=Math.abs(a.z-b.z);\n    const needW=(portrait?dz:dx)+7,needH=(portrait?dx:dz)+9;let viewH=Math.max(portrait?34:19,needH,needW/Math.max(.25,aspect));viewH=Math.min(viewH,portrait?42:27);\n    const viewW=viewH*aspect;topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;topCamera.position.set(mx,38,mz+.01);topCamera.lookAt(mx,0,mz);\n  }else{const viewH=portrait?38:23,viewW=viewH*aspect;topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;topCamera.position.set(0,38,.01);topCamera.lookAt(0,0,0)}\n  topCamera.updateProjectionMatrix();\n}\nfunction updateChaseCamera(i,cam,aspect){\n  const me=players[i];if(!me?.root)return;const a=me.root.position,forward=new THREE.Vector3(me.aim.x,0,me.aim.y);\n  if(forward.lengthSq()<.01)forward.set(i===0?1:-1,0,0);forward.normalize();\n  cam.position.set(a.x-forward.x*8.4,9.6,a.z-forward.z*8.4);cam.up.set(0,1,0);cam.aspect=Math.max(.25,aspect);cam.fov=70;cam.lookAt(a.x,1.0,a.z);cam.updateProjectionMatrix();\n}\nfunction renderSplitArena(){\n  for(let i=0;i<2;i++){const {w,h}=syncSplitRendererSize(i);const cam=chaseCameras[i];updateChaseCamera(i,cam,w/Math.max(1,h));splitRenderers[i].render(scene,cam)}\n}\n`;
+src=src.slice(0,start)+cameraCore+src.slice(end);
 
-document.title='Duel Arena v6.9.5';
-const badge=document.querySelector('.build-badge');
-if(badge)badge.innerHTML='<strong>v6.9.5</strong><span>CLEAN SPLIT CORE</span>';
+const oldResize=`const resizeObserver=new ResizeObserver(()=>{syncRendererSize();updateTopCamera()});\nresizeObserver.observe(canvas);\naddEventListener('resize',()=>{syncRendererSize();updateTopCamera()});\naddEventListener('orientationchange',()=>setTimeout(()=>{syncRendererSize();updateTopCamera()},80));\nif(window.visualViewport)visualViewport.addEventListener('resize',()=>{syncRendererSize();updateTopCamera()});\nsyncRendererSize();updateTopCamera();`;
+const newResize=`const resizeObserver=new ResizeObserver(()=>{syncRendererSize();syncSplitRendererSize(0);syncSplitRendererSize(1);updateTopCamera()});\nresizeObserver.observe(canvas);splitCanvases.forEach(c=>resizeObserver.observe(c));\naddEventListener('resize',()=>{syncRendererSize();syncSplitRendererSize(0);syncSplitRendererSize(1);updateTopCamera()});\naddEventListener('orientationchange',()=>setTimeout(()=>{syncRendererSize();syncSplitRendererSize(0);syncSplitRendererSize(1);updateTopCamera()},80));\nsyncRendererSize();syncSplitRendererSize(0);syncSplitRendererSize(1);updateTopCamera();`;
+if(!src.includes(oldResize))throw new Error('resize block not found');
+src=src.replace(oldResize,newResize);
 
-const blob=new Blob([source],{type:'text/javascript'});
-const url=URL.createObjectURL(blob);
-try{
-  await import(url);
-}finally{
-  URL.revokeObjectURL(url);
-}
+const url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+try{await import(url)}finally{URL.revokeObjectURL(url)}
