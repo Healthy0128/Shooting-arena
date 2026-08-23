@@ -3,8 +3,6 @@ name: Deploy Duel Arena to Pages
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,19 +11,22 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages-${{ github.event_name }}-${{ github.ref }}
+  group: pages
   cancel-in-progress: true
 
 jobs:
   cleanup-runtime:
-    if: github.event_name == 'pull_request' && github.head_ref == 'cleanup/resource-lifecycle'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: cleanup/resource-lifecycle
-      - name: Apply lifecycle cleanup
+      - name: Apply verified lifecycle cleanup once
         run: |
+          set -euo pipefail
+          if grep -q 'function disposeOwnedObject' src/main.js; then
+            echo 'Lifecycle cleanup already applied.'
+            exit 0
+          fi
+
           python - <<'PY'
           from pathlib import Path
 
@@ -65,7 +66,6 @@ function clearGroup(g){
 }
 """
           s=replace_once(s,anchor,replacement,'ownership helpers')
-
           s=replace_once(s,"    const model=gltf.scene.clone(true);\n","    const model=markSharedAsset(gltf.scene.clone(true));\n",'prop shared marker')
           s=replace_once(s,"    holder.add(model);\n    if(opts.fallback)opts.fallback.visible=false;","    holder.add(model);\n    if(opts.fallback){disposeOwnedObject(opts.fallback);opts.fallback.removeFromParent()}",'prop fallback disposal')
           s=replace_once(s,"    const model=gltf.scene.clone(true);\n    model.scale.setScalar(player.cfg.weaponScale||.8);","    const model=markSharedAsset(gltf.scene.clone(true));\n    model.scale.setScalar(player.cfg.weaponScale||.8);",'weapon shared marker')
@@ -85,16 +85,14 @@ function clearGroup(g){
           grep -q 'disposeOwnedObject(p.root)' src/main.js
           git diff --check
 
-      - name: Commit verified cleanup
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/main.js
           git commit -m "Clean up owned Three.js resources"
-          git push origin HEAD:cleanup/resource-lifecycle
+          git push origin HEAD:main
 
   deploy:
-    if: github.event_name != 'pull_request'
+    needs: cleanup-runtime
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
