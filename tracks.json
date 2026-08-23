@@ -1,0 +1,38 @@
+[
+  {
+    "file": "01_empacotatron_loop.ogg",
+    "title": "Empacotatron (Loop)",
+    "author": "Fupi",
+    "use": "通常戦メイン候補",
+    "license": "CC0 1.0",
+    "source": "https://opengameart.org/content/empacotatron",
+    "download": "https://opengameart.org/sites/default/files/empacotatron_loop.ogg"
+  },
+  {
+    "file": "02_trance_boss_battle.ogg",
+    "title": "Trance Boss Battle",
+    "author": "MintoDog",
+    "use": "サドンデス / 激戦用",
+    "license": "CC0 1.0",
+    "source": "https://opengameart.org/content/trance-boss-battle",
+    "download": "https://opengameart.org/sites/default/files/trance_boss_battle_bpm150_0.ogg"
+  },
+  {
+    "file": "03_space_boss_battle.ogg",
+    "title": "Space Boss Battle",
+    "author": "MintoDog",
+    "use": "SFステージ / 特別戦用",
+    "license": "CC0 1.0",
+    "source": "https://opengameart.org/content/space-boss-battle",
+    "download": "https://opengameart.org/sites/default/files/space_boss_battle_bpm175_0.ogg"
+  },
+  {
+    "file": "04_jrpg_epic_rock_battle.mp3",
+    "title": "JRPG Epic Rock Battle Theme #1 (Loop)",
+    "author": "HydroGene",
+    "use": "派手な決勝・ロック系ステージ用",
+    "license": "CC0 1.0",
+    "source": "https://opengameart.org/content/jrpg-epic-rock-battle-theme-1",
+    "download": "https://opengameart.org/sites/default/files/jrpg_battle_loop.mp3"
+  }
+]
