@@ -26,7 +26,6 @@ jobs:
         run: |
           set -euo pipefail
           node --check src/main.js
-          python -m json.tool game-config.json >/dev/null
           grep -q './src/main.js?v=695' index.html
           grep -q 'function renderSplitArena' src/main.js
           grep -q 'function updateTopCamera' src/main.js

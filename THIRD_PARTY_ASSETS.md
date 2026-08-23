@@ -5,43 +5,40 @@ Creator: Kay Lousberg
 License: CC0 1.0 Universal
 Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
 
-Used runtime models:
-- Knight.glb
-- Barbarian.glb
-- Mage.glb
-- Rogue.glb
-- Rogue_Hooded.glb
+Local runtime models:
+- `Knight.glb`
+- `Barbarian.glb`
+- `Mage.glb`
+- `Rogue.glb`
+- `Rogue_Hooded.glb`
 
 ## KayKit Character Pack: Skeletons 1.0
 Creator: Kay Lousberg
 License: CC0 1.0 Universal
 Source: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0
 
-Used runtime model:
-- Skeleton_Warrior.glb
-
+Local runtime model:
+- `Skeleton_Warrior.glb`
 
 ## KayKit Fantasy Weapons Bits 1.0
 Creator: Kay Lousberg
 License: CC0 1.0 Universal
-Runtime source mirror used for weapon GLTF loading:
-https://github.com/GeorgeQLe/assets-kaykit-3d-props
+Original pack: https://kaylousberg.itch.io/fantasy-weapons-bits
 
-Original pack:
-https://kaylousberg.itch.io/fantasy-weapons-bits
-
-Weapons remain independent from character models and have primitive fallback meshes.
-
+The repository keeps only the six weapon models used by the game, their `.bin` files, and the shared texture. Runtime loading is local from `assets/models/weapons/`.
 
 ## KayKit Prototype Bits 1.1
 Creator: Kay Lousberg
 License: CC0 1.0 Universal
-Runtime mirror: https://github.com/GeorgeQLe/assets-kaykit-3d-props
-Used for arena walls, pillars, crates, barrels, floor and decorative props.
+
+The repository keeps only the arena props used at runtime and their dependencies. Runtime loading is local from `assets/models/stage/`.
 
 ## Kenney Synth Voice 1
-- Creator: Kenney
-- License: CC0 1.0
-- Used: count_3.ogg, count_2.ogg, count_1.ogg, go.ogg
-- Runtime mirror: gamesounds.xyz / Kenney's Sound Pack / Synth Voice 1
-- Kenney Voiceover Pack contains common game voice lines and is CC0.
+Creator: Kenney
+License: CC0 1.0
+
+Local files:
+- `assets/audio/voice/count_3.ogg`
+- `assets/audio/voice/count_2.ogg`
+- `assets/audio/voice/count_1.ogg`
+- `assets/audio/voice/go.ogg`
