@@ -3,19 +3,98 @@ name: Deploy Duel Arena to Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  cleanup-runtime:
+    if: github.event_name == 'pull_request' && github.head_ref == 'cleanup/resource-lifecycle'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup/resource-lifecycle
+      - name: Apply lifecycle cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count=text.count(old)
+              if count!=1:
+                  raise SystemExit(f'{label}: expected 1 match, got {count}')
+              return text.replace(old,new,1)
+
+          p=Path('src/main.js')
+          s=p.read_text()
+
+          anchor="let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;\n\nfunction clearGroup(g){\n  // Cached GLTF clones share geometry/material resources. Removing a stage must\n  // not dispose those shared resources or later stage/model loads can render broken.\n  while(g.children.length)g.remove(g.children[g.children.length-1]);\n}\n"
+          replacement="""let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
+
+function markSharedAsset(root){
+  root.traverse(n=>{if(n.isMesh)n.userData.sharedAsset=true});
+  return root;
+}
+function disposeOwnedObject(root){
+  if(!root)return;
+  const geometries=new Set(),materials=new Set();
+  root.traverse(n=>{
+    if(!n.isMesh||n.userData.sharedAsset)return;
+    if(n.geometry&&!geometries.has(n.geometry)){
+      geometries.add(n.geometry);n.geometry.dispose?.();
+    }
+    const mats=Array.isArray(n.material)?n.material:[n.material];
+    mats.filter(Boolean).forEach(mat=>{
+      if(!materials.has(mat)){materials.add(mat);mat.dispose?.()}
+    });
+  });
+}
+function clearGroup(g){
+  disposeOwnedObject(g);
+  g.clear();
+}
+"""
+          s=replace_once(s,anchor,replacement,'ownership helpers')
+
+          s=replace_once(s,"    const model=gltf.scene.clone(true);\n","    const model=markSharedAsset(gltf.scene.clone(true));\n",'prop shared marker')
+          s=replace_once(s,"    holder.add(model);\n    if(opts.fallback)opts.fallback.visible=false;","    holder.add(model);\n    if(opts.fallback){disposeOwnedObject(opts.fallback);opts.fallback.removeFromParent()}",'prop fallback disposal')
+          s=replace_once(s,"    const model=gltf.scene.clone(true);\n    model.scale.setScalar(player.cfg.weaponScale||.8);","    const model=markSharedAsset(gltf.scene.clone(true));\n    model.scale.setScalar(player.cfg.weaponScale||.8);",'weapon shared marker')
+          s=replace_once(s,"    player.weaponPrimitive.visible=false;\n    player.weaponPivot.add(model);","    disposeOwnedObject(player.weaponPrimitive);\n    player.weaponPrimitive.removeFromParent();\n    player.weaponPrimitive=null;\n    player.weaponPivot.add(model);",'weapon fallback disposal')
+          s=replace_once(s,"    const model=cloneSkeleton(gltf.scene);\n    model.scale.setScalar(.72);","    const model=markSharedAsset(cloneSkeleton(gltf.scene));\n    model.scale.setScalar(.72);",'character shared marker')
+          s=replace_once(s,"    player.primitive.visible=false;\n    player.modelHost.add(model);","    disposeOwnedObject(player.primitive);\n    player.primitive.clear();\n    player.primitive.visible=false;\n    player.modelHost.add(model);",'character fallback disposal')
+          s=replace_once(s,"function removePlayers(){\n  players.forEach(p=>scene.remove(p.root));players=[];\n}","function removePlayers(){\n  players.forEach(p=>{\n    p.mixer?.stopAllAction();\n    p.mixer=null;\n    disposeOwnedObject(p.root);\n    scene.remove(p.root);\n  });\n  players=[];\n}",'player disposal')
+          s=replace_once(s,"  if(o.hp<=0){\n    arenaRoot.remove(o.mesh);\n    obstacles=obstacles.filter(x=>x!==o);","  if(o.hp<=0){\n    disposeOwnedObject(o.mesh);\n    arenaRoot.remove(o.mesh);\n    obstacles=obstacles.filter(x=>x!==o);",'destroyed obstacle disposal')
+
+          p.write_text(s)
+          PY
+
+          node --check src/main.js
+          grep -q 'function disposeOwnedObject' src/main.js
+          grep -q 'markSharedAsset(gltf.scene.clone(true))' src/main.js
+          grep -q 'markSharedAsset(cloneSkeleton(gltf.scene))' src/main.js
+          grep -q 'disposeOwnedObject(p.root)' src/main.js
+          git diff --check
+
+      - name: Commit verified cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/main.js
+          git commit -m "Clean up owned Three.js resources"
+          git push origin HEAD:cleanup/resource-lifecycle
+
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
