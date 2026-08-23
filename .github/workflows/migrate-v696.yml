@@ -1,0 +1,40 @@
+name: Migrate Duel Arena v6.9.6
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'migrate_v696.py'
+      - '.v696-trigger'
+      - '.github/workflows/migrate-v696.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply canonical v6.9.6
+        run: |
+          set -euo pipefail
+          python migrate_v696.py
+          node --check src/main.js
+          python -m json.tool game-config.json >/dev/null
+          grep -q 'v6.9.6' index.html
+          grep -q 'game-p1' index.html
+          grep -q 'game-p2' index.html
+          grep -q 'splitRenderers' src/main.js
+          ! test -e src/main-v695.js
+          ! test -e style-v694.css
+      - name: Commit canonical source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Canonical v6.9.6 dual canvas split' || exit 0
+          git push origin HEAD:main
