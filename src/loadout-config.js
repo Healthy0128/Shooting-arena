@@ -23,7 +23,16 @@ export const BODY_META={
 export const WEAPON_SOURCE=Object.fromEntries(
   Object.entries(CHARACTERS).map(([key,character])=>[character.weaponStyle,key])
 );
-export const COLOR_VALUES={cyan:0x35a7ff,orange:0xff8a3d,violet:0x9c6cff,mint:0x5be0d0,gold:0xffd45a,bone:0xded6c1,pink:0xff6fae,lime:0xa7ef62};
+export const COLOR_VALUES={
+  cyan:CHARACTERS.ranger.color,
+  orange:CHARACTERS.crusher.color,
+  violet:CHARACTERS.dash.color,
+  mint:CHARACTERS.mage.color,
+  gold:CHARACTERS.rogue.color,
+  bone:CHARACTERS.skeleton.color,
+  pink:0xff6fae,
+  lime:0xa7ef62
+};
 export const BUILD_LIMIT=10;
 
 export const PASSIVES={
