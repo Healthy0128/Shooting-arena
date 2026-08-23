@@ -64,19 +64,31 @@ function updateTopBattleCamera(){
   const rect=renderer.domElement.getBoundingClientRect();
   const w=Math.max(1,rect.width),h=Math.max(1,rect.height),aspect=w/h,portrait=h>=w;
   const a=players[0].root.position,b=players[1].root.position;
-  const mx=(a.x+b.x)*.5,mz=(a.z+b.z)*.5;
+  const rawMx=(a.x+b.x)*.5,rawMz=(a.z+b.z)*.5;
+  // Keep the battle midpoint near the visual center while softly biasing toward
+  // the arena center so one fighter does not get pinned under the HUD.
+  const mx=THREE.MathUtils.lerp(rawMx,0,.12),mz=THREE.MathUtils.lerp(rawMz,0,.12);
   const dx=Math.abs(a.x-b.x),dz=Math.abs(a.z-b.z);
-  // Camera axes change in portrait: screen X = world Z, screen Y = world X.
-  const spanX=(portrait?dz:dx)+5.0;
-  const spanY=(portrait?dx:dz)+6.0;
-  let viewW=Math.max(spanX,spanY*aspect);
-  let viewH=viewW/Math.max(.2,aspect);
-  const minH=portrait?13.5:10.5,maxH=portrait?23.5:17.5;
-  viewH=THREE.MathUtils.clamp(viewH,minH,maxH);viewW=viewH*aspect;
+  const screenSpanX=portrait?dz:dx;
+  const screenSpanY=portrait?dx:dz;
+  // Reserve substantial HUD/control margins. Fighters should live in roughly
+  // the middle half of the screen, not at the top/bottom edges.
+  const safeX=portrait?.72:.78;
+  const safeY=portrait?.50:.66;
+  const needW=(screenSpanX+4.6)/safeX;
+  const needH=(screenSpanY+5.8)/safeY;
+  let viewH=Math.max(needH,needW/Math.max(.2,aspect));
+  const minH=portrait?21.5:13.5,maxH=portrait?30:21;
+  viewH=THREE.MathUtils.clamp(viewH,minH,maxH);
+  let viewW=viewH*aspect;
+  // Never crop horizontally when the phone is especially narrow.
+  if(viewW<needW){viewW=needW;viewH=viewW/Math.max(.2,aspect)}
   topCamera.left=-viewW/2;topCamera.right=viewW/2;
   topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
   topCamera.up.set(portrait?1:0,0,portrait?0:-1);
-  topCamera.position.set(mx,34,mz+.01);topCamera.lookAt(mx,0,mz);topCamera.updateProjectionMatrix();
+  topCamera.position.lerp(new THREE.Vector3(mx,34,mz+.01),.18);
+  topCamera.lookAt(topCamera.position.x,0,topCamera.position.z-.01);
+  topCamera.updateProjectionMatrix();
 }
 function renderSplitArena(){
   const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
