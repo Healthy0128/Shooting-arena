@@ -7,10 +7,8 @@ const renderer=new THREE.WebGLRenderer({canvas:$('#game'),antialias:true,powerPr
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5)); renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d1118); scene.fog=new THREE.Fog(0x0d1118,26,44);
 const topCamera=new THREE.OrthographicCamera(-11.6,11.6,14.2,-14.2,.1,100); topCamera.position.set(0,34,.01); topCamera.up.set(0,0,-1); topCamera.lookAt(0,0,0);
-const arenaCamera=new THREE.PerspectiveCamera(43,1,.1,100);
 const chaseCameras=[new THREE.PerspectiveCamera(46,1,.1,100),new THREE.PerspectiveCamera(46,1,.1,100)];
 let camera=topCamera,cameraMode='top';
-const cameraTarget=new THREE.Vector3();
 const _baseRender=renderer.render.bind(renderer);
 function updateChaseCamera(i,cam,aspect){
   const me=players[i],op=players[1-i];if(!me?.root||!op?.root)return;
@@ -64,30 +62,22 @@ function updateTopBattleCamera(){
   const rect=renderer.domElement.getBoundingClientRect();
   const w=Math.max(1,rect.width),h=Math.max(1,rect.height),aspect=w/h,portrait=h>=w;
   const a=players[0].root.position,b=players[1].root.position;
-  const rawMx=(a.x+b.x)*.5,rawMz=(a.z+b.z)*.5;
-  // Keep the battle midpoint near the visual center while softly biasing toward
-  // the arena center so one fighter does not get pinned under the HUD.
-  const mx=THREE.MathUtils.lerp(rawMx,0,.12),mz=THREE.MathUtils.lerp(rawMz,0,.12);
+  const mx=(a.x+b.x)*.5,mz=(a.z+b.z)*.5;
   const dx=Math.abs(a.x-b.x),dz=Math.abs(a.z-b.z);
-  const screenSpanX=portrait?dz:dx;
-  const screenSpanY=portrait?dx:dz;
-  // Reserve substantial HUD/control margins. Fighters should live in roughly
-  // the middle half of the screen, not at the top/bottom edges.
-  const safeX=portrait?.72:.78;
-  const safeY=portrait?.50:.66;
-  const needW=(screenSpanX+4.6)/safeX;
-  const needH=(screenSpanY+5.8)/safeY;
-  let viewH=Math.max(needH,needW/Math.max(.2,aspect));
-  const minH=portrait?21.5:13.5,maxH=portrait?30:21;
-  viewH=THREE.MathUtils.clamp(viewH,minH,maxH);
-  let viewW=viewH*aspect;
-  // Never crop horizontally when the phone is especially narrow.
-  if(viewW<needW){viewW=needW;viewH=viewW/Math.max(.2,aspect)}
+  const spanScreenX=portrait?dz:dx;
+  const spanScreenY=portrait?dx:dz;
+  // One authoritative top-down camera: exact midpoint, deliberately wide.
+  const marginX=6.0,marginY=8.0;
+  const needW=spanScreenX+marginX;
+  const needH=spanScreenY+marginY;
+  let viewH=Math.max(portrait?26:16,needH,needW/Math.max(.2,aspect));
+  viewH=Math.min(viewH,portrait?34:24);
+  const viewW=viewH*aspect;
   topCamera.left=-viewW/2;topCamera.right=viewW/2;
   topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
   topCamera.up.set(portrait?1:0,0,portrait?0:-1);
-  topCamera.position.lerp(new THREE.Vector3(mx,34,mz+.01),.18);
-  topCamera.lookAt(topCamera.position.x,0,topCamera.position.z-.01);
+  topCamera.position.set(mx,34,mz+.01);
+  topCamera.lookAt(mx,0,mz);
   topCamera.updateProjectionMatrix();
 }
 function renderSplitArena(){
@@ -255,22 +245,10 @@ function updateAimGuides(){
 }
 function setCameraMode(mode){
   cameraMode=mode==='arena'?'arena':'top';
-  camera=cameraMode==='arena'?arenaCamera:topCamera;
+  camera=topCamera;
   document.body.classList.toggle('split-arena',cameraMode==='arena');
   document.querySelector('#camera-mode')?.classList.toggle('selected',cameraMode==='top');
   document.querySelector('#camera-tilt-test')?.classList.toggle('selected',cameraMode==='arena');
-}
-function updateSharedCamera(dt){
-  if(cameraMode!=='arena'||players.length<2||!players[0]?.root||!players[1]?.root)return;
-  const a=players[0].root.position,b=players[1].root.position;
-  const mid=new THREE.Vector3((a.x+b.x)/2,0,(a.z+b.z)/2);
-  cameraTarget.lerp(mid,1-Math.pow(.001,dt));
-  const dist=Math.hypot(a.x-b.x,a.z-b.z);
-  const height=THREE.MathUtils.clamp(10.8+dist*.34,11.6,16.6);
-  const back=THREE.MathUtils.clamp(9.8+dist*.24,10.2,13.8);
-  const desired=new THREE.Vector3(cameraTarget.x,height,cameraTarget.z+back);
-  arenaCamera.position.lerp(desired,1-Math.pow(.002,dt));
-  arenaCamera.lookAt(cameraTarget.x,.15,cameraTarget.z);
 }
 
 
@@ -329,6 +307,6 @@ function screenVectorToWorld(pi,x,y){
 const ptr=new Map();$$('.stick-zone').forEach(z=>{const knob=z.querySelector('i'),base=z.querySelector('.stick'),pi=+z.dataset.player,kind=z.dataset.kind;const apply=e=>{if(!players[pi])return;const r=base.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);const max=r.width*.33,mag=Math.hypot(dx,dy);let x=dx/max,y=dy/max;if(mag>max){x*=max/mag;y*=max/mag}if(mag<max*.12)x=y=0;const world=screenVectorToWorld(pi,x,y);(kind==='move'?players[pi].move:players[pi].aim).copy(world);knob.style.transform=`translate(calc(-50% + ${Math.max(-max,Math.min(max,dx))}px),calc(-50% + ${Math.max(-max,Math.min(max,dy))}px))`;if(kind==='aim'&&mag>max*.35)shoot(pi)};z.onpointerdown=e=>{e.preventDefault();z.setPointerCapture(e.pointerId);ptr.set(e.pointerId,1);apply(e)};z.onpointermove=e=>ptr.has(e.pointerId)&&apply(e);const end=e=>{ptr.delete(e.pointerId);knob.style.transform='translate(-50%,-50%)';if(players[pi]){if(kind==='move')players[pi].move.set(0,0);else players[pi].aim.set(0,0)}};z.onpointerup=end;z.onpointercancel=end});
 
 function update(dt){if(!running)return;time=Math.max(0,time-dt);if(time<=0){if(players[0].score!==players[1].score)finish(players[0].score>players[1].score?0:1);else{time=30;playBgm('sudden');banner('SUDDEN DEATH!',1000)}}players.forEach(p=>{p.cd=Math.max(0,p.cd-dt);p.inv=Math.max(0,p.inv-dt);p.weaponKick=Math.max(0,(p.weaponKick||0)-dt*1.9);if(p.weaponHost)p.weaponHost.position.z=p.weaponKick;p.defCd=Math.max(0,(p.defCd||0)-dt);p.guardTime=Math.max(0,(p.guardTime||0)-dt);p.parryTime=Math.max(0,(p.parryTime||0)-dt);const db=document.querySelector(`.def-btn[data-player="${p.i}"]`);if(db){db.textContent=p.defCd>0?p.defCd.toFixed(1):'DEF';db.classList.toggle('ready',p.defCd<=0)}if(!p.alive)return;const m=p.move.clone();if(m.lengthSq()>1)m.normalize();const q=p.root.position.clone();q.x+=m.x*p.cfg.sp*dt;q.z+=m.y*p.cfg.sp*dt;if(!blocked(q,p.r))p.root.position.copy(q);if(p.aim.lengthSq()>.1)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;if(p.mix){const moving=p.move.lengthSq()>.08;if(p.walk){p.walk.enabled=moving;p.walk.setEffectiveWeight(moving?1:0)}if(p.idle){p.idle.enabled=!moving;p.idle.setEffectiveWeight(moving?0:1)}p.mix.update(dt)}p.root.visible=p.inv>0?Math.floor(p.inv*12)%2===0:true});for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.life-=dt;b.m.position.addScaledVector(b.v,dt);let rm=b.life<=0;const o=!rm&&hitObs(b.m.position);if(o){if(o.breakable){o.hp-=b.dm;burst(b.m.position.clone(),0xd6a05d,6);if(o.hp<=0){arena.remove(o.m);obs=obs.filter(x=>x!==o);burst(b.m.position.clone(),0xc58b4a,16)}}rm=true}else if(!rm&&(Math.abs(b.m.position.x)>A.hw||Math.abs(b.m.position.z)>A.hh))rm=true;if(!rm){const e=players[1-b.owner];const dx=b.m.position.x-e.root.position.x,dz=b.m.position.z-e.root.position.z;if(e.alive&&dx*dx+dz*dz<(e.r+.16)**2)damage(1-b.owner,b.dm,b.owner),rm=true}if(rm){scene.remove(b.m);bullets.splice(i,1)}}for(let i=parts.length-1;i>=0;i--){const x=parts[i];x.life-=dt;if(x.ring){const s=(1.25-x.life/.22)*x.scale+1;x.m.scale.setScalar(Math.max(1,s))}else{x.m.position.addScaledVector(x.v,dt);x.v.y-=6*dt}x.m.material.opacity=Math.max(0,x.life/.3);if(x.life<=0){scene.remove(x.m);parts.splice(i,1)}}for(let i=0;i<2;i++){comboTimer[i]=Math.max(0,comboTimer[i]-dt);if(comboTimer[i]===0)combo[i]=0}lowHpPulse();hud();$('#timer').textContent=Math.ceil(time)}
-function resize(){const vp=getCssViewport(),w=vp.w,h=vp.h;renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';configureTopCamera(w,h);arenaCamera.aspect=w/Math.max(1,h);arenaCamera.updateProjectionMatrix()}addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,80));resize();
-function loop(now){const rawDt=Math.min(.033,(now-last)/1000);last=now;let gameDt=rawDt;if(koSlow>0){koSlow=Math.max(0,koSlow-rawDt);gameDt*=.22}if(hitStop>0){hitStop=Math.max(0,hitStop-rawDt);gameDt=0}else update(gameDt);updateAimGuides();updateTopBattleCamera();updateSharedCamera(rawDt);shakeTime=Math.max(0,shakeTime-rawDt);const saved=camera.position.clone();if(shakeTime>0&&shakePower>0){const f=shakeTime/.38,amp=shakePower*Math.min(1,f*2.5);camera.position.x+=(Math.random()-.5)*amp;camera.position.y+=(Math.random()-.5)*amp*.55;camera.position.z+=(Math.random()-.5)*amp}renderer.render(scene,camera);camera.position.copy(saved);if(shakeTime<=0)shakePower=0;requestAnimationFrame(loop)}build('square');requestAnimationFrame(loop);
-if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
+function resize(){const vp=getCssViewport(),w=vp.w,h=vp.h;renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';configureTopCamera(w,h)}addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,80));resize();
+function loop(now){const rawDt=Math.min(.033,(now-last)/1000);last=now;let gameDt=rawDt;if(koSlow>0){koSlow=Math.max(0,koSlow-rawDt);gameDt*=.22}if(hitStop>0){hitStop=Math.max(0,hitStop-rawDt);gameDt=0}else update(gameDt);updateAimGuides();updateTopBattleCamera();shakeTime=Math.max(0,shakeTime-rawDt);const saved=camera.position.clone();if(shakeTime>0&&shakePower>0){const f=shakeTime/.38,amp=shakePower*Math.min(1,f*2.5);camera.position.x+=(Math.random()-.5)*amp;camera.position.y+=(Math.random()-.5)*amp*.55;camera.position.z+=(Math.random()-.5)*amp}renderer.render(scene,camera);camera.position.copy(saved);if(shakeTime<=0)shakePower=0;requestAnimationFrame(loop)}build('square');requestAnimationFrame(loop);
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}));
