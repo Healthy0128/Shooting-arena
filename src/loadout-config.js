@@ -70,6 +70,15 @@ export const PASSIVES={
   }
 };
 
+export const LOADOUT_OPTIONS={
+  body:{knight:'KNIGHT',barbarian:'BARBARIAN',rogueHood:'HOODED',mage:'MAGE',rogue:'ROGUE',skeleton:'BONES'},
+  weapon:{rifle:'RIFLE',scatter:'SCATTER',rapid:'RAPID',arcane:'ARCANE',bladegun:'BLADE GUN',cannon:'CANNON'},
+  defense:{roll:'ROLL',guard:'GUARD',step:'STEP',barrier:'BARRIER',evade:'EVADE',parry:'PARRY'},
+  super:{rapid:'OVERDRIVE',blast:'BLAST RING',dash:'PHANTOM DASH',nova:'NOVA',fan:'BLADE FAN',boneStorm:'STORM'},
+  color:Object.fromEntries(Object.keys(COLOR_VALUES).map(key=>[key,key.toUpperCase()])),
+  passive:Object.fromEntries(Object.entries(PASSIVES).map(([key,passive])=>[key,passive.name]))
+};
+
 const PASSIVE_COSTS=Object.fromEntries(
   Object.entries(PASSIVES).map(([key,passive])=>[key,passive.cost])
 );
