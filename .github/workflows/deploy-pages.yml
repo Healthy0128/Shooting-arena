@@ -25,39 +25,75 @@ jobs:
       - name: Runtime checks
         run: |
           set -euo pipefail
-          node --check src/main.js
-          node --check src/game.js
-          node --check src/arena-config.js
-          node --check src/ui.js
-          node --check src/loadout-config.js
-          grep -q './src/main.js?v=695' index.html
-          grep -q 'function renderSplitArena' src/game.js
-          grep -q 'function updateTopCamera' src/game.js
-          test "$(grep -c "from './ui.js?v=695'" src/game.js)" -eq 1
-          test "$(grep -c "from './loadout-config.js?v=695'" src/game.js)" -eq 1
-          grep -q 'id="match-result-stats"' index.html
-          grep -q 'id="build-limit-value"' index.html
-          test "$(grep -o 'data-default=' index.html | wc -l)" -eq 12
-          grep -q "from './loadout-config.js?v=695';" src/ui.js
-          grep -q 'BUILD_LIMIT' src/ui.js
-          grep -q 'LOADOUT_OPTIONS' src/ui.js
-          grep -q '^export const LOADOUT_OPTIONS=' src/loadout-config.js
-          ! grep -q 'BUILD LIMIT <strong>10</strong>' index.html
-          ! grep -q '<option ' index.html
-          ! grep -q 'match-result-card' src/ui.js
-          ! grep -q '\.match-result-card' style.css
-          ! grep -q '^function hitWall' src/game.js
-          ! grep -q '^function showBanner' src/game.js
-          ! grep -q '^function renderMatchResult' src/game.js
-          ! grep -q '^function hideMatchResult' src/game.js
-          ! grep -q '^const CHARACTERS' src/game.js
-          ! grep -q '^const BODY_SOURCE' src/game.js
-          ! grep -q '^const BODY_META' src/game.js
-          ! grep -q '^const WEAPON_SOURCE' src/game.js
-          ! grep -q '^const COLOR_VALUES' src/game.js
-          ! grep -q '^const BUILD_LIMIT' src/game.js
-          ! grep -q '^const PASSIVES' src/game.js
-          ! grep -q '^const BUILD_COSTS' src/game.js
+
+          check() {
+            local name="$1"
+            shift
+            echo "CHECK: $name"
+            if "$@"; then
+              echo "PASS: $name"
+            else
+              echo "::error::$name"
+              exit 1
+            fi
+          }
+
+          check "main.js syntax" node --check src/main.js
+          check "game.js syntax" node --check src/game.js
+          check "arena-config.js syntax" node --check src/arena-config.js
+          check "ui.js syntax" node --check src/ui.js
+          check "loadout-config.js syntax" node --check src/loadout-config.js
+
+          check "index uses stable main entry" grep -Fq './src/main.js?v=695' index.html
+          check "split renderer still exists" grep -Fq 'function renderSplitArena' src/game.js
+          check "top camera updater still exists" grep -Fq 'function updateTopCamera' src/game.js
+
+          echo "CHECK: ui import count"
+          test "$(grep -Fc "from './ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::ui import count'; exit 1; }
+          echo "PASS: ui import count"
+
+          echo "CHECK: loadout import count"
+          test "$(grep -Fc "from './loadout-config.js?v=695'" src/game.js)" -eq 1 || { echo '::error::loadout import count'; exit 1; }
+          echo "PASS: loadout import count"
+
+          check "match result stats host exists" grep -Fq 'id="match-result-stats"' index.html
+          check "build limit host exists" grep -Fq 'id="build-limit-value"' index.html
+
+          echo "CHECK: 12 loadout defaults"
+          test "$(grep -Fo 'data-default=' index.html | wc -l | tr -d ' ')" -eq 12 || { echo '::error::12 loadout defaults'; exit 1; }
+          echo "PASS: 12 loadout defaults"
+
+          check "ui reads loadout config" grep -Fq "from './loadout-config.js?v=695';" src/ui.js
+          check "ui uses BUILD_LIMIT" grep -Fq 'BUILD_LIMIT' src/ui.js
+          check "ui uses LOADOUT_OPTIONS" grep -Fq 'LOADOUT_OPTIONS' src/ui.js
+          check "loadout options are exported" grep -Fq 'export const LOADOUT_OPTIONS=' src/loadout-config.js
+
+          echo "CHECK: no hard-coded build limit in HTML"
+          if grep -Fq 'BUILD LIMIT <strong>10</strong>' index.html; then echo '::error::hard-coded build limit returned'; exit 1; fi
+          echo "PASS: no hard-coded build limit in HTML"
+
+          echo "CHECK: no duplicated loadout options in HTML"
+          if grep -Fq '<option ' index.html; then echo '::error::duplicated loadout options returned to HTML'; exit 1; fi
+          echo "PASS: no duplicated loadout options in HTML"
+
+          echo "CHECK: no retired result card implementation"
+          if grep -Fq 'match-result-card' src/ui.js || grep -Fq '.match-result-card' style.css; then echo '::error::retired result card implementation returned'; exit 1; fi
+          echo "PASS: no retired result card implementation"
+
+          for symbol in hitWall showBanner renderMatchResult hideMatchResult; do
+            echo "CHECK: no local $symbol in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol in game.js"
+          done
+
+          for symbol in CHARACTERS BODY_SOURCE BODY_META WEAPON_SOURCE COLOR_VALUES BUILD_LIMIT PASSIVES BUILD_COSTS; do
+            echo "CHECK: no local $symbol config in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol config returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol config in game.js"
+          done
+
+          echo "All runtime checks passed."
+
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
