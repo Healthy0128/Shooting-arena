@@ -1228,15 +1228,6 @@ function canMoveTo(pos,r){
     return Math.abs(pos.x-o.x)<o.hw+r&&Math.abs(pos.z-o.z)<o.hd+r;
   });
 }
-function hitWall(pos,r=.15){
-  if(Math.abs(pos.x)>ARENA.halfW-r||Math.abs(pos.z)>ARENA.halfH-r)return true;
-  return obstacles.some(o=>{
-    if(o.circle){
-      const dx=pos.x-o.x,dz=pos.z-o.z;return dx*dx+dz*dz<(o.r+r)*(o.r+r);
-    }
-    return Math.abs(pos.x-o.x)<o.hw+r&&Math.abs(pos.z-o.z)<o.hd+r;
-  });
-}
 
 const banner=$('#banner'), result=$('#result');
 function showBanner(text,ms=650){
