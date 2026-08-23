@@ -1,1 +1,1 @@
-run v6.9.6 canonical migration
+run v6.9.6 canonical migration retry 2
