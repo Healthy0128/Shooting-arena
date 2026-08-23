@@ -8,13 +8,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.9.5</title>
+  <title>Duel Arena v6.9.6</title>
   <link rel="stylesheet" href="./style.css?v=695" />
+  <link rel="stylesheet" href="./style-v696.css?v=696" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 <body>
   <main id="game-wrap">
     <canvas id="game"></canvas>
+    <canvas id="game-p2" class="split-view split-p2" aria-hidden="true"></canvas>
+    <canvas id="game-p1" class="split-view split-p1" aria-hidden="true"></canvas>
 
     <section id="menu" class="overlay">
       <div class="panel">
@@ -26,7 +29,7 @@
             <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
           </div>
           <div class="build-badge">
-            <strong>v6.9.5</strong><span>CLEAN SPLIT CORE</span>
+            <strong>v6.9.6</strong><span>DUAL CANVAS SPLIT</span>
           </div>
         </div>
 
@@ -104,7 +107,7 @@
             <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN</button>
             <button id="camera-tilt-test" data-mode="arena">3D SPLIT CHASE</button>
           </div>
-          <p class="camera-note">TOP-DOWNは共有画面 / 3Dは上下50%ずつ・各キャラを常に中央に固定</p>
+          <p class="camera-note">TOP-DOWNは共有画面 / 3Dは2枚のcanvasで上下50%ずつ</p>
         </div>
 
         <div class="arena-select">
@@ -177,6 +180,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main.js?v=695"></script>
+  <script type="module" src="./src/main.js?v=696"></script>
 </body>
 </html>
