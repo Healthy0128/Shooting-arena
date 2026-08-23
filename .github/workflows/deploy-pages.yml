@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -22,45 +22,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Materialize direct v6.9.6 runtime
-        run: |
-          set -euo pipefail
-          if [ -f migrate_v696.py ]; then
-            python migrate_v696.py
-            node --check src/main.js
-            python -m json.tool game-config.json >/dev/null
-            grep -q 'v6.9.6' index.html
-            grep -q 'game-p1' index.html
-            grep -q 'game-p2' index.html
-            grep -q 'splitRenderers' src/main.js
-            ! grep -q 'JSZip' src/main.js
-            ! test -d .v695-payload
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add -A
-            git commit -m 'Canonical v6.9.6 direct dual-canvas runtime' || true
-            git push origin HEAD:main
-          fi
-
-      - name: Validate deploy source
+      - name: Validate v6.9.4 canvas viewport sync
         run: |
           set -euo pipefail
           node --check src/main.js
+          node --check src/main-v694.js
           python -m json.tool game-config.json >/dev/null
-          grep -q 'v6.9.6' index.html
-          grep -q 'game-p1' index.html
-          grep -q 'game-p2' index.html
-          grep -q 'splitRenderers' src/main.js
-          ! grep -q 'JSZip' src/main.js
-
+          grep -q 'v6.9.4' index.html
+          grep -q 'CANVAS VIEWPORT SYNC' index.html
+          grep -q 'main-v694.js' index.html
+          grep -q 'style-v694.css' index.html
+          grep -q 'canvas.getBoundingClientRect()' src/main-v694.js
+          grep -q 'renderer.setSize(w,h,false)' src/main-v694.js
+          grep -q 'SPLIT_VIEWS' src/main-v694.js
+          grep -q '100dvh' style-v694.css
+          test ! -e src/main-v693.js
+          ! grep -q 'serviceWorker.register' src/main.js
+          ! grep -q 'updateSharedCamera' src/main.js
+          ! grep -q 'tiltCamera' src/main.js
+          ! grep -q 'fitTopCamera' src/main.js
+          ! grep -q 'p2FaceControls' src/main.js
+          ! grep -q 'SPAWN_Z' src/main.js
+          ! grep -q 'arenaCamera' src/main.js
+          ! grep -q 'cameraTarget' src/main.js
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
           mkdir _site
-          rsync -a --delete --exclude '.git/' --exclude '.github/' --exclude '_site/' ./ _site/
+          rsync -a --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '_site/' \
+            ./ _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

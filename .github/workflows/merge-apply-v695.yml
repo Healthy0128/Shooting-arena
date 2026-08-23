@@ -1,0 +1,49 @@
+name: One-shot v6.9.5 merge canonicalizer
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Execute canonical integration script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, textwrap
+          y=Path('.github/workflows/apply-v695.yml').read_text()
+          m=re.search(r"      - name: Integrate clean v6\.9\.5 source\n        run: \|\n(.*?)(?=\n      - name: Validate before commit)",y,re.S)
+          if not m: raise SystemExit('canonical integration block not found')
+          Path('/tmp/apply-v695.sh').write_text(textwrap.dedent(m.group(1)))
+          PY
+          bash /tmp/apply-v695.sh
+      - name: Validate canonical tree
+        run: |
+          set -euo pipefail
+          node --check src/main.js
+          python -m json.tool game-config.json >/dev/null
+          grep -q 'v6.9.5' index.html
+          grep -q 'CLEAN SPLIT CORE' index.html
+          grep -q 'src/main.js?v=695' index.html
+          grep -q 'SPLIT_VIEWS' src/main.js
+          grep -q 'syncRendererSize' src/main.js
+          test "$(find src -maxdepth 1 -name 'main-v69*.js' | wc -l)" -eq 0
+          test ! -e style-v694.css
+          test ! -e fetch_bgm.py
+          test "$(find .github/workflows -maxdepth 1 -type f | wc -l)" -eq 1
+      - name: Commit canonical v6.9.5
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Replace runtime patch stack with clean v6.9.5 canonical source [canonical-v695]'
+          git push origin HEAD:main
