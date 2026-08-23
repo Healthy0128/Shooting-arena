@@ -1,6 +1,9 @@
 name: Cleanup v695 loader
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - cleanup/v695-flatten
@@ -10,11 +13,12 @@ permissions:
 
 jobs:
   flatten:
-    if: ${{ !contains(github.event.head_commit.message, '[flattened-v695]') }}
+    if: ${{ github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[flattened-v695]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: cleanup/v695-flatten
           fetch-depth: 0
       - name: Restore canonical main.js from payload
         shell: bash
@@ -41,7 +45,7 @@ jobs:
           PY
           rm -f src/main-v695.js
           rm -rf .v695-payload
-          rm -f .v695-trigger .v695-pr-trigger .v695-exact-trigger .v696-trigger .cleanup-trigger
+          rm -f .v695-trigger .v695-pr-trigger .v695-exact-trigger .v696-trigger .cleanup-trigger .cleanup-trigger-2
       - name: Verify cleanup
         shell: bash
         run: |
@@ -60,4 +64,4 @@ jobs:
           git add -A
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Flatten v6.9.5 startup and remove payload loader [flattened-v695]'
-          git push
+          git push origin HEAD:cleanup/v695-flatten
