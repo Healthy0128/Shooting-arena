@@ -24,14 +24,13 @@ jobs:
       - name: Syntax check
         run: node --check src/main.js
 
-      - name: Verify v6.8.2 dynamic battle camera build
+      - name: Verify v6.8.3 wide center framing build
         run: |
-          grep -q 'v6.8.2' index.html
-          grep -q 'DYNAMIC BATTLE CAMERA' index.html
+          grep -q 'v6.8.3' index.html
+          grep -q 'WIDE CENTER FRAMING' index.html
           grep -q 'function configureTopCamera' src/main.js
           grep -q 'function updateTopBattleCamera' src/main.js
-          grep -q 'function getCssViewport' src/main.js
-          grep -q 'renderer.getDrawingBufferSize' src/main.js
+          grep -q 'const safeY=portrait?.50:.66' src/main.js
           grep -q 'function screenVectorToWorld' src/main.js
           grep -q 'const chaseCameras=' src/main.js
           grep -q 'function equipWeapon' src/main.js
