@@ -22,13 +22,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate v6.9.0 canonical source
+      - name: Validate v6.9.1 split camera build
         run: |
           set -euo pipefail
           node --check src/main.js
+          node --check src/main-v691.js
           python -m json.tool game-config.json >/dev/null
-          grep -q 'v6.9.0' index.html
-          grep -q 'CLEAN CAMERA CORE' index.html
+          grep -q 'v6.9.1' index.html
+          grep -q 'SPLIT CAMERA FIX' index.html
+          grep -q 'main-v691.js' index.html
+          grep -q 'applyQuaternion(cam.quaternion)' src/main-v691.js
+          ! grep -q 'if(player===1){x=-x;y=-y}' src/main-v691.js
           ! grep -q 'serviceWorker.register' src/main.js
           ! grep -q 'updateSharedCamera' src/main.js
           ! grep -q 'tiltCamera' src/main.js
