@@ -32,6 +32,15 @@ jobs:
           test -s .v695-payload/part-003
           grep -q './src/main-v695.js?v=695' index.html
           python -m json.tool game-config.json >/dev/null
+
+          # Validate the actual game source that the browser reconstructs at runtime.
+          cat .v695-payload/part-* | tr -d '\r\n\t ' | base64 -d > /tmp/v695.zip
+          unzip -t /tmp/v695.zip >/dev/null
+          unzip -p /tmp/v695.zip 'duel-arena-v6.9.5-clean-local/src/main.js' > /tmp/runtime-main.js
+          test -s /tmp/runtime-main.js
+          node --check /tmp/runtime-main.js
+          grep -q 'SPLIT_VIEWS' /tmp/runtime-main.js
+          grep -q 'syncRendererSize' /tmp/runtime-main.js
       - uses: actions/configure-pages@v5
       - name: Build static site
         run: |
