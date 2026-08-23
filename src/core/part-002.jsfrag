@@ -1,0 +1,145 @@
+    msg=document.createElement('div');
+    msg.id='build-warning';
+    msg.className='build-warning';
+    start.insertAdjacentElement('afterend',msg);
+  }
+  msg.textContent=invalid?`BUILD LIMIT: ${BUILD_LIMIT} POINTS`:'';
+  msg.hidden=!invalid;
+}
+
+
+const gltfLoader = new GLTFLoader();
+const assetCache = new Map();
+const propCache = new Map();
+let arenaBuildId=0;
+
+async function loadCharacterAsset(url){
+  if(assetCache.has(url)) return assetCache.get(url);
+  const promise = new Promise((resolve,reject)=>{
+    gltfLoader.load(url, resolve, undefined, reject);
+  });
+  assetCache.set(url,promise);
+  return promise;
+}
+
+
+async function loadProp(url){
+  if(propCache.has(url)) return propCache.get(url);
+  const promise=new Promise((resolve,reject)=>gltfLoader.load(url,resolve,undefined,reject));
+  propCache.set(url,promise);return promise;
+}
+async function attachPropVisual(url, holder, opts={}, buildId=arenaBuildId){
+  try{
+    const gltf=await loadProp(url);
+    if(buildId!==arenaBuildId || !holder.parent)return;
+    const model=gltf.scene.clone(true);
+    const s=opts.scale??1;
+    if(Array.isArray(s)) model.scale.set(s[0],s[1],s[2]); else model.scale.setScalar(s);
+    model.rotation.y=opts.rotY||0;
+    model.position.set(opts.ox||0,opts.oy||0,opts.oz||0);
+    model.traverse(n=>{if(n.isMesh){n.castShadow=false;n.receiveShadow=false}});
+    holder.add(model);
+    if(opts.fallback)opts.fallback.visible=false;
+  }catch(err){console.warn('Stage prop fallback:',url,err)}
+}
+
+function findClip(clips, patterns){
+  return clips.find(c=>patterns.some(p=>c.name.toLowerCase().includes(p))) || clips[0] || null;
+}
+
+async function attachWeaponModel(player){
+  const url=player.cfg.weaponModel;
+  if(!url)return;
+  try{
+    const gltf=await loadCharacterAsset(url);
+    if(!player.root.parent)return;
+    const model=gltf.scene.clone(true);
+    model.scale.setScalar(player.cfg.weaponScale||.8);
+    model.rotation.set(Math.PI/2,0,Math.PI);
+    model.position.set(0,0,-.48);
+    model.traverse(n=>{
+      if(n.isMesh){n.castShadow=false;n.receiveShadow=false}
+    });
+    player.weaponPrimitive.visible=false;
+    player.weaponPivot.add(model);
+    player.weaponReal=model;
+  }catch(err){
+    console.warn('Weapon fallback:',url,err);
+  }
+}
+
+async function attachRealModel(player){
+  const cfg=player.cfg;
+  try{
+    const assetStatus=$('#asset-status');if(assetStatus)assetStatus.textContent='Loading CC0 character models…';
+    const gltf=await loadCharacterAsset(cfg.model);
+    if(!player.root.parent) return;
+    const model=cloneSkeleton(gltf.scene);
+    model.scale.setScalar(.72);
+    model.rotation.y=Math.PI;
+    model.position.y=.03;
+    model.traverse(n=>{
+      if(n.isMesh){
+        n.castShadow=false;
+        n.receiveShadow=false;
+      }
+    });
+    player.primitive.visible=false;
+    player.modelHost.add(model);
+    const mixer=new THREE.AnimationMixer(model);
+    const idle=findClip(gltf.animations,['idle']);
+    const walk=findClip(gltf.animations,['walk','run']);
+    if(idle){const a=mixer.clipAction(idle);a.play();player.idleAction=a}
+    if(walk){const a=mixer.clipAction(walk);a.play();a.enabled=false;player.walkAction=a}
+    player.mixer=mixer;
+    player.realModel=true;
+    if(assetStatus)assetStatus.textContent='KayKit CC0 characters enabled · weapons load independently';
+  }catch(err){
+    console.warn('GLB fallback:',cfg.model,err);
+    const assetStatus=$('#asset-status');if(assetStatus)assetStatus.textContent='Some models could not load — fallback models are active.';
+  }
+}
+
+let selections=['ranger','ranger'];
+
+let arenaSelection='square';
+let players=[];
+let bullets=[];
+let particles=[];
+let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
+
+function clearGroup(g){
+  // Cached GLTF clones share geometry/material resources. Removing a stage must
+  // not dispose those shared resources or later stage/model loads can render broken.
+  while(g.children.length)g.remove(g.children[g.children.length-1]);
+}
+
+function makeFallbackBox(w,h,d,color=0x65748c){
+  return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.78}));
+}
+function addRealBox(x,z,w,d,h=1.35,opts={}){
+  const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
+  const fallback=makeFallbackBox(w,h,d,opts.color||0x66758e);fallback.position.y=h/2;holder.add(fallback);
+  const collider={x,z,hw:w/2,hd:d/2,mesh:holder,destructible:!!opts.destructible,hp:opts.hp??0};
+  obstacles.push(collider);if(collider.destructible)destructibles.push(collider);
+  const url=opts.url||PROPS.wall;
+  // KayKit assets are modular: scale visible mesh toward collider size while collision remains simple/fast.
+  attachPropVisual(url,holder,{scale:opts.scale||[Math.max(.55,w/2),Math.max(.55,h/1.4),Math.max(.55,d/2)],rotY:opts.rotY||0,oy:opts.oy||0,fallback},arenaBuildId);
+  return collider;
+}
+function addRealPillar(x,z,r=.8,h=1.8,variant='A'){
+  const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
+  const fallback=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,18),new THREE.MeshStandardMaterial({color:0x71819a,roughness:.75}));
+  fallback.position.y=h/2;holder.add(fallback);
+  obstacles.push({x,z,hw:r,hd:r,circle:true,r,mesh:holder});
+  attachPropVisual(variant==='B'?PROPS.pillarB:PROPS.pillarA,holder,{scale:Math.max(.7,r*1.35),fallback},arenaBuildId);
+}
+function addBush(x,z,r=1.25){
+  const group=new THREE.Group();
+  const mat=new THREE.MeshStandardMaterial({color:0x3f8c56,roughness:1,transparent:true,opacity:.76,depthWrite:false});
+  for(let i=0;i<9;i++){
+    const m=new THREE.Mesh(new THREE.ConeGeometry(.46,1.05,7),mat.clone());const a=i/9*Math.PI*2;
+    m.position.set(Math.cos(a)*r*.45,.52,Math.sin(a)*r*.45);m.rotation.y=a;group.add(m);
+  }
+  group.position.set(x,0,z);arenaRoot.add(group);bushes.push({x,z,r,group});
+  // Add real props to give the bush cluster physical visual richness without making it solid.
