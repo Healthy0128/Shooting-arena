@@ -1,4 +1,4 @@
-export function createInputController({getPlayers,mapStick,screenVectorToWorld,screenPointToGround,shoot,activateSuper}){
+export function createInputController({getPlayers,mapStick,screenVectorToWorld,shoot,activateSuper}){
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
   const isTpsMode=()=>document.body.classList.contains('split-arena');
@@ -112,12 +112,18 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     if(players.length<2)return;
     const r=canvas.getBoundingClientRect();
     const localY=e.clientY-r.top;
-    const player=localY<r.height/2?1:0;
+    const half=Math.max(1,r.height/2);
+    const player=localY<half?1:0;
     const fighter=players[player];
     if(!fighter?.alive)return;
 
-    const target=screenPointToGround?.(player,e.clientX,e.clientY);
+    const localX=e.clientX-r.left;
+    const viewportY=player===1?localY:localY-half;
+    const ndcX=localX/Math.max(1,r.width)*2-1;
+    const ndcY=1-viewportY/half*2;
+    const target=mapControl(player,ndcX,ndcY,'ground');
     if(!target)return;
+
     const dx=target.x-fighter.root.position.x;
     const dz=target.z-fighter.root.position.z;
     const len=Math.hypot(dx,dz);
