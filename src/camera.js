@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
-import { createControlMapper } from './controls.js?v=695';
+import { createControlMapper } from './controls.js?v=697';
 
 export function createCameraController({renderer,scene,getPlayers}){
   const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
