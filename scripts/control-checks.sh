@@ -44,7 +44,14 @@ check "keyboard aim always shoots" grep -Fq 'shoot(player);' src/input.js
 check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
 check "split reacts to visual viewport resize" grep -Fq "visualViewport?.addEventListener('resize',resize)" src/camera.js
 check "renderer measures actual canvas bounds" grep -Fq 'getBoundingClientRect' src/camera.js
-check "renderer uses dynamic viewport height" grep -Fq "canvas.style.height='100dvh'" src/camera.js
+check "renderer uses published viewport height" grep -Fq "canvas.style.height='var(--app-height,100dvh)'" src/camera.js
+check "standalone viewport considers full screen" grep -Fq 'standaloneScreenSize(baseW,baseH)' src/camera.js
+check "standalone viewport guards implausible screen sizes" grep -Fq 'const plausible=' src/camera.js
+check "camera publishes app height" grep -Fq "setProperty('--app-height'" src/camera.js
+check "iOS safe area is measured" grep -Fq 'function safeAreaBottom()' src/camera.js
+check "iOS gesture clearance is published" grep -Fq "setProperty('--gesture-clearance'" src/camera.js
+check "bottom tap safety zone is ignored" grep -Fq 'if(localY>r.height-gestureClearance())return;' src/input.js
+check "P1 stick respects gesture clearance" grep -Fq '.stick-zone.p1{bottom:var(--gesture-clearance)}' style.css
 check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js
 
 if grep -Fq 'if(player===1){x=-x;y=-y}' src/camera.js; then

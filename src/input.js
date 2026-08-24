@@ -4,6 +4,11 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   const isTpsMode=()=>document.body.classList.contains('split-arena');
   let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';
 
+  function gestureClearance(){
+    const value=getComputedStyle(document.documentElement).getPropertyValue('--gesture-clearance');
+    return Math.max(0,Number.parseFloat(value)||0);
+  }
+
   function syncInputMode(mode=inputMode){
     inputMode=mode;
     document.body.classList.toggle('touch-input',mode==='touch');
@@ -114,6 +119,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     const r=canvas.getBoundingClientRect();
     const localX=e.clientX-r.left;
     const localY=e.clientY-r.top;
+    if(localY>r.height-gestureClearance())return;
     const half=Math.max(1,r.height/2);
     const player=localY<half?1:0;
     const fighter=players[player];
