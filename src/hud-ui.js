@@ -1,6 +1,26 @@
 export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
   const $=s=>document.querySelector(s);
 
+  function keepWorldStatusClearOfButtons(el,playerIndex,anchorY){
+    const buttons=[...document.querySelectorAll(`.def-btn[data-player="${playerIndex}"],.super-btn[data-player="${playerIndex}"]`)]
+      .filter(button=>!button.hidden)
+      .map(button=>button.getBoundingClientRect());
+    if(!buttons.length)return;
+
+    const statusRect=el.getBoundingClientRect();
+    const collisions=buttons.filter(rect=>statusRect.left<rect.right&&statusRect.right>rect.left&&statusRect.top<rect.bottom&&statusRect.bottom>rect.top);
+    if(!collisions.length)return;
+
+    const clearance=10;
+    if(playerIndex===0){
+      const controlTop=Math.min(...collisions.map(rect=>rect.top));
+      el.style.top=`${anchorY-Math.max(0,statusRect.bottom-controlTop+clearance)}px`;
+    }else{
+      const controlBottom=Math.max(...collisions.map(rect=>rect.bottom));
+      el.style.top=`${anchorY+Math.max(0,controlBottom-statusRect.top+clearance)}px`;
+    }
+  }
+
   function ensureWorldStatus(p){
     if(p.worldStatus)return;
     const el=document.createElement('div');
@@ -31,6 +51,7 @@ export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
 
       el.style.left=`${screen.x}px`;
       el.style.top=`${screen.y}px`;
+      keepWorldStatusClearOfButtons(el,p.i,screen.y);
 
       const hp=el.querySelector('.world-hp-fill');
       const heat=el.querySelector('.world-heat-fill');
