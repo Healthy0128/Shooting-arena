@@ -42,6 +42,8 @@ jobs:
           check "game.js syntax" node --check src/game.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
+          check "menu-ui.js syntax" node --check src/menu-ui.js
+          check "match-ui.js syntax" node --check src/match-ui.js
           check "loadout-config.js syntax" node --check src/loadout-config.js
 
           check "index uses stable main entry" grep -Fq './src/main.js?v=695' index.html
@@ -51,6 +53,8 @@ jobs:
           echo "CHECK: ui import count"
           test "$(grep -Fc "from './ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::ui import count'; exit 1; }
           echo "PASS: ui import count"
+          check "ui initializes menu UI" grep -Fq "from './menu-ui.js?v=695';" src/ui.js
+          check "ui re-exports match UI" grep -Fq "from './match-ui.js?v=695';" src/ui.js
 
           echo "CHECK: loadout import count"
           test "$(grep -Fc "from './loadout-config.js?v=695'" src/game.js)" -eq 1 || { echo '::error::loadout import count'; exit 1; }
@@ -62,7 +66,7 @@ jobs:
           check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
           check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
           check "ARENA_OPTIONS is exported" grep -Fq 'export const ARENA_OPTIONS=' src/arena-config.js
-          check "ui uses ARENA_OPTIONS" grep -Fq 'ARENA_OPTIONS' src/ui.js
+          check "menu UI uses ARENA_OPTIONS" grep -Fq 'ARENA_OPTIONS' src/menu-ui.js
           check "arena button host exists" grep -Fq 'class="arena-buttons"' index.html
 
           echo "CHECK: no HTML-owned arena options"
@@ -82,10 +86,10 @@ jobs:
           test "$(grep -Fo 'data-default=' index.html | wc -l | tr -d ' ')" -eq 0 || { echo '::error::HTML-owned loadout defaults returned'; exit 1; }
           echo "PASS: no HTML-owned loadout defaults"
 
-          check "ui reads loadout config" grep -Fq "from './loadout-config.js?v=695';" src/ui.js
-          check "ui uses BUILD_LIMIT" grep -Fq 'BUILD_LIMIT' src/ui.js
-          check "ui uses LOADOUT_OPTIONS" grep -Fq 'LOADOUT_OPTIONS' src/ui.js
-          check "ui uses DEFAULT_LOADOUTS" grep -Fq 'DEFAULT_LOADOUTS' src/ui.js
+          check "menu UI reads loadout config" grep -Fq "from './loadout-config.js?v=695';" src/menu-ui.js
+          check "menu UI uses BUILD_LIMIT" grep -Fq 'BUILD_LIMIT' src/menu-ui.js
+          check "menu UI uses LOADOUT_OPTIONS" grep -Fq 'LOADOUT_OPTIONS' src/menu-ui.js
+          check "menu UI uses DEFAULT_LOADOUTS" grep -Fq 'DEFAULT_LOADOUTS' src/menu-ui.js
           check "loadout options are exported" grep -Fq 'export const LOADOUT_OPTIONS=' src/loadout-config.js
           check "default loadouts are exported" grep -Fq 'export const DEFAULT_LOADOUTS=' src/loadout-config.js
 
@@ -98,7 +102,7 @@ jobs:
           echo "PASS: no duplicated loadout options in HTML"
 
           echo "CHECK: no retired result card implementation"
-          if grep -Fq 'match-result-card' src/ui.js || grep -Fq '.match-result-card' style.css; then echo '::error::retired result card implementation returned'; exit 1; fi
+          if grep -Fq 'match-result-card' src/match-ui.js || grep -Fq '.match-result-card' style.css; then echo '::error::retired result card implementation returned'; exit 1; fi
           echo "PASS: no retired result card implementation"
 
           for symbol in hitWall showBanner renderMatchResult hideMatchResult; do
