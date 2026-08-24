@@ -1,12 +1,11 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
-import { ARENA, SPAWN_X } from './arena-config.js?v=695';
+import { ARENA } from './arena-config.js?v=695';
 import { showBanner, renderMatchResult, hideMatchResult } from './ui.js?v=695';
 import { createInputController } from './input.js?v=695';
 import { createHudUI } from './hud-ui.js?v=695';
 import { createCameraController } from './camera.js?v=695';
 import { createArenaController } from './arena.js?v=695';
+import { createPlayerController, defenseLabel } from './player.js?v=695';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=695';
 
 const $ = s => document.querySelector(s);
@@ -65,7 +64,6 @@ function randomizeLoadout(i){
   const card=document.querySelector(`.loadout-card[data-player="${i}"]`);
   if(!card)return;
   const sels=[...card.querySelectorAll('[data-slot]')];
-
   for(let tries=0;tries<200;tries++){
     sels.forEach(sel=>{
       sel.selectedIndex=Math.floor(Math.random()*sel.options.length);
@@ -157,75 +155,6 @@ function updateStartAvailability(){
   msg.hidden=!invalid;
 }
 
-const gltfLoader = new GLTFLoader();
-const assetCache = new Map();
-
-async function loadCharacterAsset(url){
-  if(assetCache.has(url)) return assetCache.get(url);
-  const promise = new Promise((resolve,reject)=>{
-    gltfLoader.load(url, resolve, undefined, reject);
-  });
-  assetCache.set(url,promise);
-  return promise;
-}
-
-function findClip(clips, patterns){
-  return clips.find(c=>patterns.some(p=>c.name.toLowerCase().includes(p))) || clips[0] || null;
-}
-
-async function attachWeaponModel(player){
-  const url=player.cfg.weaponModel;
-  if(!url)return;
-  try{
-    const gltf=await loadCharacterAsset(url);
-    if(!player.root.parent)return;
-    const model=gltf.scene.clone(true);
-    model.scale.setScalar(player.cfg.weaponScale||.8);
-    model.rotation.set(Math.PI/2,0,Math.PI);
-    model.position.set(0,0,-.48);
-    model.traverse(n=>{
-      if(n.isMesh){n.castShadow=false;n.receiveShadow=false}
-    });
-    player.weaponPrimitive.visible=false;
-    player.weaponPivot.add(model);
-    player.weaponReal=model;
-  }catch(err){
-    console.warn('Weapon fallback:',url,err);
-  }
-}
-
-async function attachRealModel(player){
-  const cfg=player.cfg;
-  try{
-    const assetStatus=$('#asset-status');if(assetStatus)assetStatus.textContent='Loading CC0 character models…';
-    const gltf=await loadCharacterAsset(cfg.model);
-    if(!player.root.parent) return;
-    const model=cloneSkeleton(gltf.scene);
-    model.scale.setScalar(.72);
-    model.rotation.y=Math.PI;
-    model.position.y=.03;
-    model.traverse(n=>{
-      if(n.isMesh){
-        n.castShadow=false;
-        n.receiveShadow=false;
-      }
-    });
-    player.primitive.visible=false;
-    player.modelHost.add(model);
-    const mixer=new THREE.AnimationMixer(model);
-    const idle=findClip(gltf.animations,['idle']);
-    const walk=findClip(gltf.animations,['walk','run']);
-    if(idle){const a=mixer.clipAction(idle);a.play();player.idleAction=a}
-    if(walk){const a=mixer.clipAction(walk);a.play();a.enabled=false;player.walkAction=a}
-    player.mixer=mixer;
-    player.realModel=true;
-    if(assetStatus)assetStatus.textContent='KayKit CC0 characters enabled · weapons load independently';
-  }catch(err){
-    console.warn('GLB fallback:',cfg.model,err);
-    const assetStatus=$('#asset-status');if(assetStatus)assetStatus.textContent='Some models could not load — fallback models are active.';
-  }
-}
-
 let arenaSelection='square';
 let players=[];
 let bullets=[];
@@ -233,68 +162,13 @@ let particles=[];
 let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
 const arenaController=createArenaController({scene});
+const playerController=createPlayerController({scene});
 const buildArena=arenaController.build;
 const canMoveTo=arenaController.canMoveTo;
 const hitObstacle=arenaController.hitObstacle;
-
-function makePlayer(i,keyOrCfg){
-  const cfg=typeof keyOrCfg==='string'?CHARACTERS[keyOrCfg]:keyOrCfg;
-  const key=cfg.weaponKey||keyOrCfg;
-  const root=new THREE.Group();
-
-  const shadow=new THREE.Mesh(new THREE.CircleGeometry(.72,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.3,depthWrite:false}));
-  shadow.rotation.x=-Math.PI/2;shadow.position.y=.015;root.add(shadow);
-
-  const primitive=new THREE.Group();
-  root.add(primitive);
-  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.72,5,10),new THREE.MeshStandardMaterial({color:cfg.color,roughness:.58}));
-  body.position.y=.88;primitive.add(body);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.42,16,12),new THREE.MeshStandardMaterial({color:0xf1c6a5,roughness:.8}));
-  head.position.y=1.66;primitive.add(head);
-
-  const modelHost=new THREE.Group();
-  root.add(modelHost);
-
-  const weaponPivot=new THREE.Group();weaponPivot.position.y=1.05;root.add(weaponPivot);
-  const gunLen=key==='crusher'?1.0:key==='skeleton'?1.4:1.25;
-  const gunColor=key==='mage'?0x5be0d0:key==='skeleton'?0x8f826c:0x202735;
-  const gun=new THREE.Mesh(new THREE.BoxGeometry(key==='crusher'?.38:.26,.24,gunLen),new THREE.MeshStandardMaterial({color:gunColor,metalness:.25,roughness:.45}));
-  gun.position.z=-gunLen*.5;weaponPivot.add(gun);
-
-  const x=i===0?-SPAWN_X:SPAWN_X;
-  root.position.set(x,0,0);root.rotation.y=i===0?-Math.PI/2:Math.PI/2;
-  const bodyScale=cfg.bodyWeight==='heavy'?1.08:cfg.bodyWeight==='light'?.94:1;
-  primitive.scale.setScalar(bodyScale);
-  modelHost.scale.setScalar(bodyScale);
-  scene.add(root);
-
-  const defenseFx=new THREE.Group();root.add(defenseFx);
-
-  const guardShield=new THREE.Mesh(
-    new THREE.PlaneGeometry(1.25,1.45),
-    new THREE.MeshBasicMaterial({color:0x83d8ff,transparent:true,opacity:.0,side:THREE.DoubleSide,depthWrite:false})
-  );
-  guardShield.position.set(0,1.0,-.72);defenseFx.add(guardShield);
-
-  const barrierShell=new THREE.Mesh(
-    new THREE.SphereGeometry(.95,16,12),
-    new THREE.MeshBasicMaterial({color:0x69dbff,transparent:true,opacity:0,wireframe:true,depthWrite:false})
-  );
-  barrierShell.position.y=.95;defenseFx.add(barrierShell);
-
-  const parryRing=new THREE.Mesh(
-    new THREE.RingGeometry(.72,1.02,40),
-    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false})
-  );
-  parryRing.rotation.x=-Math.PI/2;parryRing.position.y=.06;defenseFx.add(parryRing);
-
-  const player={i,key,cfg,root,primitive,modelHost,weaponPivot,weaponPrimitive:gun,weaponReal:null,hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,overheated:false,fireHeld:false,powerBuff:0,
-    defenseCd:0,guard:100,guarding:false,barrier:0,parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
-    stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
-    move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,mixer:null,realModel:false};
-  attachRealModel(player);attachWeaponModel(player);
-  return player;
-}
+const makePlayer=playerController.makePlayer;
+const flashPlayer=playerController.flashPlayer;
+const defenseTrail=playerController.defenseTrail;
 
 const weaponBulletMats={
   rifle:new THREE.MeshBasicMaterial({color:0x8fd7ff}),
@@ -470,75 +344,6 @@ function shoot(i){
   applyShotRecoil(p);
   weaponShotSound(p.cfg.weaponStyle||'rifle');
   if(navigator.vibrate) navigator.vibrate(p.cfg.weaponStyle==='cannon'?18:p.cfg.weaponStyle==='scatter'?12:8);
-}
-
-function defenseTrail(p,color=p.cfg.color){
-  const ghost=new THREE.Mesh(
-    new THREE.RingGeometry(.38,.62,28),
-    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false})
-  );
-  ghost.rotation.x=-Math.PI/2;
-  ghost.position.copy(p.root.position);ghost.position.y=.08;
-  scene.add(ghost);
-
-  const born=performance.now();
-  function fade(){
-    const t=(performance.now()-born)/220;
-    if(t>=1){scene.remove(ghost);ghost.geometry.dispose();ghost.material.dispose();return}
-    ghost.scale.setScalar(1+t*.8);
-    ghost.material.opacity=.55*(1-t);
-    requestAnimationFrame(fade);
-  }
-  requestAnimationFrame(fade);
-}
-
-function flashPlayer(p,duration=.09){
-  p.flashTime=Math.max(p.flashTime||0,duration);
-}
-
-function updateDefenseFx(p,dt){
-  if(!p.guardShield)return;
-
-  p.flashTime=Math.max(0,(p.flashTime||0)-dt);
-
-  const guardOn=p.guarding&&p.alive;
-  p.guardShield.material.opacity=guardOn?.42:0;
-  p.guardShield.visible=guardOn;
-  if(guardOn){
-    p.guardShield.scale.setScalar(.98+.04*Math.sin(performance.now()*.012));
-  }
-
-  const barrierOn=p.barrier>0&&p.alive;
-  p.barrierShell.material.opacity=barrierOn?.22:0;
-  p.barrierShell.visible=barrierOn;
-  if(barrierOn){
-    p.barrierShell.rotation.y+=dt*1.8;
-    p.barrierShell.scale.setScalar(.98+.04*Math.sin(performance.now()*.01));
-  }
-
-  const parryOn=p.parryActive>0&&p.alive;
-  p.parryRing.material.opacity=parryOn?.85:0;
-  p.parryRing.visible=parryOn;
-  if(parryOn){
-    p.parryRing.rotation.z+=dt*7;
-    const s=1+.18*Math.sin(performance.now()*.03);
-    p.parryRing.scale.setScalar(s);
-  }
-
-  if(p.flashTime>0){
-    p.primitive.visible=Math.floor(p.flashTime*70)%2===0;
-    if(p.realModel)p.modelHost.visible=Math.floor(p.flashTime*70)%2===0;
-  }else{
-    p.primitive.visible=!p.realModel;
-    if(p.realModel)p.modelHost.visible=true;
-  }
-}
-
-function defenseLabel(type){
-  return ({
-    roll:'ROLL',guard:'GUARD',step:'STEP',
-    barrier:'BARRIER',evade:'EVADE',parry:'PARRY'
-  })[type]||'DEF';
 }
 
 const {updateHUD,updateWorldStatus,clearWorldStatus}=createHudUI({
@@ -821,13 +626,7 @@ function activateSuper(i){
 const result=$('#result');
 
 function resetPlayer(i){
-  const p=players[i];p.hp=p.maxHp;p.alive=true;p.invuln=1.15;p.heat=0;p.overheated=false;p.recovery=0;p.fireHeld=false;p.powerBuff=0;
-  p.defenseCd=0;p.guard=100;p.guarding=false;p.barrier=0;p.parryActive=0;p.parryChain=0;p.flashTime=0;
-  if(p.guardShield)p.guardShield.visible=false;
-  if(p.barrierShell)p.barrierShell.visible=false;
-  if(p.parryRing)p.parryRing.visible=false;
-  p.fireCd=.18;p.root.visible=true;
-  p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.move.set(0,0);p.aim.set(i===0?1:-1,0);
+  playerController.resetPlayer(players[i],i);
 }
 
 function damagePop(amount){
@@ -941,7 +740,8 @@ function finish(w){
 }
 
 function removePlayers(){
-  players.forEach(p=>scene.remove(p.root));players=[];
+  playerController.removePlayers(players);
+  players=[];
 }
 
 function clearProjectiles(){
@@ -1224,16 +1024,8 @@ function update(dt){
       const nz=p.root.position.clone();nz.z=next.z;if(canMoveTo(nz,p.radius))p.root.position.z=nz.z;
     }
     if(p.aim.lengthSq()>.12)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;
-    updateDefenseFx(p,dt);
-    if(p.mixer){
-      const moving=p.move.lengthSq()>.08;
-      if(p.walkAction){p.walkAction.enabled=moving;p.walkAction.setEffectiveWeight(moving?1:0)}
-      if(p.idleAction){p.idleAction.enabled=!moving;p.idleAction.setEffectiveWeight(moving?0:1)}
-      p.mixer.update(dt);
-    }
-    p.root.visible=p.invuln>0?Math.floor(p.invuln*12)%2===0:true;
     const inBush=arenaController.isInBush(p.root.position);
-    if(p.realModel)p.modelHost.scale.setScalar(inBush?0.96:1);
+    playerController.updatePlayerVisuals(p,dt,inBush);
   });
 
   // Keep both fighters from occupying the exact same space.
