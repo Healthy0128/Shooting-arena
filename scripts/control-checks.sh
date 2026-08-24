@@ -19,7 +19,9 @@ check "controls normalizes face-to-face input" grep -Fq 'function normalizeFaceT
 check "controls separates top-down mapping" grep -Fq 'function mapTopDown' src/controls.js
 check "controls separates TPS mapping" grep -Fq 'function mapTps' src/controls.js
 check "controls switches by camera mode" grep -Fq "getMode()==='arena'" src/controls.js
-check "camera imports controls mapper" grep -Fq "from './controls.js?v=695';" src/camera.js
+check "TPS uses camera basis" grep -Fq 'const basis=getTpsBasis(player);' src/controls.js
+check "TPS does not face-to-face invert" bash -c '! sed -n "/function mapTps/,/function mapStick/p" src/controls.js | grep -Fq "normalizeFaceToFace"'
+check "camera imports controls mapper" grep -Eq "from './controls.js\\?v=[0-9]+';" src/camera.js
 check "camera delegates stick mapping" grep -Fq 'return controlMapper.mapStick(player,x,y);' src/camera.js
 check "camera exposes TPS basis" grep -Fq 'function getTpsBasis' src/camera.js
 check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||screenVectorToWorld;' src/input.js
