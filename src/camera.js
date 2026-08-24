@@ -13,6 +13,8 @@ export function createCameraController({renderer,scene,getPlayers}){
     new THREE.PerspectiveCamera(58,1,.1,120)
   ];
   const baseRender=renderer.render.bind(renderer);
+  const tapRaycaster=new THREE.Raycaster();
+  const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let mode='top';
   let initialized=false;
 
@@ -103,7 +105,16 @@ export function createCameraController({renderer,scene,getPlayers}){
     getPortrait:isPortrait
   });
 
-  function screenVectorToWorld(player,x,y){
+  function screenPointToGround(player,ndcX,ndcY){
+    if(mode!=='arena'||(player!==0&&player!==1))return null;
+    tapRaycaster.setFromCamera(new THREE.Vector2(ndcX,ndcY),chaseCameras[player]);
+    const hit=new THREE.Vector3();
+    if(!tapRaycaster.ray.intersectPlane(groundPlane,hit))return null;
+    return {x:hit.x,z:hit.z};
+  }
+
+  function screenVectorToWorld(player,x,y,projection='vector'){
+    if(projection==='ground')return screenPointToGround(player,x,y);
     return controlMapper.mapStick(player,x,y);
   }
 
