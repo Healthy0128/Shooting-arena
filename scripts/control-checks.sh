@@ -34,6 +34,8 @@ check "TPS aim does not hold fire" grep -Fq 'players[player].fireHeld=false;' sr
 check "TPS tap fires from canvas" grep -Fq "canvas?.addEventListener('pointerdown'" src/input.js
 check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
 check "split reacts to visual viewport resize" grep -Fq "visualViewport?.addEventListener('resize',resize)" src/camera.js
+check "iOS layout considers window inner height" grep -Fq 'Math.round(globalThis.innerHeight||0)' src/camera.js
+check "iOS layout considers visual viewport height" grep -Fq 'Math.round(vv?.height||0)' src/camera.js
 check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js
 
 if grep -Fq 'if(player===1){x=-x;y=-y}' src/camera.js; then

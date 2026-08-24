@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
-import { createControlMapper } from './controls.js?v=6100';
+import { createControlMapper } from './controls.js?v=6101';
 
 export function createCameraController({renderer,scene,getPlayers}){
   const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
@@ -18,7 +18,23 @@ export function createCameraController({renderer,scene,getPlayers}){
 
   function getLayoutSize(){
     const root=document.documentElement;
-    return {w:Math.max(1,root.clientWidth||innerWidth),h:Math.max(1,root.clientHeight||innerHeight)};
+    const vv=globalThis.visualViewport;
+    // iOS can report a shorter documentElement.clientHeight than the actual
+    // drawable viewport. Use the largest live viewport measurement so the
+    // WebGL canvas reaches the physical bottom edge instead of leaving a band.
+    const w=Math.max(
+      1,
+      Math.round(globalThis.innerWidth||0),
+      Math.round(root.clientWidth||0),
+      Math.round(vv?.width||0)
+    );
+    const h=Math.max(
+      1,
+      Math.round(globalThis.innerHeight||0),
+      Math.round(root.clientHeight||0),
+      Math.round(vv?.height||0)
+    );
+    return {w,h};
   }
 
   function isPortrait(){
