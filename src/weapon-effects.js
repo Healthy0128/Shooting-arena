@@ -12,7 +12,7 @@ const EFFECTS={
   rail:{color:0xff5e78,length:.95,radius:.11,impact:0xff7890,count:24,shake:6.2}
 };
 
-export function createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake}){
+export function createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake,shotSfx}){
   const transientMeshes=new Set();
   function config(style){return EFFECTS[style]||EFFECTS.rifle}
 
@@ -67,6 +67,7 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
   }
 
   function shotSound(style){
+    shotSfx?.(style);
     if(style==='shock'){
       tone(118,.08,'square',.032,90);matchLater(()=>tone(76,.07,'sawtooth',.02,-25),28);
     }else if(style==='seeker'){

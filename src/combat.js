@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6170';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6170';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6210';
 
 export function createCombatController({
   scene,
@@ -22,6 +22,7 @@ export function createCombatController({
   damagePop,
   addHitStop,
   cameraShake,
+  shotSfx,
   vibrate,
   consumeFieldWeapon,
   onDamage,
@@ -30,7 +31,7 @@ export function createCombatController({
   const bullets=[];
   const superEffects=[];
   const projectileVisuals=createProjectileVisualController();
-  const weaponEffects=createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake});
+  const weaponEffects=createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake,shotSfx});
 
   function bodyMeta(player){
     return BODY_META[player?.cfg?.bodyKey]||BODY_META.knight;
@@ -274,8 +275,7 @@ export function createCombatController({
 
   function disposeSuperEffect(effect){
     effect.mesh?.removeFromParent?.();
-    effect.mesh?.geometry?.dispose?.();
-    effect.mesh?.material?.dispose?.();
+    effect.mesh?.traverse?.(child=>{child.geometry?.dispose?.();child.material?.dispose?.()});
   }
 
   function makeGroundRing(position,inner,outer,color,opacity=.72){
@@ -292,7 +292,11 @@ export function createCombatController({
   function createNovaField(owner){
     const player=getPlayers()[owner];
     const position=player.root.position.clone();
-    superEffects.push({type:'novaField',owner,position,radius:3.35,life:4,tick:.05,mesh:makeGroundRing(position,2.85,3.35,0x5be0d0,.68)});
+    const fill=new THREE.Mesh(new THREE.CircleGeometry(3.35,64),new THREE.MeshBasicMaterial({color:0x5be0d0,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));
+    fill.rotation.x=-Math.PI/2;fill.position.copy(position).setY(.055);
+    const border=makeGroundRing(position,2.85,3.35,0x5be0d0,.72);
+    const mesh=new THREE.Group();mesh.add(fill);mesh.add(border);
+    superEffects.push({type:'novaField',owner,position,radius:3.35,life:4,tick:.05,mesh,fill,border});
   }
 
   function queueBoneStrike(owner,position,delay){
@@ -308,7 +312,8 @@ export function createCombatController({
         effect.life-=dt;
         effect.tick-=dt;
         effect.mesh.rotation.z+=dt*.8;
-        effect.mesh.material.opacity=.48+.18*Math.sin(effect.life*7);
+        effect.fill.material.opacity=.12+.06*Math.sin(effect.life*7);
+        effect.border.material.opacity=.56+.24*Math.sin(effect.life*7);
         const owner=players[effect.owner],enemy=players[1-effect.owner];
         if(!owner?.alive)remove=true;
         while(!remove&&effect.tick<=0){

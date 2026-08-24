@@ -8,6 +8,8 @@ const BGM_FILES={
 };
 
 const COUNTDOWN_BASE='./assets/audio/voice/';
+const SHOT_SFX='./assets/audio/sfx/laser_shooting_sfx.wav';
+const BGM_BASE_VOLUME={menu:.95,normal:.18,sudden:.10,space:.10};
 const BATTLE_NOTES=[110,138.59,164.81,138.59,123.47,155.56,185,155.56];
 const MENU_NOTES=[220,277.18,329.63,415.3,329.63,277.18,246.94,329.63];
 
@@ -22,6 +24,8 @@ export function createAudioController(){
   let desiredMode='menu';
   let bgmPaused=false;
   let realBGMBaseVolume=0;
+  let shotBuffer=null;
+  let shotLoading=null;
 
   function unlock(){
     try{
@@ -74,9 +78,9 @@ export function createAudioController(){
     synthTimer=setInterval(()=>{
       if(bgmPaused||desiredMode!==mode)return;
       const freq=notes[synthStep++%notes.length];
-      tone(freq,menu?.34:.16,menu?'sine':'triangle',menu?.0045:.008,0,'bgm');
+      tone(freq,menu?.34:.16,menu?'sine':'triangle',menu?.008:.0055,0,'bgm');
       if(synthStep%4===1){
-        tone(freq/2,menu?.28:.11,'sine',menu?.0025:.006,0,'bgm');
+        tone(freq/2,menu?.28:.11,'sine',menu?.004:.0035,0,'bgm');
       }
     },interval);
   }
@@ -126,11 +130,11 @@ export function createAudioController(){
   }
 
   function playBattleBGM(mode='normal'){
-    playRealTrack(mode,.28);
+    playRealTrack(mode,BGM_BASE_VOLUME[mode]||BGM_BASE_VOLUME.normal);
   }
 
   function playMenuBGM(){
-    playRealTrack('menu',.16);
+    playRealTrack('menu',BGM_BASE_VOLUME.menu);
   }
 
   function stopAllBGM(){
@@ -151,7 +155,7 @@ export function createAudioController(){
     if(realBGM){
       realBGM.play().catch(()=>startSynthBGM(desiredMode||'normal'));
     }else if(desiredMode){
-      playRealTrack(desiredMode,desiredMode==='menu'?.16:.28);
+      playRealTrack(desiredMode,BGM_BASE_VOLUME[desiredMode]||BGM_BASE_VOLUME.normal);
     }
   }
 
@@ -168,6 +172,28 @@ export function createAudioController(){
     });
   }
 
+  function loadShotBuffer(){
+    if(shotBuffer)return Promise.resolve(shotBuffer);
+    if(shotLoading)return shotLoading;
+    unlock();
+    shotLoading=fetch(SHOT_SFX).then(response=>response.arrayBuffer()).then(data=>audioCtx.decodeAudioData(data)).then(buffer=>{
+      shotBuffer=buffer;shotLoading=null;return buffer;
+    }).catch(()=>{shotLoading=null;return null});
+    return shotLoading;
+  }
+
+  function shotSfx(style='rifle'){
+    const rates={rifle:1,scatter:.86,rapid:1.35,arcane:1.12,bladegun:1.2,cannon:.68,seeker:1.08,shock:.78,rail:.62};
+    loadShotBuffer().then(buffer=>{
+      if(!buffer||!audioCtx||getGameSettings().seVolume<=0)return;
+      const source=audioCtx.createBufferSource();
+      const volume=audioCtx.createGain();
+      source.buffer=buffer;source.playbackRate.value=rates[style]||1;
+      volume.gain.value=.22*getGameSettings().seVolume;
+      source.connect(volume);volume.connect(audioCtx.destination);source.start();
+    });
+  }
+
   function unlockAndRetry(){
     unlock();
     if(desiredMode==='menu'&&!realBGM)playMenuBGM();
@@ -179,5 +205,5 @@ export function createAudioController(){
     if(realBGM)realBGM.volume=realBGMBaseVolume*settings.bgmVolume;
   });
 
-  return {unlock,tone,playBattleBGM,playMenuBGM,stopAllBGM,pauseBGM,resumeBGM,synthKO,playCountdownVoice};
+  return {unlock,tone,shotSfx,playBattleBGM,playMenuBGM,stopAllBGM,pauseBGM,resumeBGM,synthKO,playCountdownVoice};
 }

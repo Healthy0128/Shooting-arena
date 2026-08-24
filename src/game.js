@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6180';
+import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6210';
 import { createInputController } from './input.js?v=6200';
 import { createHudUI } from './hud-ui.js?v=6170';
 import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6170';
-import { createCombatController } from './combat.js?v=6180';
-import { createAudioController } from './audio.js?v=6160';
+import { createCombatController } from './combat.js?v=6210';
+import { createAudioController } from './audio.js?v=6210';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
@@ -171,6 +171,7 @@ const audioController=createAudioController();
 const {
   unlock:unlockAudio,
   tone,
+  shotSfx,
   playBattleBGM,
   playMenuBGM,
   stopAllBGM,
@@ -238,6 +239,7 @@ const combatController=createCombatController({
   damagePop,
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
   cameraShake:feedbackController.shake,
+  shotSfx,
   vibrate:feedbackController.vibrate,
   consumeFieldWeapon:fieldWeaponController.consume,
   onDamage:fieldWeaponController.noteDamage,
@@ -274,13 +276,13 @@ function ko(victim,attacker){
   feedbackController.vibrate([55,35,90]);
   updateHUD();
 
-  if(suddenDeath){
-    matchLater(()=>finish(attacker),650);
+  const finalKO=suddenDeath||players[attacker].score>=3;
+  if(finalKO){
+    showMatchFinish(attacker,players,suddenDeath);
+    matchLater(()=>finish(attacker),1500);
     return;
   }
-
-  if(players[attacker].score>=3)matchLater(()=>finish(attacker),700);
-  else matchLater(()=>resetPlayer(victim),1100);
+  matchLater(()=>resetPlayer(victim),1100);
 }
 
 function finish(winner){
@@ -289,6 +291,7 @@ function finish(winner){
   paused=false;
   pauseUI.hide();
   pauseUI.setAvailable(false);
+  hideMatchFinish();
   stopAllBGM();
   fieldWeaponController.reset();
   renderMatchResult(winner,players);
@@ -355,6 +358,7 @@ async function battleCountdown(generation){
 
 function startBattle(){
   hideMatchResult();
+  hideMatchFinish();
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
@@ -386,6 +390,7 @@ function startBattle(){
 
 function fullReset(){
   hideMatchResult();
+  hideMatchFinish();
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
@@ -415,6 +420,7 @@ function fullReset(){
 $('#rematch').addEventListener('click',fullReset);
 function backToMenu(){
   hideMatchResult();
+  hideMatchFinish();
   matchGeneration++;
   matchScheduler.clear();
   suddenDeath=false;
