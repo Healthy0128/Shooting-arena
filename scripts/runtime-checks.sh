@@ -80,7 +80,12 @@ for symbol in buildArena canMoveTo hitObstacle renderSplitArena updateTopCamera 
 done
 
 check "match result stats host" grep -Fq 'id="match-result-stats"' index.html
-check "build limit host" grep -Fq 'id="build-limit-value"' index.html
+
+if grep -Fq 'id="build-limit-value"' index.html || grep -Fq 'budget-legend' index.html; then
+  echo '::error::build limit UI returned after cost restrictions were disabled'
+  exit 1
+fi
+echo 'PASS: build limit UI remains removed'
 
 if grep -Fq '<option ' index.html; then
   echo '::error::duplicated loadout options returned to HTML'
