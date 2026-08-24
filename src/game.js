@@ -11,7 +11,7 @@ import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
 import { createFieldWeaponController } from './field-weapons.js?v=6170';
-import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6180';
+import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6220';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -84,8 +84,9 @@ function buildCustomConfig(i){
   if(!card)return {...CHARACTERS.ranger,weaponKey:'ranger'};
   const val=s=>card.querySelector(`[data-slot="${s}"]`)?.value;
   const bodyKey=BODY_SOURCE[val('body')]||'ranger';
-  const weaponKey=WEAPON_SOURCE[val('weapon')]||'ranger';
-  const body=CHARACTERS[bodyKey],weapon=CHARACTERS[weaponKey];
+  const selectedWeapon=val('weapon');
+  const weaponKey=WEAPON_SOURCE[selectedWeapon]||'ranger';
+  const body=CHARACTERS[bodyKey],weapon=WEAPON_PROFILES[selectedWeapon]||CHARACTERS[weaponKey];
   const meta=BODY_META[val('body')]||BODY_META.knight;
   const passive=val('passive')||'coolant';
   const passiveCfg=PASSIVES[passive]||PASSIVES.coolant;

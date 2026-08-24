@@ -25,7 +25,6 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     if(!player?.fieldWeapon)return;
     disposeObject(player.fieldWeapon.attachment);
     player.fieldWeapon=null;
-    if(announce)showBanner(`P${player.i+1} LOADOUT RESTORED`,360);
   }
 
   function randomPosition(){
@@ -62,8 +61,15 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     );
     beam.position.y=.36;
     group.add(beam);
+    const arrow=new THREE.Mesh(
+      new THREE.ConeGeometry(.16,.34,4),
+      new THREE.MeshBasicMaterial({color:definition.color,transparent:true,opacity:.9,depthWrite:false})
+    );
+    arrow.position.y=1.35;
+    arrow.rotation.z=Math.PI;
+    group.add(arrow);
     scene.add(group);
-    return {group,ring,core};
+    return {group,ring,core,arrow};
   }
 
   function spawn(){
@@ -71,7 +77,6 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     const definition=FIELD_WEAPONS[Math.floor(Math.random()*FIELD_WEAPONS.length)];
     const position=randomPosition();
     pickup={definition,position,visual:createPickupVisual(definition,position),time:0};
-    showBanner(`FIELD WEAPON: ${definition.name}`,620);
     tone(560,.12,'sine',.035,260);
   }
 
@@ -103,7 +108,6 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     quietTime=0;
     spawnTimer=THREE.MathUtils.randFloat(13,18);
     particleBurst(position,definition.color,24,.09);
-    showBanner(`P${player.i+1} GET: ${definition.name} ×${definition.ammo}`,720);
     tone(720,.12,'square',.04,240);
   }
 
@@ -132,6 +136,8 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     pickup.visual.core.rotation.x+=dt*1.1;
     pickup.visual.core.position.y=.72+Math.sin(pickup.time*4)*.09;
     pickup.visual.ring.rotation.z+=dt*.8;
+    pickup.visual.arrow.position.y=1.3+Math.sin(pickup.time*5)*.12;
+    pickup.visual.arrow.rotation.y=pickup.time*1.5;
     for(const player of getPlayers()){
       if(!player.alive)continue;
       const dx=player.root.position.x-pickup.position.x;

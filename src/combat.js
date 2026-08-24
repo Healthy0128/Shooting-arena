@@ -145,7 +145,6 @@ export function createCombatController({
       if(player.guard<=0||player.defenseCd>0)return;
       player.guarding=!player.guarding;
       playPlayerAction(player,'defense');
-      showBanner(player.guarding?`P${i+1} GUARD`:`P${i+1} RELEASE`,240);
       tone(player.guarding?170:240,.045,'square',.022,player.guarding?-20:60);
       return;
     }
@@ -168,7 +167,6 @@ export function createCombatController({
       defenseTrail(player);
       particleBurst(player.root.position.clone().setY(.45),player.cfg.color,10,.07);
       tone(280,.05,'triangle',.025,120);
-      showBanner(`P${i+1} ROLL!`,260);
     }else if(type==='step'){
       playPlayerAction(player,'defense');
       player.defenseCd=1.7;
@@ -180,7 +178,6 @@ export function createCombatController({
       defenseTrail(player);
       particleBurst(player.root.position.clone().setY(.35),player.cfg.color,8,.06);
       tone(350,.045,'triangle',.022,160);
-      showBanner(`P${i+1} STEP!`,240);
     }else if(type==='evade'){
       playPlayerAction(player,'defense');
       player.defenseCd=3.2;
@@ -193,20 +190,17 @@ export function createCombatController({
       defenseTrail(player);
       particleBurst(player.root.position.clone().setY(.4),player.cfg.color,12,.075);
       tone(320,.06,'triangle',.028,180);
-      showBanner(`P${i+1} EVADE!`,260);
     }else if(type==='barrier'){
       playPlayerAction(player,'defense');
-      player.defenseCd=6;
-      player.barrier=55;
+      player.defenseCd=7.5;
+      player.barrier=30;
       particleBurst(player.root.position.clone().setY(.9),0x8fefff,18,.08);
       tone(520,.09,'sine',.03,-120);
-      showBanner(`P${i+1} BARRIER!`,320);
     }else if(type==='parry'){
       playPlayerAction(player,'defense');
-      player.defenseCd=.85;
+      player.defenseCd=.95;
       player.parryActive=.18;
       tone(720,.035,'square',.018,-90);
-      showBanner(`P${i+1} PARRY`,220);
     }
   }
 
@@ -510,8 +504,8 @@ export function createCombatController({
     if(player.cfg.defense==='guard'&&player.guarding&&player.guard>0){
       const source=players[attacker]?.root.position;
       if(source&&sourceFrontDot(player,source)>.05){
-        player.guard=Math.max(0,player.guard-amount*1.25);
-        amount*=.22;
+        player.guard=Math.max(0,player.guard-amount*1.1);
+        amount*=.35;
         addHitStop(.04);
         tone(170,.05,'square',.028,-60);
         if(player.guard<=0){

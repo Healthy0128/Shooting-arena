@@ -32,8 +32,12 @@ export const WEAPON_INFO={
   rapid:{name:'ラピッド',role:'高速削り',desc:'超連射で当てやすいが1発は弱い',longDesc:'約10.5発/秒の超連射と高速弾が特徴。1発7ダメージなので単発は弱く、追い続けて削る武器です。撃ち続けるとオーバーヒートするため、指切りも重要です。'},
   arcane:{name:'アーケイン',role:'大型弾・長射程',desc:'大きい弾で当てやすいが単発火力は低め',longDesc:'弾が大きく長時間残るため、相手の進路を塞ぎやすい武器。1発14ダメージと低めですが、命中させやすく、遠距離や牽制で強みが出ます。'},
   bladegun:{name:'ブレードガン',role:'リコシェット',desc:'壁反射を重ねるほど威力アップ',longDesc:'直接当てると0.8倍、1回反射で1.0倍、2回反射で1.3倍、3回反射で2.0倍。最大3回まで壁や障害物で跳ね返ります。狙いにくい角度ほど高火力になります。'},
-  cannon:{name:'キャノン',role:'高難度・超火力',desc:'遅く当てにくいが一撃が非常に重い',longDesc:'1秒に1発、弾速も遅く、弾も小さめで命中させにくい代わりに基礎58ダメージ。読みと置き撃ちが必要な上級者向け高威力武器です。'}
+  cannon:{name:'キャノン',role:'高難度・超火力',desc:'遅く当てにくいが一撃が非常に重い',longDesc:'1秒に1発、弾速も遅く、弾も小さめで命中させにくい代わりに基礎58ダメージ。読みと置き撃ちが必要な上級者向け高威力武器です。'},
+  boomerang:{name:'ブーメラン',role:'帰還・牽制',desc:'往復する弾で二度狙える',longDesc:'一定時間後に戻る弾で往復攻撃を狙う特殊武器です。'},
+  sniper:{name:'スナイパー',role:'超長射程',desc:'高威力・低連射',longDesc:'射程と弾速に特化した単発武器です。'},
+  katana:{name:'刀',role:'近距離斬撃',desc:'短射程・高威力',longDesc:'短い斬撃弾を飛ばす近距離武器です。'}
 };
+export const WEAPON_PROFILES={boomerang:{weaponStyle:'boomerang',fireCd:.62,damage:28,bulletSpeed:10,spread:0,bulletRadius:.16,bulletLife:2.2,recovery:.16,recoil:.12},sniper:{weaponStyle:'sniper',fireCd:1.15,damage:72,bulletSpeed:28,spread:0,bulletRadius:.13,bulletLife:2.8,recovery:.38,recoil:.42},katana:{weaponStyle:'katana',fireCd:.38,damage:34,bulletSpeed:12,spread:0,bulletRadius:.12,bulletLife:.8,recovery:.2,recoil:.08}};
 
 export const OVERDRIVE_PROFILES={
   rifle:{bursts:10,pellets:1,interval:58,damage:17,speed:18,style:'rifle',radius:.12,life:1.7,spread:0},
@@ -68,9 +72,9 @@ export const PASSIVES={
 
 export const DEFENSE_INFO={
   roll:{name:'ロール',desc:'進行方向へ回避。0.26秒無敵',longDesc:'入力している移動方向へ素早く転がります。0.26秒の無敵時間があり、クールタイムは2.4秒。弾を見てから避ける基本的な防御です。'},
-  guard:{name:'ガード',desc:'前方ダメージを78%軽減',longDesc:'前方から受けるダメージを78%軽減します。ガードゲージを消費し、削り切られるとガードブレイク。移動速度も落ちるため、向きと解除タイミングが重要です。'},
+  guard:{name:'ガード',desc:'前方ダメージを65%軽減',longDesc:'前方から受けるダメージを65%軽減します。ガードゲージを消費し、削り切られるとガードブレイク。バリアより持続的ですが、正面の向きとゲージ管理が必要です。'},
   step:{name:'ステップ',desc:'短CTの高速回避。0.17秒無敵',longDesc:'短い無敵時間と長めの移動距離を持つ高速回避。無敵0.17秒、クールタイム1.7秒。連続して位置を変えたい高速型向けです。'},
-  barrier:{name:'バリア',desc:'55ダメージ分を吸収',longDesc:'55ダメージ分まで攻撃を肩代わりするバリアを展開します。クールタイム6秒。大技を受ける前に先置きすると強力です。'},
+  barrier:{name:'バリア',desc:'30ダメージ分を吸収。CT7.5秒',longDesc:'30ダメージ分だけ攻撃を肩代わりする短時間の防御。クールタイムが長いため、連打ではなく大技を読む使い方が必要です。'},
   evade:{name:'イベイド',desc:'長距離回避。0.38秒無敵',longDesc:'横方向にも逃げやすい長距離回避。0.38秒の長い無敵時間がありますが、クールタイムは3.2秒。危険な場面を一気に抜ける防御です。'},
   parry:{name:'パリィ',desc:'0.18秒受け流し。弾を反射',longDesc:'0.18秒の短い受付時間中に正面から弾を受けると、その弾を相手へ反射し威力と速度を強化します。成功時はすぐ次のパリィも狙えます。'}
 };
