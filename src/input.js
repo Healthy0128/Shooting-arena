@@ -50,6 +50,10 @@ export function createInputController({getPlayers,screenVectorToWorld,shoot,acti
   const keys=new Set();
   addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));
   addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+  addEventListener('blur',()=>keys.clear());
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)keys.clear();
+  });
 
   function update(){
     const players=getPlayers();
