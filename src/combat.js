@@ -22,6 +22,7 @@ export function createCombatController({
   damagePop,
   addHitStop,
   cameraShake,
+  vibrate,
   onKO
 }){
   const bullets=[];
@@ -95,7 +96,7 @@ export function createCombatController({
       player.overheated=true;
       showBanner(`P${i+1} OVERHEAT!`,420);
       tone(120,.11,'sawtooth',.03,-45);
-      if(navigator.vibrate)navigator.vibrate([20,30,20]);
+      vibrate([20,30,20]);
     }
     const base=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
     const count=player.cfg.pellets||1;
@@ -110,7 +111,7 @@ export function createCombatController({
     weaponEffects.muzzle(player.cfg.weaponStyle||'rifle',getMuzzlePosition(player,new THREE.Vector3()),base,player.powerBuff>0);
     applyShotRecoil(player);
     weaponEffects.shotSound(player.cfg.weaponStyle||'rifle');
-    if(navigator.vibrate)navigator.vibrate(player.cfg.weaponStyle==='cannon'?24:player.cfg.weaponStyle==='scatter'?14:8);
+    vibrate(player.cfg.weaponStyle==='cannon'?24:player.cfg.weaponStyle==='scatter'?14:8);
   }
 
   function defenseAction(i){
@@ -217,7 +218,7 @@ export function createCombatController({
     particleBurst(player.root.position.clone().setY(.9),0xffffff,22,.09);
     tone(940,.065,'square',.045,-280);
     showBanner(`PARRY! x${player.parryChain}`,320);
-    if(navigator.vibrate)navigator.vibrate([12,18,12]);
+    vibrate([12,18,12]);
   }
 
   function superPulse(player,color=0xffffff,scale=1){
@@ -353,7 +354,7 @@ export function createCombatController({
       }
     }
 
-    if(navigator.vibrate)navigator.vibrate([20,18,35]);
+    vibrate([20,18,35]);
   }
 
   function damageObstacle(obstacle,amount,pos,style='rifle',bounces=0){
@@ -430,7 +431,7 @@ export function createCombatController({
 
     addHitStop(.045);
     tone(85,.07,'sawtooth',.04,-30);
-    if(navigator.vibrate)navigator.vibrate(18);
+    vibrate(18);
     if(player.hp<=0)onKO(victim,attacker);
   }
 

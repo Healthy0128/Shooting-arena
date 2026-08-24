@@ -1,14 +1,15 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6120';
+import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6160';
 import { createInputController } from './input.js?v=6151';
 import { createHudUI } from './hud-ui.js?v=6150';
 import { createCameraController } from './camera.js?v=6151';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6150';
-import { createCombatController } from './combat.js?v=6150';
-import { createAudioController } from './audio.js?v=6150';
-import { createPauseUI } from './pause-ui.js?v=6150';
+import { createCombatController } from './combat.js?v=6160';
+import { createAudioController } from './audio.js?v=6160';
+import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
+import { createFeedbackController } from './feedback.js?v=6160';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 
 const $ = s => document.querySelector(s);
@@ -154,6 +155,7 @@ let players=[];
 let particles=[];
 let running=false, paused=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
+const feedbackController=createFeedbackController({cameraShake:(strength,duration)=>cameraController.addShake(strength,duration)});
 const arenaController=createArenaController({scene});
 const playerController=createPlayerController({scene});
 const buildArena=arenaController.build;
@@ -225,7 +227,8 @@ const combatController=createCombatController({
   getMuzzlePosition,
   damagePop,
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
-  cameraShake:(strength,duration)=>cameraController.addShake(strength,duration),
+  cameraShake:feedbackController.shake,
+  vibrate:feedbackController.vibrate,
   onKO:ko
 });
 const shoot=combatController.shoot;
@@ -256,7 +259,7 @@ function ko(victim,attacker){
   hitStop=Math.max(hitStop,.11);
   synthKO();
   showBanner(suddenDeath?'FINAL K.O!':'K.O!',suddenDeath?900:700);
-  if(navigator.vibrate)navigator.vibrate([55,35,90]);
+  feedbackController.vibrate([55,35,90]);
   updateHUD();
 
   if(suddenDeath){
@@ -608,7 +611,7 @@ function updatePowerCore(dt){
       matchLater(()=>tone(1040,.08,'square',.028,-120),55);
       showBanner(`P${p.i+1} POWER UP!`,620);
       hitStop=Math.max(hitStop,.06);
-      if(navigator.vibrate)navigator.vibrate([18,20,35,18,20]);
+      feedbackController.vibrate([18,20,35,18,20]);
       clearPowerCore();
       powerCoreTimer=12;
       break;

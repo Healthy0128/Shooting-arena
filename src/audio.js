@@ -1,3 +1,5 @@
+import { getGameSettings, subscribeGameSettings } from './game-settings.js?v=6160';
+
 const BGM_FILES={
   menu:'./assets/audio/bgm/00_menu_pulse.ogg',
   normal:'./assets/audio/bgm/01_empacotatron_loop.ogg',
@@ -19,6 +21,7 @@ export function createAudioController(){
   let synthStep=0;
   let desiredMode='menu';
   let bgmPaused=false;
+  let realBGMBaseVolume=0;
 
   function unlock(){
     try{
@@ -27,8 +30,10 @@ export function createAudioController(){
     }catch{}
   }
 
-  function tone(freq,dur=.06,type='square',gain=.025,slide=0){
+  function tone(freq,dur=.06,type='square',gain=.025,slide=0,channel='se'){
     try{
+      const gainScale=channel==='bgm'?getGameSettings().bgmVolume:getGameSettings().seVolume;
+      if(gainScale<=0)return;
       unlock();
       const c=audioCtx;
       if(!c)return;
@@ -42,7 +47,7 @@ export function createAudioController(){
           c.currentTime+dur
         );
       }
-      volume.gain.setValueAtTime(gain,c.currentTime);
+      volume.gain.setValueAtTime(gain*gainScale,c.currentTime);
       volume.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
       oscillator.connect(volume);
       volume.connect(c.destination);
@@ -69,9 +74,9 @@ export function createAudioController(){
     synthTimer=setInterval(()=>{
       if(bgmPaused||desiredMode!==mode)return;
       const freq=notes[synthStep++%notes.length];
-      tone(freq,menu?.34:.16,menu?'sine':'triangle',menu?.0045:.008,0);
+      tone(freq,menu?.34:.16,menu?'sine':'triangle',menu?.0045:.008,0,'bgm');
       if(synthStep%4===1){
-        tone(freq/2,menu?.28:.11,'sine',menu?.0025:.006,0);
+        tone(freq/2,menu?.28:.11,'sine',menu?.0025:.006,0,'bgm');
       }
     },interval);
   }
@@ -84,6 +89,7 @@ export function createAudioController(){
       realBGM=null;
     }
     realBGMMode=null;
+    realBGMBaseVolume=0;
   }
 
   function playRealTrack(mode,volume){
@@ -99,7 +105,8 @@ export function createAudioController(){
     }
     const audio=new Audio(src);
     audio.loop=true;
-    audio.volume=volume;
+    realBGMBaseVolume=volume;
+    audio.volume=volume*getGameSettings().bgmVolume;
     audio.preload='auto';
     const fallback=()=>{
       if(requestId===realBGMRequestId&&desiredMode===mode)startSynthBGM(mode);
@@ -112,6 +119,7 @@ export function createAudioController(){
         return;
       }
       stopSynthBGM();
+      audio.volume=volume*getGameSettings().bgmVolume;
       realBGM=audio;
       realBGMMode=mode;
     }).catch(fallback);
@@ -154,7 +162,7 @@ export function createAudioController(){
 
   function playCountdownVoice(name){
     const audio=new Audio(COUNTDOWN_BASE+name+'.ogg');
-    audio.volume=.9;
+    audio.volume=.9*getGameSettings().seVolume;
     audio.play().catch(()=>{
       tone(name==='go'?700:440,.1,'square',.03,name==='go'?200:0);
     });
@@ -167,6 +175,9 @@ export function createAudioController(){
 
   window.addEventListener('pointerdown',unlockAndRetry,{once:true,capture:true});
   window.addEventListener('keydown',unlockAndRetry,{once:true,capture:true});
+  subscribeGameSettings(settings=>{
+    if(realBGM)realBGM.volume=realBGMBaseVolume*settings.bgmVolume;
+  });
 
   return {unlock,tone,playBattleBGM,playMenuBGM,stopAllBGM,pauseBGM,resumeBGM,synthKO,playCountdownVoice};
 }
