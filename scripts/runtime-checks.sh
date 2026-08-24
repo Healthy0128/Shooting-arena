@@ -33,8 +33,25 @@ check "loadout renderer exported" grep -Fq 'export function renderLoadoutSummary
 check "loadout summary delegated" grep -Fq 'renderLoadoutSummary(card,cfg,cost,over);' src/game.js
 check "defense descriptions centralized" grep -Fq 'export const DEFENSE_INFO=' src/loadout-config.js
 check "super descriptions centralized" grep -Fq 'export const SUPER_INFO=' src/loadout-config.js
+check "weapon descriptions centralized" grep -Fq 'export const WEAPON_INFO=' src/loadout-config.js
+check "body attack tradeoffs defined" grep -Fq 'damageMul:' src/loadout-config.js
+check "body defense tradeoffs defined" grep -Fq 'damageTakenMul:' src/loadout-config.js
+check "body super tradeoffs defined" grep -Fq 'superGainMul:' src/loadout-config.js
+check "scatter has seven pellets" grep -Fq 'pellets:7' src/loadout-config.js
+check "rapid has extreme fire rate" grep -Fq 'fireCd:.095' src/loadout-config.js
+check "cannon has heavy single hit" grep -Fq 'damage:58' src/loadout-config.js
+check "blade ricochet multiplier exists" grep -Fq 'function ricochetMultiplier(bullet)' src/combat.js
+check "blade direct hit is discounted" grep -Fq 'if(bullet.bounces<=0)return .8;' src/combat.js
+check "blade two bounce bonus" grep -Fq 'if(bullet.bounces===2)return 1.3;' src/combat.js
+check "blade three bounce bonus" grep -Fq 'return 2;' src/combat.js
+check "arena edge ricochet exists" grep -Fq 'function reflectFromArenaEdge(bullet)' src/combat.js
+check "obstacle ricochet exists" grep -Fq 'function reflectFromObstacle(bullet,obstacle)' src/combat.js
+check "body damage affects shots" grep -Fq 'const attackMul=bodyDamageMul(player)' src/combat.js
+check "body toughness affects incoming damage" grep -Fq 'amount*=bodyIncomingMul(player)' src/combat.js
+check "body super gain affects meter" grep -Fq 'superGainMul(players[attacker])' src/combat.js
 check "visual menu stylesheet loaded" grep -Fq 'menu-stats.css' index.html
 check "stat meters rendered" grep -Fq "meter('HP'" src/menu-ui.js
+check "weapon profile rendered" grep -Fq 'class="weapon-profile"' src/menu-ui.js
 check "ability cards rendered" grep -Fq 'class="ability-grid"' src/menu-ui.js
 check "stage spawn pads visualized" grep -Fq 'function addSpawnPads(arenaRoot,theme,type)' src/stage-visuals.js
 check "stage architecture visualized" grep -Fq 'function addStageArchitecture(arenaRoot,type,theme' src/stage-visuals.js
