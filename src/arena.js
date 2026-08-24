@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ARENA, PROPS, STAGE_THEMES } from './arena-config.js?v=695';
+import { addStageVisuals } from './stage-visuals.js?v=6110';
 
 export function createArenaController({scene}){
   const arenaRoot=new THREE.Group();
@@ -520,6 +521,7 @@ export function createArenaController({scene}){
     addArenaPerimeter(theme);
     addArenaAccentLights(theme,type);
     addArenaScenery(type,theme);
+    addStageVisuals({arenaRoot,type,theme,attachPropVisual,buildId});
 
     if(type==='square'){
       [[-5,-3],[5,3],[5,-3],[-5,3]].forEach(([x,z],i)=>addCrate(x,z,60,i));

@@ -15,7 +15,7 @@ check() {
 
 for file in \
   src/main.js src/game.js src/input.js src/controls.js src/hud-ui.js src/camera.js \
-  src/arena.js src/player.js src/combat.js src/arena-config.js src/ui.js \
+  src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js; do
   check "$file syntax" node --check "$file"
 done
@@ -23,6 +23,7 @@ done
 check "stable main entry" grep -Eq 'src/main\.js\?v=[0-9]+' index.html
 check "camera controller exported" grep -Fq 'export function createCameraController' src/camera.js
 check "arena controller exported" grep -Fq 'export function createArenaController' src/arena.js
+check "stage visuals exported" grep -Fq 'export function addStageVisuals' src/stage-visuals.js
 check "player controller exported" grep -Fq 'export function createPlayerController' src/player.js
 check "combat controller exported" grep -Fq 'export function createCombatController' src/combat.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
@@ -35,6 +36,9 @@ check "super descriptions centralized" grep -Fq 'export const SUPER_INFO=' src/l
 check "visual menu stylesheet loaded" grep -Fq 'menu-stats.css' index.html
 check "stat meters rendered" grep -Fq "meter('HP'" src/menu-ui.js
 check "ability cards rendered" grep -Fq 'class="ability-grid"' src/menu-ui.js
+check "stage spawn pads visualized" grep -Fq 'function addSpawnPads(arenaRoot,theme,type)' src/stage-visuals.js
+check "stage architecture visualized" grep -Fq 'function addStageArchitecture(arenaRoot,type,theme' src/stage-visuals.js
+check "stage visuals delegated" grep -Fq 'addStageVisuals({arenaRoot,type,theme,attachPropVisual,buildId});' src/arena.js
 
 check "countdown generation guard" grep -Fq 'async function battleCountdown(generation)' src/game.js
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
@@ -45,8 +49,6 @@ check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMo
 check "camera render delegated" grep -Fq 'cameraController.render();' src/game.js
 check "input update delegated" grep -Fq 'input.update();' src/game.js
 
-# Match exact function declarations only. Substrings such as damagePop must not
-# be mistaken for a returned combat implementation named damage().
 for symbol in \
   projectileGeometryFor muzzleFlash weaponShotSound applyShotRecoil disposeBullet \
   spawnBullet shoot defenseAction sourceFrontDot parryBullet superPulse superFlash \
