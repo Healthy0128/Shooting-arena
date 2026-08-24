@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
+import { createControlMapper } from './controls.js?v=695';
 
 export function createCameraController({renderer,scene,getPlayers}){
   const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
@@ -82,6 +83,16 @@ export function createCameraController({renderer,scene,getPlayers}){
     };
   }
 
+  const controlMapper=createControlMapper({
+    getMode:()=>mode,
+    getTpsBasis,
+    getPortrait:isPortrait
+  });
+
+  function screenVectorToWorld(player,x,y){
+    return controlMapper.mapStick(player,x,y);
+  }
+
   function renderSplitArena(){
     const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
     const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y)),lower=Math.floor(h/2),upper=h-lower;
@@ -126,6 +137,7 @@ export function createCameraController({renderer,scene,getPlayers}){
   return {
     init,
     render,
+    screenVectorToWorld,
     getMode:()=>mode,
     getTpsBasis,
     isPortrait,
