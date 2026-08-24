@@ -23,12 +23,12 @@ export const STAGE_THEMES={
 };
 
 export const ARENA_OPTIONS={
-  square:'SQUARE',
-  pillars:'4 PILLARS',
-  ring:'RING',
-  cross:'CROSS',
-  hex:'HEX',
-  fort:'TWIN FORT',
-  bush:'BUSH FIELD',
-  crates:'CRATE YARD'
+  square:'スクエア',
+  pillars:'4ピラー',
+  ring:'リング',
+  cross:'クロス',
+  hex:'ヘックス',
+  fort:'ツインフォート',
+  bush:'ブッシュフィールド',
+  crates:'クレートヤード'
 };
