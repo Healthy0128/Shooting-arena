@@ -1,4 +1,4 @@
-export function createInputController({getPlayers,mapStick,screenVectorToWorld,shoot,activateSuper}){
+export function createInputController({getPlayers,mapStick,screenVectorToWorld,screenPointToGround,shoot,activateSuper}){
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
   const isTpsMode=()=>document.body.classList.contains('split-arena');
@@ -12,6 +12,33 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     document.querySelectorAll('.stick-zone.aim').forEach(zone=>{
       zone.style.display=hideAim?'none':'';
     });
+  }
+
+  function showTapMarker(x,y,player){
+    const marker=document.createElement('div');
+    marker.textContent='◎';
+    marker.setAttribute('aria-hidden','true');
+    Object.assign(marker.style,{
+      position:'fixed',
+      left:`${x}px`,
+      top:`${y}px`,
+      transform:`translate(-50%,-50%)${player===1?' rotate(180deg)':''}`,
+      zIndex:'19',
+      pointerEvents:'none',
+      color:'#fff',
+      fontSize:'28px',
+      fontWeight:'900',
+      lineHeight:'1',
+      textShadow:'0 0 8px #000,0 0 10px #fff8',
+      opacity:'1',
+      transition:'transform .18s ease-out,opacity .18s ease-out'
+    });
+    document.body.appendChild(marker);
+    requestAnimationFrame(()=>{
+      marker.style.opacity='0';
+      marker.style.transform=`translate(-50%,-50%) scale(1.5)${player===1?' rotate(180deg)':''}`;
+    });
+    setTimeout(()=>marker.remove(),220);
   }
 
   function clearTransientInput(){
@@ -85,18 +112,20 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     if(players.length<2)return;
     const r=canvas.getBoundingClientRect();
     const localY=e.clientY-r.top;
-    const half=Math.max(1,r.height/2);
-    const player=localY<half?1:0;
-    const centerX=r.left+r.width/2;
-    const centerY=r.top+(player===1?half*.5:half*1.5);
-    let vx=(e.clientX-centerX)/Math.max(1,r.width*.5);
-    let vy=(e.clientY-centerY)/Math.max(1,half*.5);
-    const mag=Math.hypot(vx,vy);
-    if(mag>.08){
-      if(mag>1){vx/=mag;vy/=mag}
-      players[player].aim.copy(mapControl(player,vx,vy)).normalize();
-    }
-    if(players[player]?.alive&&players[player].aim.lengthSq()>.12)shoot(player);
+    const player=localY<r.height/2?1:0;
+    const fighter=players[player];
+    if(!fighter?.alive)return;
+
+    const target=screenPointToGround?.(player,e.clientX,e.clientY);
+    if(!target)return;
+    const dx=target.x-fighter.root.position.x;
+    const dz=target.z-fighter.root.position.z;
+    const len=Math.hypot(dx,dz);
+    if(len<.08)return;
+    fighter.aim.set(dx/len,dz/len);
+    fighter.fireHeld=false;
+    showTapMarker(e.clientX,e.clientY,player);
+    shoot(player);
   });
 
   const keys=new Set();
