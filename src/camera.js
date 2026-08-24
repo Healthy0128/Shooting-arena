@@ -20,6 +20,11 @@ export function createCameraController({renderer,scene,getPlayers}){
     return {w:Math.max(1,root.clientWidth||innerWidth),h:Math.max(1,root.clientHeight||innerHeight)};
   }
 
+  function isPortrait(){
+    const {w,h}=getLayoutSize();
+    return h>=w;
+  }
+
   function updateTopCamera(){
     if(mode!=='top')return;
     const players=getPlayers();
@@ -63,6 +68,20 @@ export function createCameraController({renderer,scene,getPlayers}){
     cam.updateProjectionMatrix();
   }
 
+  function getTpsBasis(player){
+    const cam=chaseCameras[player];
+    const forward3=new THREE.Vector3();
+    cam.getWorldDirection(forward3);
+    forward3.y=0;
+    if(forward3.lengthSq()<1e-6)forward3.set(player===0?1:-1,0,0);
+    else forward3.normalize();
+    const right3=new THREE.Vector3(forward3.z,0,-forward3.x).normalize();
+    return {
+      forward:new THREE.Vector2(forward3.x,forward3.z),
+      right:new THREE.Vector2(right3.x,right3.z)
+    };
+  }
+
   function renderSplitArena(){
     const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
     const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y)),lower=Math.floor(h/2),upper=h-lower;
@@ -87,20 +106,6 @@ export function createCameraController({renderer,scene,getPlayers}){
     updateTopCamera();
   }
 
-  function screenVectorToWorld(player,x,y){
-    if(mode==='arena'){
-      const cam=chaseCameras[player];
-      const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);fwd.y=0;
-      if(fwd.lengthSq()<1e-6)fwd.set(player===0?1:-1,0,0);else fwd.normalize();
-      const right=new THREE.Vector3(fwd.z,0,-fwd.x);
-      if(player===1){x=-x;y=-y}
-      const world=right.multiplyScalar(x).add(fwd.multiplyScalar(-y));
-      return new THREE.Vector2(world.x,world.z);
-    }
-    const {w,h}=getLayoutSize(),portrait=h>=w;
-    return portrait?new THREE.Vector2(-y,x):new THREE.Vector2(x,y);
-  }
-
   function render(){
     updateTopCamera();
     const players=getPlayers();
@@ -121,7 +126,9 @@ export function createCameraController({renderer,scene,getPlayers}){
   return {
     init,
     render,
-    screenVectorToWorld,
+    getMode:()=>mode,
+    getTpsBasis,
+    isPortrait,
     getProjectionCamera:()=>topCamera
   };
 }
