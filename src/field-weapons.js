@@ -11,6 +11,24 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
   let pickup=null;
   let spawnTimer=8;
   let quietTime=0;
+  const directionIndicators=new Map();
+
+  function ensureIndicator(player){
+    if(directionIndicators.has(player))return directionIndicators.get(player);
+    const group=new THREE.Group();
+    group.position.y=.08;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(.72,.77,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false}));
+    ring.rotation.x=-Math.PI/2;
+    const arrow=new THREE.Mesh(new THREE.ConeGeometry(.13,.28,3),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));
+    arrow.rotation.x=Math.PI/2;
+    arrow.position.z=-.88;
+    group.add(ring,arrow);player.root.add(group);
+    const indicator={group,ring,arrow};directionIndicators.set(player,indicator);return indicator;
+  }
+
+  function hideIndicators(){
+    directionIndicators.forEach(indicator=>{indicator.group.visible=false});
+  }
 
   function disposeObject(object){
     object?.traverse?.(node=>{
@@ -61,15 +79,8 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     );
     beam.position.y=.36;
     group.add(beam);
-    const arrow=new THREE.Mesh(
-      new THREE.ConeGeometry(.16,.34,4),
-      new THREE.MeshBasicMaterial({color:definition.color,transparent:true,opacity:.9,depthWrite:false})
-    );
-    arrow.position.y=1.35;
-    arrow.rotation.z=Math.PI;
-    group.add(arrow);
     scene.add(group);
-    return {group,ring,core,arrow};
+    return {group,ring,core};
   }
 
   function spawn(){
@@ -129,6 +140,7 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     if(!pickup){
       spawnTimer-=dt*(quietTime>=7?2.5:1);
       if(spawnTimer<=0)spawn();
+      hideIndicators();
       return;
     }
     pickup.time+=dt;
@@ -136,19 +148,25 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
     pickup.visual.core.rotation.x+=dt*1.1;
     pickup.visual.core.position.y=.72+Math.sin(pickup.time*4)*.09;
     pickup.visual.ring.rotation.z+=dt*.8;
-    pickup.visual.arrow.position.y=1.3+Math.sin(pickup.time*5)*.12;
-    pickup.visual.arrow.rotation.y=pickup.time*1.5;
     for(const player of getPlayers()){
+      const indicator=ensureIndicator(player);
+      indicator.group.visible=player.alive;
+      const dx=pickup.position.x-player.root.position.x;
+      const dz=pickup.position.z-player.root.position.z;
+      indicator.arrow.material.color.setHex(pickup.definition.color);
+      indicator.ring.material.color.setHex(pickup.definition.color);
+      indicator.arrow.rotation.y=Math.atan2(dx,dz)-player.root.rotation.y;
       if(!player.alive)continue;
-      const dx=player.root.position.x-pickup.position.x;
-      const dz=player.root.position.z-pickup.position.z;
-      if(dx*dx+dz*dz<1.15*1.15){collect(player);break}
+      const pdx=player.root.position.x-pickup.position.x;
+      const pdz=player.root.position.z-pickup.position.z;
+      if(pdx*pdx+pdz*pdz<1.15*1.15){collect(player);break}
     }
   }
 
   function reset(){
     if(pickup)disposeObject(pickup.visual.group);
     pickup=null;
+    hideIndicators();
     getPlayers().forEach(player=>clearPlayerWeapon(player));
     spawnTimer=8;
     quietTime=0;

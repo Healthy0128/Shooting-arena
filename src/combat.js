@@ -323,7 +323,7 @@ export function createCombatController({
     const border=makeGroundRing(position,2.85,3.35,0x5be0d0,.72);
     const mesh=new THREE.Group();mesh.add(fill);mesh.add(border);
     scene.add(mesh);
-    superEffects.push({type:'novaField',owner,position,radius:3.35,life:4,tick:.05,mesh,fill,border});
+    superEffects.push({type:'novaField',owner,position,radius:3.35,life:6,tick:.05,mesh,fill,border});
   }
 
   function queueBoneStrike(owner,position,delay){
@@ -472,7 +472,6 @@ export function createCombatController({
     }else if(type==='nova'){
       superPulse(player,0x5be0d0,1.35);
       superFlash(player,0x5be0d0);
-      showBanner(`P${i+1} SANCTUARY!`,520);
       tone(460,.12,'sine',.04,360);
       createNovaField(i);
     }else if(type==='fan'){
