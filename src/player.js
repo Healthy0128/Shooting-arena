@@ -181,11 +181,19 @@ export function createPlayerController({scene}){
     parryRing.position.y=.06;
     defenseFx.add(parryRing);
 
+    const superAura=new THREE.Mesh(
+      new THREE.TorusGeometry(.82,.045,8,48),
+      new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:0,depthWrite:false})
+    );
+    superAura.rotation.x=-Math.PI/2;
+    superAura.position.y=.08;
+    defenseFx.add(superAura);
+
     const player={
       i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,muzzleAnchor,weaponPrimitive:gun,weaponReal:null,
       hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
-      parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
+      parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,superAura,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
       mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,fieldWeapon:null,
@@ -332,6 +340,15 @@ export function createPlayerController({scene}){
       player.parryRing.rotation.z+=dt*7;
       const s=1+.18*Math.sin(performance.now()*.03);
       player.parryRing.scale.setScalar(s);
+    }
+
+    const superReady=player.super>=100&&player.alive;
+    player.superAura.visible=superReady;
+    player.superAura.material.opacity=superReady?.72:0;
+    if(superReady){
+      player.superAura.rotation.z+=dt*2.8;
+      const pulse=1+.12*Math.sin(performance.now()*.012);
+      player.superAura.scale.setScalar(pulse);
     }
 
     if(player.flashTime>0){
