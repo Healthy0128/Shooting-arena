@@ -17,7 +17,7 @@ for file in \
   src/main.js src/game.js src/input.js src/controls.js src/hud-ui.js src/camera.js \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
-  src/pause-ui.js src/match-scheduler.js src/weapon-effects.js; do
+  src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -32,6 +32,8 @@ check "projectile visual controller exported" grep -Fq 'export function createPr
 check "weapon effects controller exported" grep -Fq 'export function createWeaponEffectsController' src/weapon-effects.js
 check "pause UI controller exported" grep -Fq 'export function createPauseUI' src/pause-ui.js
 check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
+check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
+check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
@@ -92,8 +94,21 @@ check "camera render delegated" grep -Fq 'cameraController.render();' src/game.j
 check "input update delegated" grep -Fq 'input.update();' src/game.js
 check "pause UI delegated" grep -Fq 'createPauseUI({' src/game.js
 check "pause freezes match scheduler" grep -Fq 'isPaused:()=>paused' src/game.js
+check "audio follows BGM setting" grep -Fq 'realBGMBaseVolume*settings.bgmVolume' src/audio.js
+check "synth BGM uses BGM channel" grep -Fq "0,'bgm'" src/audio.js
+check "feedback setting gates vibration" grep -Fq '!getGameSettings().vibration' src/feedback.js
+check "feedback setting gates screen shake" grep -Fq '!getGameSettings().screenShake' src/feedback.js
+check "combat vibration delegated" grep -Fq 'vibrate(player.cfg.weaponStyle' src/combat.js
+check "pause settings persist through controller" grep -Fq 'updateGameSettings({bgmVolume:value/100})' src/pause-ui.js
+check "two pause buttons are created" grep -Fq 'const buttons=[0,1].map' src/pause-ui.js
 check "split HUD uses camera projection" grep -Fq 'projectWorldToScreen(p.i,q)' src/hud-ui.js
 check "HUD no longer hidden in split mode" bash -c '! grep -Fq "classList.contains(\x27split-arena\x27)" src/hud-ui.js'
+
+if grep -Fq 'navigator.vibrate' src/game.js src/combat.js src/menu-ui.js; then
+  echo '::error::direct vibration bypasses feedback settings'
+  exit 1
+fi
+echo 'PASS: vibration is centralized'
 
 for symbol in \
   projectileGeometryFor muzzleFlash weaponShotSound applyShotRecoil disposeBullet \

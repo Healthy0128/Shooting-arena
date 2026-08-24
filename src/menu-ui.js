@@ -9,6 +9,7 @@ import {
   WEAPON_INFO
 } from './loadout-config.js?v=6130';
 import { ARENA_OPTIONS } from './arena-config.js?v=695';
+import { vibrate } from './feedback.js?v=6160';
 
 function clamp01(value){
   return Math.max(0,Math.min(1,value));
@@ -87,7 +88,7 @@ function installDetailInteraction(){
       timer=setTimeout(()=>{
         openedByHold=true;
         openDetail(target);
-        if(navigator.vibrate)navigator.vibrate(12);
+        vibrate(12);
       },520);
     }
   });
