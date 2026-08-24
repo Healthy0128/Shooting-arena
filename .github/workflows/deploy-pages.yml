@@ -41,6 +41,7 @@ jobs:
           check "main.js syntax" node --check src/main.js
           check "game.js syntax" node --check src/game.js
           check "input.js syntax" node --check src/input.js
+          check "hud-ui.js syntax" node --check src/hud-ui.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
           check "menu-ui.js syntax" node --check src/menu-ui.js
@@ -70,6 +71,17 @@ jobs:
             echo "CHECK: no local $symbol input state in game.js"
             if grep -Eq "^(const|let|var|function) ${symbol}([ (=]|$)" src/game.js; then echo "::error::$symbol input state returned to game.js"; exit 1; fi
             echo "PASS: no local $symbol input state in game.js"
+          done
+
+          echo "CHECK: HUD import count"
+          test "$(grep -Fc "from './hud-ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::HUD import count'; exit 1; }
+          echo "PASS: HUD import count"
+          check "HUD controller is created" grep -Fq 'createHudUI({' src/game.js
+          check "HUD controller is exported" grep -Fq 'export function createHudUI' src/hud-ui.js
+          for symbol in ensureWorldStatus updateWorldStatus clearWorldStatus updateHUD; do
+            echo "CHECK: no local $symbol HUD implementation in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol HUD implementation returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol HUD implementation in game.js"
           done
 
           echo "CHECK: loadout import count"
