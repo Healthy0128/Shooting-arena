@@ -1,0 +1,64 @@
+name: Refactor HUD branch
+
+on:
+  push:
+    branches: [refactor/hud-camera]
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/hud-camera
+          fetch-depth: 0
+      - name: Extract HUD ownership atomically
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/game.js')
+          s=path.read_text()
+          original=s
+          input_import="import { createInputController } from './input.js?v=695';\n"
+          hud_import="import { createHudUI } from './hud-ui.js?v=695';\n"
+          if hud_import not in s:
+              if input_import not in s: raise SystemExit('input import anchor missing')
+              s=s.replace(input_import,input_import+hud_import,1)
+          hud_init="""const {updateHUD,updateWorldStatus,clearWorldStatus}=createHudUI({
+            getPlayers:()=>players,
+            getCamera:()=>camera,
+            defenseLabel
+          });
+
+"""
+          if hud_init not in s:
+              anchor='function defenseAction(i){'
+              if anchor not in s: raise SystemExit('defenseAction anchor missing')
+              s=s.replace(anchor,hud_init+anchor,1)
+          start_marker='\nfunction ensureWorldStatus(p){'
+          end_marker='\nfunction screenVectorToWorld(player,x,y){'
+          if start_marker in s:
+              start=s.index(start_marker)
+              end=s.index(end_marker,start)
+              s=s[:start]+'\n'+s[end:]
+          if s!=original:
+              path.write_text(s)
+          PY
+          node --check src/game.js
+          node --check src/hud-ui.js
+          grep -Fq "from './hud-ui.js?v=695'" src/game.js
+          grep -Fq 'createHudUI({' src/game.js
+          for symbol in ensureWorldStatus updateWorldStatus clearWorldStatus updateHUD; do
+            if grep -Fq "function $symbol" src/game.js; then echo "ERROR: local $symbol remains"; exit 1; fi
+          done
+      - name: Commit HUD extraction
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/game.js
+          git commit -m 'Extract HUD controller without duplication'
+          git push origin HEAD:refactor/hud-camera
