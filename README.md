@@ -12,11 +12,11 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 ## 現在の構成
 
-- `index.html` — 画面UIとゲームエントリ。ロードアウト候補や初期値は持たず、構造だけを定義
+- `index.html` — 画面UIとゲームエントリ。ロードアウト候補・初期値・アリーナ候補は持たず、構造だけを定義
 - `src/main.js` — 安定した起動用エントリポイント
 - `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
-- `src/arena-config.js` — アリーナ共通定数とステージ静的設定（`ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES`）
-- `src/ui.js` — ロードアウトUI初期化、ビルド上限表示、バナー表示、試合結果統計
+- `src/arena-config.js` — アリーナ共通定数、ステージ静的設定、アリーナ候補一覧（`ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` / `ARENA_OPTIONS`）
+- `src/ui.js` — ロードアウトUI初期化、アリーナ選択UI生成、ビルド上限表示、バナー表示、試合結果統計
 - `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。候補一覧、初期ロードアウト、BUILD LIMITもここを正とする
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
@@ -44,8 +44,10 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 1. **アリーナ設定 — 完了**
    - `ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` を `arena-config.js` へ原子移動済み
+   - 8アリーナのキーと表示名も `ARENA_OPTIONS` へ一本化済み
+   - HTMLのアリーナボタン直書きを削除し、`ui.js` が設定から生成
    - `game.js` 側の旧定義は同じ変更で削除済み
-   - CIで `game.js` への再定義を禁止
+   - CIで `game.js` への再定義とHTMLへの候補直書きを禁止
 2. **キャラクター・装備・ビルド設定 — 完了**
    - `loadout-config.js` へ分離済み
    - `BODY_SOURCE`、`WEAPON_SOURCE`、キャラ由来色、PASSIVEコストの二重管理を解消済み
@@ -53,7 +55,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 3. **UI表示処理 — 第1段階完了**
    - バナーと試合結果統計を `ui.js` へ分離済み
    - 旧結果オーバーレイと追加結果カードの二重実装を統合済み
-   - ロードアウト候補生成と初期値反映も `ui.js` が担当
+   - ロードアウト候補生成、初期値反映、アリーナ候補生成も `ui.js` が担当
    - HUD / ワールドステータスはまだ `game.js` 側
 4. **入力処理 — 候補作成・未反映**
    - `input.js` は依存注入型の候補を再設計・検証済み
@@ -132,6 +134,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `index.html` が正しいエントリポイントを参照していること
 - 分離済み定義が `src/game.js` に重複していないこと
 - 移動途中の責務が新旧両方に重複していないこと
+- ロードアウト候補・初期値・アリーナ候補がHTMLへ戻っていないこと
 - 分離済みモジュールのimportが1回だけ存在すること
 - 現在のカメラ／レンダリング経路に必要な主要関数が存在すること
 
