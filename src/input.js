@@ -2,6 +2,17 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
   const isTpsMode=()=>document.body.classList.contains('split-arena');
+  let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';
+
+  function syncInputMode(mode=inputMode){
+    inputMode=mode;
+    document.body.classList.toggle('touch-input',mode==='touch');
+    document.body.classList.toggle('keyboard-input',mode==='keyboard');
+    const hideAim=isTpsMode()&&mode==='touch';
+    document.querySelectorAll('.stick-zone.aim').forEach(zone=>{
+      zone.style.display=hideAim?'none':'';
+    });
+  }
 
   function clearTransientInput(){
     activePointers.clear();
@@ -41,6 +52,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     }
 
     zone.addEventListener('pointerdown',e=>{
+      syncInputMode('touch');
       e.preventDefault();
       zone.setPointerCapture(e.pointerId);
       activePointers.set(e.pointerId,{player,kind});
@@ -66,15 +78,32 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
 
   const canvas=document.querySelector('#game');
   canvas?.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse')return;
+    syncInputMode('touch');
     if(!isTpsMode())return;
     const players=getPlayers();
     if(players.length<2)return;
-    const player=e.clientY<innerHeight/2?1:0;
+    const r=canvas.getBoundingClientRect();
+    const localY=e.clientY-r.top;
+    const half=Math.max(1,r.height/2);
+    const player=localY<half?1:0;
+    const centerX=r.left+r.width/2;
+    const centerY=r.top+(player===1?half*.5:half*1.5);
+    let vx=(e.clientX-centerX)/Math.max(1,r.width*.5);
+    let vy=(e.clientY-centerY)/Math.max(1,half*.5);
+    const mag=Math.hypot(vx,vy);
+    if(mag>.08){
+      if(mag>1){vx/=mag;vy/=mag}
+      players[player].aim.copy(mapControl(player,vx,vy)).normalize();
+    }
     if(players[player]?.alive&&players[player].aim.lengthSq()>.12)shoot(player);
   });
 
   const keys=new Set();
-  addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));
+  addEventListener('keydown',e=>{
+    syncInputMode('keyboard');
+    keys.add(e.key.toLowerCase());
+  });
   addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
   addEventListener('blur',()=>{
     keys.clear();
@@ -98,10 +127,11 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     const players=getPlayers();
     if(!players[player])return;
     players[player].aim.copy(mapControl(player,x,y));
-    if(!isTpsMode())shoot(player);
+    shoot(player);
   }
 
   function update(){
+    syncInputMode();
     const players=getPlayers();
     if(!players.length)return;
 
@@ -120,5 +150,6 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     if(keys.has('o'))activateSuper(1);
   }
 
+  syncInputMode();
   return {update};
 }
