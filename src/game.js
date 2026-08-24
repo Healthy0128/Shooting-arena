@@ -92,7 +92,7 @@ function buildCustomConfig(i){
   const passiveCfg=PASSIVES[passive]||PASSIVES.coolant;
   return {
     ...body,
-    name:`${body.name} / ${weapon.name}`,
+    name:`${body.name} / ${weapon.name||selectedWeapon||'WEAPON'}`,
     hp:Math.round(body.hp*meta.hpMul),
     speed:Number((body.speed*meta.speedMul*(passive==='sprinter'?1.06:1)).toFixed(2)),
     radius:meta.radius,
@@ -111,7 +111,7 @@ function buildCustomConfig(i){
     coreDuration:passive==='coreHunter'?11:8,
     fireCd:weapon.fireCd,damage:weapon.damage,pellets:weapon.pellets||1,
     bulletSpeed:weapon.bulletSpeed,spread:weapon.spread||0,recovery:weapon.recovery||0,
-    weaponModel:weapon.weaponModel,weaponScale:weapon.weaponScale,
+    weaponModel:weapon.weaponModel||body.weaponModel,weaponScale:weapon.weaponScale||body.weaponScale,
     weaponStyle:weapon.weaponStyle,bulletRadius:weapon.bulletRadius,bulletLife:weapon.bulletLife,recoil:weapon.recoil,
     defense:val('defense')||body.defense,
     super:val('super')||body.super,
