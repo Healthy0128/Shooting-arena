@@ -1,5 +1,12 @@
 # BGM Licenses / Sources
 
+## Pulse
+- Author: SRG774
+- License: CC0 1.0
+- Runtime file: `assets/audio/bgm/00_menu_pulse.ogg`
+- Use: 対戦待機・メニュー
+- Source: https://opengameart.org/content/dark-sci-fi-audio-pack
+
 ## Empacotatron (Loop)
 - Author: Fupi
 - License: CC0 1.0

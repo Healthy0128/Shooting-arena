@@ -4,8 +4,9 @@ import { createInputController } from './input.js?v=6120';
 import { createHudUI } from './hud-ui.js?v=6120';
 import { createCameraController } from './camera.js?v=6120';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6120';
-import { createCombatController } from './combat.js?v=6120';
+import { createPlayerController, defenseLabel } from './player.js?v=6140';
+import { createCombatController } from './combat.js?v=6140';
+import { createAudioController } from './audio.js?v=6140';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 
 const $ = s => document.querySelector(s);
@@ -159,75 +160,18 @@ const hitObstacle=arenaController.hitObstacle;
 const makePlayer=playerController.makePlayer;
 const flashPlayer=playerController.flashPlayer;
 const defenseTrail=playerController.defenseTrail;
-
-let audioCtx=null;
-function ac(){
-  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  return audioCtx;
-}
-function tone(freq,dur=.06,type='square',gain=.025,slide=0){
-  try{
-    const c=ac(),o=c.createOscillator(),g=c.createGain();
-    o.type=type;o.frequency.setValueAtTime(freq,c.currentTime);
-    if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,freq+slide),c.currentTime+dur);
-    g.gain.setValueAtTime(gain,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
-    o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+dur);
-  }catch{}
-}
-function synthKO(){
-  tone(150,.16,'sawtooth',.055,-100);
-  setTimeout(()=>tone(72,.22,'square',.04,-20),90);
-}
-
-const bgmFiles={
-  normal:'./assets/audio/bgm/01_empacotatron_loop.ogg',
-  sudden:'./assets/audio/bgm/02_trance_boss_battle.ogg',
-  space:'./assets/audio/bgm/03_space_boss_battle.ogg'
-};
-let realBGM=null,realBGMMode=null,realBGMRequestId=0;
-function playRealBGM(mode='normal'){
-  const src=bgmFiles[mode]||bgmFiles.normal;
-  if(realBGMMode===mode&&realBGM&&!realBGM.paused)return;
-  const requestId=++realBGMRequestId;
-  if(realBGM){realBGM.pause();realBGM=null}
-  const a=new Audio(src);
-  a.loop=true;a.volume=.28;a.preload='auto';
-  a.addEventListener('error',()=>{
-    if(requestId===realBGMRequestId&&running)startBGM();
-  },{once:true});
-  a.play().then(()=>{
-    if(requestId!==realBGMRequestId){
-      a.pause();
-      a.currentTime=0;
-      return;
-    }
-    stopBGM();
-    realBGM=a;
-    realBGMMode=mode;
-  }).catch(()=>{
-    if(requestId===realBGMRequestId&&running)startBGM();
-  });
-}
-function stopRealBGM(){
-  realBGMRequestId++;
-  if(realBGM){realBGM.pause();realBGM.currentTime=0;realBGM=null}
-  realBGMMode=null;
-}
-
-let bgmTimer=null,bgmStep=0;
-const BGM_NOTES=[110,138.59,164.81,138.59,123.47,155.56,185,155.56];
-function startBGM(){
-  if(bgmTimer)return;
-  bgmStep=0;
-  bgmTimer=setInterval(()=>{
-    if(!running)return;
-    const f=BGM_NOTES[bgmStep++%BGM_NOTES.length];
-    tone(f,.16,'triangle',.008,0);
-    if(bgmStep%4===1)tone(f/2,.11,'sine',.006,0);
-  },240);
-}
-function stopBGM(){if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null}}
+const playPlayerAction=playerController.playPlayerAction;
+const audioController=createAudioController();
+const {
+  unlock:unlockAudio,
+  tone,
+  playBattleBGM,
+  playMenuBGM,
+  stopAllBGM,
+  synthKO,
+  playCountdownVoice
+}=audioController;
+playMenuBGM();
 
 function particleBurst(pos,color=0xffffff,count=9,scale=.08){
   for(let i=0;i<count;i++){
@@ -271,6 +215,7 @@ const combatController=createCombatController({
   matchLater,
   flashPlayer,
   defenseTrail,
+  playPlayerAction,
   damagePop,
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
   onKO:ko
@@ -294,10 +239,11 @@ function resetPlayer(i){
 function ko(victim,attacker){
   const player=players[victim];
   player.alive=false;
+  playPlayerAction(player,'death');
   const pos=player.root.position.clone().setY(.9);
   particleBurst(pos.clone(),player.cfg.color,32,.13);
   matchLater(()=>particleBurst(pos.clone().setY(1.05),0xffffff,18,.08),55);
-  player.root.visible=false;
+  matchLater(()=>{player.root.visible=false},720);
   players[attacker].score++;
   hitStop=Math.max(hitStop,.11);
   synthKO();
@@ -317,8 +263,7 @@ function ko(victim,attacker){
 function finish(winner){
   matchGeneration++;
   running=false;
-  stopBGM();
-  stopRealBGM();
+  stopAllBGM();
   renderMatchResult(winner,players);
   $('#winner').textContent=`P${winner+1} WIN!`;
   $('#result-score').textContent=`${players[0].score} - ${players[1].score}`;
@@ -338,13 +283,6 @@ function clearProjectiles(){
     p.mesh.material?.dispose?.();
   });
   particles=[];
-}
-
-const COUNTDOWN_BASE='./assets/audio/voice/';
-function playCountdownVoice(name){
-  const a=new Audio(COUNTDOWN_BASE+name+'.ogg');
-  a.volume=.9;
-  a.play().catch(()=>tone(name==='go'?700:440,.1,'square',.03,name==='go'?200:0));
 }
 
 function buildShortLabel(p){
@@ -403,7 +341,7 @@ function startBattle(){
   matchTime=90;
   running=false;
   result.hidden=true;
-  playRealBGM(arenaSelection==='hex'?'space':'normal');
+  playBattleBGM(arenaSelection==='hex'?'space':'normal');
   $('#menu').hidden=true;
   $('#hud').hidden=false;
   $('#controls').hidden=false;
@@ -429,7 +367,7 @@ function fullReset(){
   matchTime=90;
   running=true;
   result.hidden=true;
-  playRealBGM(arenaSelection==='hex'?'space':'normal');
+  playBattleBGM(arenaSelection==='hex'?'space':'normal');
   updateHUD();
   showBanner('FIGHT!',900);
 }
@@ -443,8 +381,7 @@ $('#back-menu').addEventListener('click',()=>{
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
   running=false;
-  stopBGM();
-  stopRealBGM();
+  playMenuBGM();
   result.hidden=true;
   $('#hud').hidden=true;
   $('#controls').hidden=true;
@@ -480,7 +417,7 @@ $('#start').addEventListener('click',()=>{
     tone(110,.1,'square',.03,-40);
     return;
   }
-  ac();
+  unlockAudio();
   startBattle();
 });
 
@@ -629,7 +566,7 @@ function update(dt){
       }else{
         suddenDeath=true;
         matchTime=30;
-        playRealBGM('sudden');
+        playBattleBGM('sudden');
         showBanner('SUDDEN DEATH! NEXT K.O WINS',1200);
         tone(210,.12,'square',.035,260);
       }
@@ -653,6 +590,8 @@ function update(dt){
       showBanner(`P${p.i+1} READY`,260);
       tone(520,.06,'sine',.02,120);
     }
+    const inBush=p.alive&&arenaController.isInBush(p.root.position);
+    playerController.updatePlayerVisuals(p,dt,inBush);
     if(!p.alive)return;
     if(p.fireHeld&&p.aim.lengthSq()>.12)shoot(p.i);
 
@@ -674,8 +613,6 @@ function update(dt){
       if(canMoveTo(nextZ,p.radius))p.root.position.z=nextZ.z;
     }
     if(p.aim.lengthSq()>.12)p.root.rotation.y=Math.atan2(p.aim.x,p.aim.y)+Math.PI;
-    const inBush=arenaController.isInBush(p.root.position);
-    playerController.updatePlayerVisuals(p,dt,inBush);
   });
 
   if(players.length===2&&players[0].alive&&players[1].alive){

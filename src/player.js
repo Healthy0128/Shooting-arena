@@ -24,8 +24,8 @@ export function createPlayerController({scene}){
     return promise;
   }
 
-  function findClip(clips,patterns){
-    return clips.find(c=>patterns.some(p=>c.name.toLowerCase().includes(p)))||clips[0]||null;
+  function findClip(clips,patterns,fallback=false){
+    return clips.find(c=>patterns.some(p=>c.name.toLowerCase().includes(p)))||(fallback?clips[0]:null);
   }
 
   async function attachWeaponModel(player){
@@ -69,10 +69,26 @@ export function createPlayerController({scene}){
       player.primitive.visible=false;
       player.modelHost.add(model);
       const mixer=new THREE.AnimationMixer(model);
-      const idle=findClip(gltf.animations,['idle']);
-      const walk=findClip(gltf.animations,['walk','run']);
+      const idle=findClip(gltf.animations,['idle'],true);
+      const walk=findClip(gltf.animations,['walking_a','walk','running_a','run']);
+      const actionClips={
+        shoot:findClip(gltf.animations,['shooting','shoot','attack_stab']),
+        hit:findClip(gltf.animations,['hit_a','hit_b','hit']),
+        defense:findClip(gltf.animations,['roll','dodge','attack_spin']),
+        super:findClip(gltf.animations,['attack_spinning','attack_spin','attack']),
+        death:findClip(gltf.animations,['death_a','death_b','death'])
+      };
       if(idle){const a=mixer.clipAction(idle);a.play();player.idleAction=a}
       if(walk){const a=mixer.clipAction(walk);a.play();a.enabled=false;player.walkAction=a}
+      player.actionAnimations=Object.fromEntries(
+        Object.entries(actionClips).filter(([,clip])=>clip).map(([name,clip])=>{
+          const action=mixer.clipAction(clip);
+          action.setLoop(THREE.LoopOnce,1);
+          action.clampWhenFinished=true;
+          action.enabled=false;
+          return [name,action];
+        })
+      );
       player.mixer=mixer;
       player.realModel=true;
       if(assetStatus)assetStatus.textContent='KayKit CC0 characters enabled · weapons load independently';
@@ -166,7 +182,7 @@ export function createPlayerController({scene}){
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
-      mixer:null,realModel:false
+      mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0
     };
     attachRealModel(player);
     attachWeaponModel(player);
@@ -189,6 +205,12 @@ export function createPlayerController({scene}){
     player.parryActive=0;
     player.parryChain=0;
     player.flashTime=0;
+    player.actionTime=0;
+    if(player.oneShotAction){
+      player.oneShotAction.stop();
+      player.oneShotAction.enabled=false;
+      player.oneShotAction=null;
+    }
     if(player.guardShield)player.guardShield.visible=false;
     if(player.barrierShell)player.barrierShell.visible=false;
     if(player.parryRing)player.parryRing.visible=false;
@@ -229,6 +251,22 @@ export function createPlayerController({scene}){
     requestAnimationFrame(fade);
   }
 
+  function playPlayerAction(player,name){
+    const action=player?.actionAnimations?.[name];
+    if(!action)return false;
+    if(player.oneShotAction&&player.oneShotAction!==action){
+      player.oneShotAction.stop();
+      player.oneShotAction.enabled=false;
+    }
+    action.reset();
+    action.enabled=true;
+    action.setEffectiveWeight(1);
+    action.play();
+    player.oneShotAction=action;
+    player.actionTime=Math.max(.12,action.getClip().duration);
+    return true;
+  }
+
   function updatePlayerVisuals(player,dt,inBush=false){
     if(!player.guardShield)return;
     player.flashTime=Math.max(0,(player.flashTime||0)-dt);
@@ -265,18 +303,29 @@ export function createPlayerController({scene}){
 
     if(player.mixer){
       const moving=player.move.lengthSq()>.08;
+      if(player.actionTime>0){
+        player.actionTime=Math.max(0,player.actionTime-dt);
+        if(player.actionTime===0&&player.oneShotAction){
+          player.oneShotAction.stop();
+          player.oneShotAction.enabled=false;
+          player.oneShotAction=null;
+        }
+      }
+      const acting=player.actionTime>0;
       if(player.walkAction){
-        player.walkAction.enabled=moving;
-        player.walkAction.setEffectiveWeight(moving?1:0);
+        player.walkAction.enabled=moving&&!acting;
+        player.walkAction.setEffectiveWeight(moving&&!acting?1:0);
       }
       if(player.idleAction){
-        player.idleAction.enabled=!moving;
-        player.idleAction.setEffectiveWeight(moving?0:1);
+        player.idleAction.enabled=!moving&&!acting;
+        player.idleAction.setEffectiveWeight(!moving&&!acting?1:0);
       }
       player.mixer.update(dt);
     }
 
-    player.root.visible=player.invuln>0?Math.floor(player.invuln*12)%2===0:true;
+    if(player.alive){
+      player.root.visible=player.invuln>0?Math.floor(player.invuln*12)%2===0:true;
+    }
     if(player.realModel)player.modelHost.scale.setScalar(inBush?0.96:1);
   }
 
@@ -284,5 +333,5 @@ export function createPlayerController({scene}){
     players.forEach(player=>scene.remove(player.root));
   }
 
-  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,updatePlayerVisuals,removePlayers};
+  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,playPlayerAction,updatePlayerVisuals,removePlayers};
 }

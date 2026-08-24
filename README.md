@@ -14,13 +14,21 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 - `index.html` — 画面UIとゲームエントリ。ロードアウト候補・初期値・アリーナ候補は持たず、構造だけを定義
 - `src/main.js` — 安定した起動用エントリポイント
-- `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
+- `src/game.js` — 試合状態と各コントローラーを結ぶオーケストレーション
 - `src/arena-config.js` — アリーナ共通定数、ステージ静的設定、アリーナ候補一覧（`ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` / `ARENA_OPTIONS`）
 - `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。候補一覧、初期ロードアウト、BUILD LIMITもここを正とする
 - `src/ui.js` — UIの薄い窓口。メニューUIを初期化し、試合UI APIを再公開する
 - `src/menu-ui.js` — ロードアウトUI初期化、アリーナ選択UI生成、ビルド上限表示
 - `src/match-ui.js` — バナー表示、試合結果統計
 - `src/input.js` — タッチ／キーボード入力。ゲーム状態や射撃処理は依存注入で受け取る
+- `src/controls.js` — 対面配置とカメラ方式に応じた操作方向変換
+- `src/camera.js` — 2D／3Dカメラ、分割描画、画面座標から地面座標への変換
+- `src/combat.js` — 射撃、ダメージ、防御、SUPER、弾の衝突更新
+- `src/player.js` — キャラクター生成、3Dモデル、待機・歩行・戦闘モーション
+- `src/arena.js` — ステージロジック、障害物、破壊可能オブジェクト
+- `src/stage-visuals.js` — 8ステージ固有の装飾とランドマーク
+- `src/audio.js` — 待機BGM、戦闘BGM、カウント音声、合成SE
+- `src/projectile-visuals.js` — 武器別の弾スプライト生成・アニメーション
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
 - `assets/models/weapons/` — 使用中の6武器と依存ファイル
@@ -56,22 +64,26 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
    - `loadout-config.js` へ分離済み
    - `BODY_SOURCE`、`WEAPON_SOURCE`、キャラ由来色、PASSIVEコストの二重管理を解消済み
    - ロードアウト候補、初期ロードアウト、BUILD LIMITも設定側へ一本化済み
-3. **UI表示処理 — 第2段階完了**
+3. **UI表示処理 — 完了**
    - `ui.js` は薄い窓口だけに縮小済み
    - メニュー初期化を `menu-ui.js` へ分離済み
    - バナーと試合結果統計を `match-ui.js` へ分離済み
    - 旧結果オーバーレイと追加結果カードの二重実装を統合済み
-   - HUD / ワールドステータスはまだ `game.js` 側
+   - HUD / ワールドステータスは `hud-ui.js` へ分離済み
 4. **入力処理 — 完了**
    - タッチ／キーボード入力を `input.js` へ原子移動済み
    - `screenVectorToWorld()` はcamera境界として `game.js` に残す
    - `players` / `shoot` / `activateSuper` は直接importせず依存注入
    - 旧 `activePointers` / `keys` / `keyboardInput()` は `game.js` から削除済み
    - CIで旧入力実装の復活とinput import重複を禁止
-5. **HUD / ワールドステータス — 次**
-6. **カメラ・レンダリング — 未着手**
-7. **ステージ生成 — 未着手**
-8. **プレイヤー・戦闘処理 — 未着手**
+5. **HUD / ワールドステータス — 完了**
+6. **カメラ・レンダリング — 完了**
+7. **ステージ生成・装飾 — 完了**
+8. **プレイヤー・戦闘処理 — 完了**
+9. **音声 — 完了**
+   - 待機BGM、戦闘BGM、音声、合成音を `audio.js` へ一本化
+10. **弾の見た目 — 完了**
+   - 武器別スプライト生成・更新を `projectile-visuals.js` へ分離
 
 ※ 未完成の分割ファイルを旧実装と並存させることはしません。安全に旧定義を削除できる状態になってから同一変更で反映します。
 

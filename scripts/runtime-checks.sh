@@ -16,7 +16,7 @@ check() {
 for file in \
   src/main.js src/game.js src/input.js src/controls.js src/hud-ui.js src/camera.js \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
-  src/menu-ui.js src/match-ui.js src/loadout-config.js; do
+  src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -26,6 +26,8 @@ check "arena controller exported" grep -Fq 'export function createArenaControlle
 check "stage visuals exported" grep -Fq 'export function addStageVisuals' src/stage-visuals.js
 check "player controller exported" grep -Fq 'export function createPlayerController' src/player.js
 check "combat controller exported" grep -Fq 'export function createCombatController' src/combat.js
+check "audio controller exported" grep -Fq 'export function createAudioController' src/audio.js
+check "projectile visual controller exported" grep -Fq 'export function createProjectileVisualController' src/projectile-visuals.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
@@ -66,7 +68,12 @@ check "stage visuals delegated" grep -Fq 'addStageVisuals({arenaRoot,type,theme,
 
 check "countdown generation guard" grep -Fq 'async function battleCountdown(generation)' src/game.js
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
-check "BGM request guard" grep -Fq 'realBGMRequestId' src/game.js
+check "BGM request guard" grep -Fq 'realBGMRequestId' src/audio.js
+check "menu BGM delegated" grep -Fq 'playMenuBGM();' src/game.js
+check "battle BGM delegated" grep -Fq "playBattleBGM(arenaSelection==='hex'?'space':'normal');" src/game.js
+check "projectile visuals delegated" grep -Fq 'projectileVisuals.update(bullet,dt,performance.now());' src/combat.js
+check "shoot animation delegated" grep -Fq "playPlayerAction(player,'shoot');" src/combat.js
+check "death animation delegated" grep -Fq "playPlayerAction(player,'death');" src/game.js
 check "combat projectile update delegated" grep -Fq 'combatController.updateProjectiles(dt);' src/game.js
 check "player visuals delegated" grep -Fq 'playerController.updatePlayerVisuals(p,dt,inBush);' src/game.js
 check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMoveTo;' src/game.js
@@ -83,6 +90,15 @@ for symbol in \
     exit 1
   fi
   echo "PASS: no local $symbol combat implementation in game.js"
+done
+
+for symbol in createAudioController playBattleBGM playMenuBGM stopAllBGM playCountdownVoice; do
+  echo "CHECK: no local $symbol audio implementation in game.js"
+  if grep -Eq "^[[:space:]]*(async[[:space:]]+)?function[[:space:]]+${symbol}[[:space:]]*\\(" src/game.js; then
+    echo "::error::$symbol audio implementation returned to game.js"
+    exit 1
+  fi
+  echo "PASS: no local $symbol audio implementation in game.js"
 done
 
 for symbol in \

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META } from './loadout-config.js?v=6120';
+import { createProjectileVisualController } from './projectile-visuals.js?v=6140';
 
 export function createCombatController({
   scene,
@@ -15,23 +16,13 @@ export function createCombatController({
   matchLater,
   flashPlayer,
   defenseTrail,
+  playPlayerAction,
   damagePop,
   addHitStop,
   onKO
 }){
   const bullets=[];
-  const weaponBulletMats={
-    rifle:new THREE.MeshBasicMaterial({color:0x8fd7ff}),
-    scatter:new THREE.MeshBasicMaterial({color:0xffbf66}),
-    rapid:new THREE.MeshBasicMaterial({color:0xb8ff7a}),
-    arcane:new THREE.MeshBasicMaterial({color:0xb780ff}),
-    bladegun:new THREE.MeshBasicMaterial({color:0xff7fb5}),
-    cannon:new THREE.MeshBasicMaterial({color:0xff6a54})
-  };
-  const bulletMats=[
-    new THREE.MeshBasicMaterial({color:0x74d5ff}),
-    new THREE.MeshBasicMaterial({color:0xff7b92})
-  ];
+  const projectileVisuals=createProjectileVisualController();
 
   function bodyMeta(player){
     return BODY_META[player?.cfg?.bodyKey]||BODY_META.knight;
@@ -49,19 +40,9 @@ export function createCombatController({
     return (bodyMeta(player).superGainMul||1)*(player?.cfg?.superGainMul||1);
   }
 
-  function projectileGeometryFor(style,radius){
-    if(style==='arcane')return new THREE.IcosahedronGeometry(radius,1);
-    if(style==='cannon')return new THREE.SphereGeometry(radius,12,8);
-    if(style==='scatter')return new THREE.SphereGeometry(radius,8,6);
-    if(style==='rapid')return new THREE.CapsuleGeometry(radius*.6,radius*1.4,3,6);
-    if(style==='bladegun')return new THREE.OctahedronGeometry(radius*1.15,0);
-    return new THREE.SphereGeometry(radius,10,7);
-  }
-
   function disposeBullet(bullet){
     scene.remove(bullet.mesh);
-    bullet.mesh.geometry?.dispose?.();
-    bullet.mesh.material?.dispose?.();
+    projectileVisuals.dispose(bullet.mesh);
   }
 
   function muzzleFlash(player){
@@ -117,11 +98,7 @@ export function createCombatController({
     const player=players[owner];
     const style=player?.cfg.weaponStyle||'rifle';
     const radius=player?.cfg.bulletRadius||.16;
-    const geo=projectileGeometryFor(style,radius);
-    const mat=(weaponBulletMats[style]||bulletMats[owner]||weaponBulletMats.rifle).clone();
-    if(player?.powerBuff>0)mat.color.offsetHSL(0,.05,.16);
-
-    const mesh=new THREE.Mesh(geo,mat);
+    const mesh=projectileVisuals.create(style,radius,player?.powerBuff>0);
     mesh.position.copy(player.root.position);
     mesh.position.y=.82;
     const forward=dir.clone().normalize();
@@ -147,6 +124,7 @@ export function createCombatController({
     player.fireCd=player.cfg.fireCd;
     player.recovery=player.cfg.recovery||0;
     player.stats.shots++;
+    playPlayerAction(player,'shoot');
     player.heat=Math.min(100,(player.heat||0)+(player.cfg.pellets>1?30:player.cfg.fireCd<.12?9:player.cfg.fireCd>.75?42:18));
     if(player.heat>=100&&!player.overheated){
       player.overheated=true;
@@ -180,6 +158,7 @@ export function createCombatController({
     if(type==='guard'){
       if(player.guard<=0||player.defenseCd>0)return;
       player.guarding=!player.guarding;
+      playPlayerAction(player,'defense');
       showBanner(player.guarding?`P${i+1} GUARD`:`P${i+1} RELEASE`,240);
       tone(player.guarding?170:240,.045,'square',.022,player.guarding?-20:60);
       return;
@@ -193,6 +172,7 @@ export function createCombatController({
     dir.normalize();
 
     if(type==='roll'){
+      playPlayerAction(player,'defense');
       player.defenseCd=2.4;
       player.invuln=Math.max(player.invuln,.26);
       for(let k=0;k<7;k++){
@@ -204,6 +184,7 @@ export function createCombatController({
       tone(280,.05,'triangle',.025,120);
       showBanner(`P${i+1} ROLL!`,260);
     }else if(type==='step'){
+      playPlayerAction(player,'defense');
       player.defenseCd=1.7;
       player.invuln=Math.max(player.invuln,.17);
       for(let k=0;k<9;k++){
@@ -215,6 +196,7 @@ export function createCombatController({
       tone(350,.045,'triangle',.022,160);
       showBanner(`P${i+1} STEP!`,240);
     }else if(type==='evade'){
+      playPlayerAction(player,'defense');
       player.defenseCd=3.2;
       player.invuln=Math.max(player.invuln,.38);
       if(player.move.lengthSq()<=.05)dir.set(-player.aim.y,0,player.aim.x).normalize();
@@ -227,12 +209,14 @@ export function createCombatController({
       tone(320,.06,'triangle',.028,180);
       showBanner(`P${i+1} EVADE!`,260);
     }else if(type==='barrier'){
+      playPlayerAction(player,'defense');
       player.defenseCd=6;
       player.barrier=55;
       particleBurst(player.root.position.clone().setY(.9),0x8fefff,18,.08);
       tone(520,.09,'sine',.03,-120);
       showBanner(`P${i+1} BARRIER!`,320);
     }else if(type==='parry'){
+      playPlayerAction(player,'defense');
       player.defenseCd=.85;
       player.parryActive=.18;
       tone(720,.035,'square',.018,-90);
@@ -305,10 +289,7 @@ export function createCombatController({
 
   function superShot(owner,dir,damage,speed,style,radius=.18,life=1.4){
     const player=getPlayers()[owner];
-    const geo=projectileGeometryFor(style,radius);
-    const mat=(weaponBulletMats[style]||weaponBulletMats.rifle).clone();
-    mat.color.offsetHSL(0,.12,.12);
-    const mesh=new THREE.Mesh(geo,mat);
+    const mesh=projectileVisuals.create(style,radius,true);
     mesh.position.copy(player.root.position);
     mesh.position.y=.9;
     const forward=dir.clone().normalize();
@@ -323,6 +304,7 @@ export function createCombatController({
 
     player.super=0;
     player.stats.supers++;
+    playPlayerAction(player,'super');
     player.fireHeld=false;
     player.heat=Math.max(0,player.heat-35);
     player.overheated=false;
@@ -467,6 +449,7 @@ export function createCombatController({
     player.super=Math.min(100,player.super+finalDamage*.35*superGainMul(player));
 
     flashPlayer(player,.11);
+    playPlayerAction(player,'hit');
     const src=players[attacker]?.root.position;
     if(src){
       const away=player.root.position.clone().sub(src);
@@ -498,7 +481,7 @@ export function createCombatController({
 
   function registerRicochet(bullet){
     bullet.bounces++;
-    bullet.mesh.material?.color?.offsetHSL?.(.02,.04,.08);
+    projectileVisuals.ricochet(bullet);
     particleBurst(bullet.mesh.position.clone().setY(.65),0xff9fd0,7,.045);
     tone(340+bullet.bounces*90,.035,'triangle',.018,70);
     bullet.mesh.position.addScaledVector(bullet.vel.clone().normalize(),.10);
@@ -552,19 +535,7 @@ export function createCombatController({
       const bullet=bullets[i];
       bullet.life-=dt;
       bullet.mesh.position.addScaledVector(bullet.vel,dt);
-      if(bullet.style==='arcane'){
-        bullet.mesh.rotation.x+=dt*5;
-        bullet.mesh.rotation.y+=dt*7;
-        const scale=1+.14*Math.sin(performance.now()*.02);
-        bullet.mesh.scale.setScalar(scale);
-      }else if(bullet.style==='cannon'){
-        bullet.mesh.rotation.y+=dt*2.2;
-      }else if(bullet.style==='rapid'){
-        bullet.mesh.rotation.z+=dt*10;
-      }else if(bullet.style==='bladegun'){
-        bullet.mesh.rotation.x+=dt*11;
-        bullet.mesh.rotation.z+=dt*14;
-      }
+      projectileVisuals.update(bullet,dt,performance.now());
 
       let remove=bullet.life<=0;
       if(!remove){
