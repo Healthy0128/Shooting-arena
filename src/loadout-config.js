@@ -38,43 +38,37 @@ export const COLOR_VALUES={
 export const BUILD_LIMIT=10;
 
 export const PASSIVES={
-  coolant:{
-    name:'COOLANT',
-    cost:1,
-    desc:'HEAT cooling +25%'
-  },
-  stabilizer:{
-    name:'STABILIZER',
-    cost:1,
-    desc:'Weapon recoil -35%'
-  },
-  sprinter:{
-    name:'SPRINTER',
-    cost:1,
-    desc:'Move speed +6%'
-  },
-  armor:{
-    name:'ARMOR PLATE',
-    cost:2,
-    desc:'Damage taken -8%'
-  },
-  charger:{
-    name:'CHARGER',
-    cost:2,
-    desc:'SUPER gain +18%'
-  },
-  coreHunter:{
-    name:'CORE HUNTER',
-    cost:1,
-    desc:'POWER duration +3s'
-  }
+  coolant:{name:'COOLANT',cost:1,desc:'HEATの冷却速度 +25%'},
+  stabilizer:{name:'STABILIZER',cost:1,desc:'射撃反動 -35%'},
+  sprinter:{name:'SPRINTER',cost:1,desc:'移動速度 +6%'},
+  armor:{name:'ARMOR PLATE',cost:2,desc:'受けるダメージ -8%'},
+  charger:{name:'CHARGER',cost:2,desc:'SUPER獲得量 +18%'},
+  coreHunter:{name:'CORE HUNTER',cost:1,desc:'POWER CORE効果時間 +3秒'}
+};
+
+export const DEFENSE_INFO={
+  roll:{name:'ROLL',desc:'進行方向へ回避。0.26秒無敵 / CT 2.4秒'},
+  guard:{name:'GUARD',desc:'前方ダメージを78%軽減。ガードゲージ制'},
+  step:{name:'STEP',desc:'素早く前進回避。0.17秒無敵 / CT 1.7秒'},
+  barrier:{name:'BARRIER',desc:'55ダメージ分を吸収するバリア / CT 6秒'},
+  evade:{name:'EVADE',desc:'長めの回避移動。0.38秒無敵 / CT 3.2秒'},
+  parry:{name:'PARRY',desc:'0.18秒受け流し。成功すると弾を反射・強化'}
+};
+
+export const SUPER_INFO={
+  rapid:{name:'OVERDRIVE',desc:'現在の照準方向へ12連射'},
+  blast:{name:'BLAST RING',desc:'周囲360°へ18発を一斉射撃'},
+  dash:{name:'PHANTOM DASH',desc:'0.65秒無敵で高速突進'},
+  nova:{name:'NOVA',desc:'全周20発＋HPを24回復'},
+  fan:{name:'BLADE FAN',desc:'前方へ扇状に11発を一斉射撃'},
+  boneStorm:{name:'STORM',desc:'時間差で2回の全周弾幕を発生'}
 };
 
 export const LOADOUT_OPTIONS={
   body:{knight:'KNIGHT',barbarian:'BARBARIAN',rogueHood:'HOODED',mage:'MAGE',rogue:'ROGUE',skeleton:'BONES'},
   weapon:{rifle:'RIFLE',scatter:'SCATTER',rapid:'RAPID',arcane:'ARCANE',bladegun:'BLADE GUN',cannon:'CANNON'},
-  defense:{roll:'ROLL',guard:'GUARD',step:'STEP',barrier:'BARRIER',evade:'EVADE',parry:'PARRY'},
-  super:{rapid:'OVERDRIVE',blast:'BLAST RING',dash:'PHANTOM DASH',nova:'NOVA',fan:'BLADE FAN',boneStorm:'STORM'},
+  defense:Object.fromEntries(Object.entries(DEFENSE_INFO).map(([key,info])=>[key,info.name])),
+  super:Object.fromEntries(Object.entries(SUPER_INFO).map(([key,info])=>[key,info.name])),
   color:Object.fromEntries(Object.keys(COLOR_VALUES).map(key=>[key,key.toUpperCase()])),
   passive:Object.fromEntries(Object.entries(PASSIVES).map(([key,passive])=>[key,passive.name]))
 };
