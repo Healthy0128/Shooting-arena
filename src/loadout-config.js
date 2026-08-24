@@ -35,7 +35,9 @@ export const COLOR_VALUES={
   pink:0xff6fae,
   lime:0xa7ef62
 };
-export const BUILD_LIMIT=10;
+
+// Cost restrictions are temporarily disabled while balance and feel are tuned.
+export const BUILD_LIMIT=999;
 
 export const PASSIVES={
   coolant:{name:'COOLANT',cost:1,desc:'HEATの冷却速度 +25%'},
