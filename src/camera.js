@@ -13,6 +13,8 @@ export function createCameraController({renderer,scene,getPlayers}){
     new THREE.PerspectiveCamera(58,1,.1,120)
   ];
   const baseRender=renderer.render.bind(renderer);
+  const tapRaycaster=new THREE.Raycaster();
+  const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let mode='top';
   let initialized=false;
 
@@ -107,6 +109,27 @@ export function createCameraController({renderer,scene,getPlayers}){
     return controlMapper.mapStick(player,x,y);
   }
 
+  function screenPointToGround(player,clientX,clientY){
+    if(mode!=='arena'||(player!==0&&player!==1))return null;
+    const canvas=renderer.domElement;
+    const rect=canvas?.getBoundingClientRect?.();
+    if(!rect?.width||!rect?.height)return null;
+    const half=rect.height/2;
+    const viewportTop=player===1?0:half;
+    const localX=clientX-rect.left;
+    const localY=clientY-rect.top-viewportTop;
+    if(localX<0||localX>rect.width||localY<0||localY>half)return null;
+
+    const ndc=new THREE.Vector2(
+      localX/rect.width*2-1,
+      1-localY/half*2
+    );
+    tapRaycaster.setFromCamera(ndc,chaseCameras[player]);
+    const hit=new THREE.Vector3();
+    if(!tapRaycaster.ray.intersectPlane(groundPlane,hit))return null;
+    return {x:hit.x,z:hit.z};
+  }
+
   function renderSplitArena(){
     const size=new THREE.Vector2();renderer.getSize(size);
     const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y));
@@ -162,6 +185,7 @@ export function createCameraController({renderer,scene,getPlayers}){
     init,
     render,
     screenVectorToWorld,
+    screenPointToGround,
     getMode:()=>mode,
     getTpsBasis,
     isPortrait,
