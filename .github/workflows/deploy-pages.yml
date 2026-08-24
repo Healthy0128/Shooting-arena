@@ -63,6 +63,8 @@ jobs:
           check "input controller is created" grep -Fq 'const input=createInputController({' src/game.js
           check "input controller is updated" grep -Fq 'input.update();' src/game.js
           check "input controller is exported" grep -Fq 'export function createInputController' src/input.js
+          check "input clears keys on blur" grep -Fq "addEventListener('blur',()=>keys.clear());" src/input.js
+          check "input clears keys when hidden" grep -Fq "if(document.hidden)keys.clear();" src/input.js
 
           for symbol in activePointers keys keyboardInput; do
             echo "CHECK: no local $symbol input state in game.js"
