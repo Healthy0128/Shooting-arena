@@ -90,7 +90,32 @@ export function createCombatController({
       bounces:0,
       ricochetMax:style==='bladegun'?3:0,
       homing:weapon.homing||0
+      ,curve:style==='boomerang'?1.35:0,curveTime:0
     });
+  }
+
+  function bladeAttack(i,player,damage){
+    const forward=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
+    const enemy=1-i, target=getPlayers()[enemy];
+    const cosArc=Math.cos(Math.PI*65/180);
+    if(target?.alive){
+      const to=target.root.position.clone().sub(player.root.position).setY(0);
+      const distance=to.length();
+      if(distance<=1.55&&distance>.01&&forward.dot(to.normalize())>=cosArc){
+        damage(enemy,damage,i,'katana',target.root.position.clone().setY(.75),0,{grantAttackerSuper:true});
+      }
+    }
+    for(let n=bullets.length-1;n>=0;n--){
+      const bullet=bullets[n];
+      if(bullet.owner===i)continue;
+      const to=bullet.mesh.position.clone().sub(player.root.position).setY(0);
+      if(to.length()<=1.8&&to.length()>.01&&forward.dot(to.normalize())>=cosArc){
+        particleBurst(bullet.mesh.position.clone().setY(.65),0xffe5a1,8,.06);
+        disposeBullet(bullet);bullets.splice(n,1);
+      }
+    }
+    particleBurst(player.root.position.clone().addScaledVector(forward,.85).setY(.75),0xffe5a1,18,.08);
+    tone(620,.06,'sawtooth',.028,-240);
   }
 
   function shoot(i){
@@ -111,6 +136,10 @@ export function createCombatController({
     }
     const base=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
     const attackMul=bodyDamageMul(player)*(player.powerBuff>0?1.18:1);
+    if(weapon.weaponStyle==='katana'){
+      bladeAttack(i,player,weapon.damage*attackMul);
+      return;
+    }
     if(weapon.pattern==='radial'){
       const count=weapon.radialCount||12;
       for(let n=0;n<count;n++){
@@ -628,6 +657,12 @@ export function createCombatController({
           current.lerp(desired,THREE.MathUtils.clamp(bullet.homing*dt,0,1)).normalize();
           bullet.vel.copy(current.multiplyScalar(speed));
         }
+      }
+      if(bullet.curve){
+        bullet.curveTime+=dt;
+        const forward=bullet.vel.clone().normalize();
+        const side=new THREE.Vector3(-forward.z,0,forward.x);
+        bullet.vel.addScaledVector(side,Math.sin(bullet.curveTime*8)*bullet.curve*dt).normalize().multiplyScalar(bullet.vel.length());
       }
       bullet.life-=dt;
       bullet.mesh.position.addScaledVector(bullet.vel,dt);
