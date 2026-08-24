@@ -16,6 +16,7 @@ check() {
 check "controls.js syntax" node --check src/controls.js
 check "camera.js syntax" node --check src/camera.js
 check "input.js syntax" node --check src/input.js
+check "floating-stick.js syntax" node --check src/floating-stick.js
 check "controls mapper is exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "controls normalizes face-to-face input" grep -Fq 'function normalizeFaceToFace' src/controls.js
 check "controls separates top-down mapping" grep -Fq 'function mapTopDown' src/controls.js
@@ -32,14 +33,18 @@ check "camera mapping exposes ground projection" grep -Fq "if(projection==='grou
 check "top-down tap uses shared top camera" grep -Fq 'camera=topCamera;' src/camera.js
 check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||screenVectorToWorld;' src/input.js
 check "input separates touch and keyboard modes" grep -Fq "let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';" src/input.js
-check "touch hides aim sticks in both camera modes" grep -Fq "const hideAim=mode==='touch';" src/input.js
+check "touch replaces fixed sticks in both camera modes" grep -Fq "const hideSticks=mode==='touch';" src/input.js
 check "tap assigns player by screen half" grep -Fq 'const player=localY<half?1:0;' src/input.js
 check "TPS tap computes split-view NDC" grep -Fq 'ndcY=1-viewportY/half*2;' src/input.js
 check "top-down tap computes full-view NDC" grep -Fq 'ndcY=1-localY/Math.max(1,r.height)*2;' src/input.js
 check "tap requests ground projection" grep -Fq "const target=mapControl(player,ndcX,ndcY,'ground');" src/input.js
 check "tap aims from player to ground point" grep -Fq 'fighter.aim.set(dx/len,dz/len);' src/input.js
-check "tap shows aim feedback" grep -Fq 'showTapMarker(e.clientX,e.clientY,player);' src/input.js
-check "tap fires from canvas" grep -Fq "canvas?.addEventListener('pointerdown'" src/input.js
+check "tap shows aim feedback" grep -Fq 'if(showMarker)showTapMarker(clientX,clientY,player);' src/input.js
+check "tap fires through floating controller" grep -Fq 'onTap:(player,x,y)' src/input.js
+check "stationary hold keeps continuous fire" grep -Fq 'fighter.fireHeld=true;shoot(player)' src/input.js
+check "floating stick gesture lifecycle" node scripts/floating-stick-check.mjs
+check "floating stick owns gesture pointer events" grep -Fq "canvas?.addEventListener('pointerdown'" src/floating-stick.js
+check "one movement pointer per player" grep -Fq 'movingPointerByPlayer' src/floating-stick.js
 check "keyboard aim always shoots" grep -Fq 'shoot(player);' src/input.js
 check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
 check "split reacts to visual viewport resize" grep -Fq "visualViewport?.addEventListener('resize',resize)" src/camera.js
@@ -60,7 +65,7 @@ check "split camera widens for outer inset" grep -Fq 'baseFov*(1+safeRatio*.45)'
 check "P2 camera shifts below Dynamic Island" grep -Fq '(i===1?outerInset:-outerInset)/viewportH' src/camera.js
 check "safe inset moves own character inward" grep -Fq 'function safeSelfWeight(outerInset,viewportHeight)' src/camera.js
 check "chase target uses adaptive self weight" grep -Fq 'a.x*selfWeight+b.x*opponentWeight' src/camera.js
-check "bottom tap safety zone is ignored" grep -Fq 'if(localY>r.height-gestureClearance())return;' src/input.js
+check "bottom touch safety zone is ignored" grep -Fq 'localY>r.height-gestureClearance())return null;' src/input.js
 check "P1 stick respects gesture clearance" grep -Fq '.stick-zone.p1{bottom:var(--gesture-clearance)}' style.css
 check "3D framing keeps low target height" grep -Fq 'b.x*opponentWeight,1.15,a.z*selfWeight' src/camera.js
 
