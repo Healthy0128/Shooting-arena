@@ -1,6 +1,7 @@
 export function createInputController({getPlayers,mapStick,screenVectorToWorld,shoot,activateSuper}){
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
+  const isTpsMode=()=>document.body.classList.contains('split-arena');
 
   function clearTransientInput(){
     activePointers.clear();
@@ -23,7 +24,6 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
       const r=base.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
       const screenDx=e.clientX-cx,screenDy=e.clientY-cy;
       const max=r.width*.33,len=Math.hypot(screenDx,screenDy)||1,k=Math.min(1,max/len);
-      // The knob follows the physical finger. Face-to-face normalization and camera mapping happen after this raw input step.
       knob.style.transform=`translate(calc(-50% + ${screenDx*k}px),calc(-50% + ${screenDy*k}px))`;
       let vx=screenDx/max,vy=screenDy/max;const mag=Math.hypot(vx,vy);
       if(mag>1){vx/=mag;vy/=mag} if(mag<.12){vx=0;vy=0}
@@ -31,8 +31,12 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
       const vec=kind==='move'?players[player].move:players[player].aim;
       vec.copy(world);
       if(kind==='aim'){
-        players[player].fireHeld=mag>.35;
-        if(players[player].fireHeld)shoot(player);
+        if(isTpsMode()){
+          players[player].fireHeld=false;
+        }else{
+          players[player].fireHeld=mag>.35;
+          if(players[player].fireHeld)shoot(player);
+        }
       }
     }
 
@@ -60,6 +64,15 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     zone.addEventListener('lostpointercapture',end);
   });
 
+  const canvas=document.querySelector('#game');
+  canvas?.addEventListener('pointerdown',e=>{
+    if(!isTpsMode())return;
+    const players=getPlayers();
+    if(players.length<2)return;
+    const player=e.clientY<innerHeight/2?1:0;
+    if(players[player]?.alive&&players[player].aim.lengthSq()>.12)shoot(player);
+  });
+
   const keys=new Set();
   addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));
   addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
@@ -85,7 +98,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     const players=getPlayers();
     if(!players[player])return;
     players[player].aim.copy(mapControl(player,x,y));
-    shoot(player);
+    if(!isTpsMode())shoot(player);
   }
 
   function update(){

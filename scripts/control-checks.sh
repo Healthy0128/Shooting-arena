@@ -27,8 +27,12 @@ check "camera exposes TPS basis" grep -Fq 'function getTpsBasis' src/camera.js
 check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||screenVectorToWorld;' src/input.js
 check "input maps pointer input" grep -Fq 'const world=mapControl(player,vx,vy);' src/input.js
 check "input maps keyboard movement" grep -Fq 'players[player].move.copy(mapControl(player,x,y))' src/input.js
+check "TPS mode detected in input" grep -Fq "document.body.classList.contains('split-arena')" src/input.js
+check "TPS aim does not hold fire" grep -Fq 'players[player].fireHeld=false;' src/input.js
+check "TPS tap fires from canvas" grep -Fq "canvas?.addEventListener('pointerdown'" src/input.js
 check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
 check "split reacts to visual viewport resize" grep -Fq "visualViewport?.addEventListener('resize',resize)" src/camera.js
+check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js
 
 if grep -Fq 'if(player===1){x=-x;y=-y}' src/camera.js; then
   echo '::error::face-to-face inversion returned to camera mapping'
