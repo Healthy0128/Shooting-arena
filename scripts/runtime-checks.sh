@@ -30,6 +30,9 @@ check "loadout-config.js syntax" node --check src/loadout-config.js
 check "index uses stable main entry" grep -Fq './src/main.js?v=695' index.html
 check "split renderer exists in camera module" grep -Fq 'function renderSplitArena' src/camera.js
 check "top camera updater exists in camera module" grep -Fq 'function updateTopCamera' src/camera.js
+check "countdown is generation guarded" grep -Fq 'async function battleCountdown(generation)' src/game.js
+check "countdown aborts stale generation" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
+check "BGM async request is guarded" grep -Fq 'realBGMRequestId' src/game.js
 
 echo "CHECK: ui import count"
 test "$(grep -Fc "from './ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::ui import count'; exit 1; }
@@ -134,8 +137,10 @@ echo "PASS: input import count"
 check "input controller is created" grep -Fq 'const input=createInputController({' src/game.js
 check "input controller is updated" grep -Fq 'input.update();' src/game.js
 check "input controller is exported" grep -Fq 'export function createInputController' src/input.js
-check "input clears keys on blur" grep -Fq "addEventListener('blur',()=>keys.clear());" src/input.js
-check "input clears keys when hidden" grep -Fq "if(document.hidden)keys.clear();" src/input.js
+check "input owns transient reset" grep -Fq 'function clearTransientInput()' src/input.js
+check "input handles lost pointer capture" grep -Fq "zone.addEventListener('lostpointercapture',end);" src/input.js
+check "input clears transient state on blur" grep -Fq 'clearTransientInput();' src/input.js
+check "input clears transient state when hidden" grep -Fq 'if(document.hidden){' src/input.js
 
 for symbol in activePointers keys keyboardInput; do
   echo "CHECK: no local $symbol input state in game.js"

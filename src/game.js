@@ -194,17 +194,32 @@ const bgmFiles={
   sudden:'./assets/audio/bgm/02_trance_boss_battle.ogg',
   space:'./assets/audio/bgm/03_space_boss_battle.ogg'
 };
-let realBGM=null,realBGMMode=null;
+let realBGM=null,realBGMMode=null,realBGMRequestId=0;
 function playRealBGM(mode='normal'){
   const src=bgmFiles[mode]||bgmFiles.normal;
   if(realBGMMode===mode&&realBGM&&!realBGM.paused)return;
+  const requestId=++realBGMRequestId;
   if(realBGM){realBGM.pause();realBGM=null}
   const a=new Audio(src);
   a.loop=true;a.volume=.28;a.preload='auto';
-  a.addEventListener('error',()=>{ if(running) startBGM(); },{once:true});
-  a.play().then(()=>{ stopBGM(); realBGM=a; realBGMMode=mode; }).catch(()=>{ if(running) startBGM(); });
+  a.addEventListener('error',()=>{
+    if(requestId===realBGMRequestId&&running)startBGM();
+  },{once:true});
+  a.play().then(()=>{
+    if(requestId!==realBGMRequestId){
+      a.pause();
+      a.currentTime=0;
+      return;
+    }
+    stopBGM();
+    realBGM=a;
+    realBGMMode=mode;
+  }).catch(()=>{
+    if(requestId===realBGMRequestId&&running)startBGM();
+  });
 }
 function stopRealBGM(){
+  realBGMRequestId++;
   if(realBGM){realBGM.pause();realBGM.currentTime=0;realBGM=null}
   realBGMMode=null;
 }
@@ -364,23 +379,27 @@ function showVsIntro(){
   return new Promise(r=>setTimeout(()=>{el.classList.remove('show');r()},1050));
 }
 
-async function battleCountdown(){
+async function battleCountdown(generation){
   running=false;
   await showVsIntro();
+  if(generation!==matchGeneration)return;
   for(const n of [3,2,1]){
     showBanner(String(n),700);
     playCountdownVoice('count_'+n);
     await new Promise(r=>setTimeout(r,800));
+    if(generation!==matchGeneration)return;
   }
   showBanner('GO!',700);
   playCountdownVoice('go');
   await new Promise(r=>setTimeout(r,350));
+  if(generation!==matchGeneration)return;
   running=true;
 }
 
 function startBattle(){
   hideMatchResult();
   matchGeneration++;
+  const generation=matchGeneration;
   suddenDeath=false;
   clearWorldStatus();
   clearPowerCore();
@@ -399,7 +418,7 @@ function startBattle(){
   $('#controls').hidden=false;
   updateHUD();
   updateWorldStatus();
-  battleCountdown();
+  battleCountdown(generation);
 }
 
 function fullReset(){

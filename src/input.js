@@ -1,6 +1,17 @@
 export function createInputController({getPlayers,screenVectorToWorld,shoot,activateSuper}){
   const activePointers=new Map();
 
+  function clearTransientInput(){
+    activePointers.clear();
+    document.querySelectorAll('.stick-zone i').forEach(knob=>{
+      knob.style.transform='translate(-50%,-50%)';
+    });
+    getPlayers().forEach(player=>{
+      player.move?.set(0,0);
+      player.fireHeld=false;
+    });
+  }
+
   document.querySelectorAll('.stick-zone').forEach(zone=>{
     const knob=zone.querySelector('i'),base=zone.querySelector('.stick');
     const player=Number(zone.dataset.player),kind=zone.dataset.kind;
@@ -45,14 +56,21 @@ export function createInputController({getPlayers,screenVectorToWorld,shoot,acti
     };
     zone.addEventListener('pointerup',end);
     zone.addEventListener('pointercancel',end);
+    zone.addEventListener('lostpointercapture',end);
   });
 
   const keys=new Set();
   addEventListener('keydown',e=>keys.add(e.key.toLowerCase()));
   addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
-  addEventListener('blur',()=>keys.clear());
+  addEventListener('blur',()=>{
+    keys.clear();
+    clearTransientInput();
+  });
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden)keys.clear();
+    if(document.hidden){
+      keys.clear();
+      clearTransientInput();
+    }
   });
 
   function update(){
