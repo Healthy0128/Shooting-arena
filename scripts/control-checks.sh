@@ -20,7 +20,9 @@ check "controls separates top-down mapping" grep -Fq 'function mapTopDown' src/c
 check "controls separates TPS mapping" grep -Fq 'function mapTps' src/controls.js
 check "controls switches by camera mode" grep -Fq "getMode()==='arena'" src/controls.js
 check "TPS uses camera basis" grep -Fq 'const basis=getTpsBasis(player);' src/controls.js
-check "TPS does not face-to-face invert" bash -c '! sed -n "/function mapTps/,/function mapStick/p" src/controls.js | grep -Fq "normalizeFaceToFace"'
+check "TPS normalizes P2 physical orientation once" bash -c 'sed -n "/function mapTps/,/function mapStick/p" src/controls.js | grep -Fq "const local=normalizeFaceToFace(player,x,y);"'
+check "TPS maps normalized local axes" grep -Fq 'right.x*local.x+forward.x*(-local.y)' src/controls.js
+check "camera uses correct ground-plane right basis" grep -Fq 'new THREE.Vector3(-forward3.z,0,forward3.x)' src/camera.js
 check "camera imports controls mapper" grep -Eq "from './controls.js\\?v=[0-9]+';" src/camera.js
 check "camera delegates stick mapping" grep -Fq 'return controlMapper.mapStick(player,x,y);' src/camera.js
 check "camera exposes TPS basis" grep -Fq 'function getTpsBasis' src/camera.js
