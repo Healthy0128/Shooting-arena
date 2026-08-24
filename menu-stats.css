@@ -3,6 +3,7 @@
 #menu .lobby-top,#menu .custom-grid,#menu .camera-select,#menu .arena-select,#menu .battle-start{min-width:0;flex:0 0 auto}
 #menu .lobby-top{margin-bottom:0}.lobby-top h1{font-size:clamp(24px,5vw,48px)}#menu .sub{margin:2px 0 0;font-size:clamp(8px,1.4vw,12px)}
 .custom-grid{min-height:0;flex:1 1 auto!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(5px,1vw,10px)}
+#menu .custom-grid{flex:0 0 auto!important;align-items:start}
 .loadout-card{min-width:0;min-height:0;padding:clamp(6px,1vh,10px);overflow:hidden}.loadout-summary{min-width:0;min-height:0;padding:7px 8px;background:linear-gradient(180deg,#07101ccc,#0b1422cc);border:1px solid #ffffff14;margin-bottom:5px}
 .loadout-head{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:6px;min-width:0}.loadout-head>div{min-width:0;max-width:100%}.loadout-head strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(10px,1.7vw,14px);line-height:1.1}.loadout-head small{display:block;margin-top:2px;font-size:8px;font-weight:1000;letter-spacing:.04em;color:var(--player-accent,#8fd7ff);opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .build-pill,.budget-legend{display:none!important}
