@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6290';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6280';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6300';
 
 export function createCombatController({
   scene,
@@ -77,7 +77,9 @@ export function createCombatController({
     const mesh=projectileVisuals.create(style,radius,player?.powerBuff>0);
     const forward=dir.clone().normalize();
     const launch=forward.clone();
-    const curveDirection=style==='boomerang'?(Math.random()<.5?-1:1):0;
+    const curveDirection=style==='boomerang'
+      ?(Math.abs(player.move.x)>.1?(player.move.x<0?-1:1):(Math.random()<.5?-1:1))
+      :0;
     if(curveDirection)launch.applyAxisAngle(new THREE.Vector3(0,1,0),curveDirection*Math.PI*40/180);
     mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(launch,.08);
     scene.add(mesh);
@@ -667,7 +669,7 @@ export function createCombatController({
         if(bullet.curveTime>bullet.curveDelay){
           const speed=bullet.vel.length();
           const current=bullet.vel.clone().normalize();
-          current.lerp(bullet.curveBase,THREE.MathUtils.clamp((bullet.curveTime-bullet.curveDelay)*2.2*dt,0,1)).normalize();
+          current.lerp(bullet.curveBase,THREE.MathUtils.clamp((bullet.curveTime-bullet.curveDelay)*10*dt,0,1)).normalize();
           bullet.vel.copy(current.multiplyScalar(speed));
         }
       }

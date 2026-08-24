@@ -89,5 +89,13 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
     [...transientMeshes].forEach(disposeMesh);
   }
 
-  return {muzzle,impact,shotSound,clear};
+  function slash(position,direction,color=0xffe5a1){
+    const arc=new THREE.Mesh(new THREE.RingGeometry(.2,1.75,48,-Math.PI*65/180,Math.PI*130/180),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false}));
+    arc.rotation.x=-Math.PI/2;
+    arc.rotation.y=Math.atan2(direction.x,direction.z);
+    arc.position.copy(position).setY(.72);
+    scene.add(arc);transientMeshes.add(arc);matchLater(()=>disposeMesh(arc),150);
+  }
+
+  return {muzzle,impact,shotSound,slash,clear};
 }
