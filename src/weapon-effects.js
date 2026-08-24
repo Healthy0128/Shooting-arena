@@ -14,6 +14,7 @@ const EFFECTS={
 
 export function createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake,shotSfx}){
   const transientMeshes=new Set();
+  const slashEffects=new Map();
   function config(style){return EFFECTS[style]||EFFECTS.rifle}
 
   function disposeMesh(mesh){
@@ -87,16 +88,50 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
 
   function clear(){
     [...transientMeshes].forEach(disposeMesh);
+    slashEffects.forEach(effect=>{
+      scene.remove(effect.root);
+      effect.root.traverse(part=>{
+        part.geometry?.dispose?.();
+        part.material?.dispose?.();
+      });
+    });
+    slashEffects.clear();
   }
 
-  function slash(position,direction,color=0xffe5a1){
-    if([...transientMeshes].filter(mesh=>mesh.userData.katanaSlash).length>=2)return;
-    const arc=new THREE.Mesh(new THREE.RingGeometry(.2,1.75,48,-Math.PI*65/180,Math.PI*130/180),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false}));
-    arc.userData.katanaSlash=true;
-    arc.rotation.x=-Math.PI/2;
-    arc.rotation.y=Math.atan2(direction.x,direction.z);
-    arc.position.copy(position).setY(.72);
-    scene.add(arc);transientMeshes.add(arc);matchLater(()=>disposeMesh(arc),150);
+  function createSlashEffect(owner){
+    const root=new THREE.Group();
+    const start=-Math.PI*155/180;
+    const length=Math.PI*130/180;
+    const glow=new THREE.Mesh(
+      new THREE.RingGeometry(.38,1.72,48,1,start,length),
+      new THREE.MeshBasicMaterial({color:0xffe5a1,transparent:true,opacity:.32,side:THREE.DoubleSide,depthWrite:false})
+    );
+    const edge=new THREE.Mesh(
+      new THREE.RingGeometry(1.48,1.78,48,1,start,length),
+      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.95,side:THREE.DoubleSide,depthWrite:false})
+    );
+    glow.rotation.x=edge.rotation.x=-Math.PI/2;
+    root.add(glow,edge);
+    root.visible=false;
+    root.userData.slashToken=0;
+    scene.add(root);
+    const effect={root,glow,edge};
+    slashEffects.set(owner,effect);
+    return effect;
+  }
+
+  function slash(position,direction,color=0xffe5a1,owner=0){
+    const effect=slashEffects.get(owner)||createSlashEffect(owner);
+    const token=++effect.root.userData.slashToken;
+    effect.glow.material.color.set(color);
+    effect.edge.material.color.set(0xffffff);
+    effect.root.position.copy(position).setY(.72);
+    effect.root.rotation.y=Math.atan2(direction.x,direction.z);
+    effect.root.scale.setScalar(1);
+    effect.root.visible=true;
+    matchLater(()=>{
+      if(effect.root.userData.slashToken===token)effect.root.visible=false;
+    },180);
   }
 
   return {muzzle,impact,shotSound,slash,clear};

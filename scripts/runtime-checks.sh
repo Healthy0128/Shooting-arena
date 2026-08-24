@@ -31,6 +31,9 @@ check "combat controller exported" grep -Fq 'export function createCombatControl
 check "audio controller exported" grep -Fq 'export function createAudioController' src/audio.js
 check "projectile visual controller exported" grep -Fq 'export function createProjectileVisualController' src/projectile-visuals.js
 check "weapon effects controller exported" grep -Fq 'export function createWeaponEffectsController' src/weapon-effects.js
+check "boomerang remembers horizontal input" grep -Fq 'player.lastMoveSide' src/combat.js
+check "boomerang turns sharply after delay" grep -Fq 'bullet.curveComplete=true;' src/combat.js
+check "katana slash effects are pooled" grep -Fq 'const slashEffects=new Map();' src/weapon-effects.js
 check "pause UI controller exported" grep -Fq 'export function createPauseUI' src/pause-ui.js
 check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js

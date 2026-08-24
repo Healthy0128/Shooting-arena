@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6310';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6310';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6320';
 
 export function createCombatController({
   scene,
@@ -78,7 +78,7 @@ export function createCombatController({
     const forward=dir.clone().normalize();
     const launch=forward.clone();
     const curveDirection=style==='boomerang'
-      ?(Math.abs(player.move.x)>.1?(player.move.x<0?-1:1):(Math.random()<.5?-1:1))
+      ?(player.lastMoveSide||(Math.random()<.5?-1:1))
       :0;
     if(curveDirection)launch.applyAxisAngle(new THREE.Vector3(0,1,0),curveDirection*Math.PI*40/180);
     mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(launch,.08);
@@ -94,8 +94,12 @@ export function createCombatController({
       style,
       bounces:0,
       ricochetMax:style==='bladegun'?3:0,
-      homing:weapon.homing||0
-      ,curveBase:forward,curveDirection,curveTime:0,curveDelay:style==='boomerang'?.3:0
+      homing:weapon.homing||0,
+      curveBase:forward,
+      curveDirection,
+      curveTime:0,
+      curveDelay:style==='boomerang'?.3:0,
+      curveComplete:false
     });
   }
 
@@ -119,7 +123,7 @@ export function createCombatController({
         disposeBullet(bullet);bullets.splice(n,1);
       }
     }
-    weaponEffects.slash?.(player.root.position.clone().addScaledVector(forward,.68),forward,player.cfg.color);
+    weaponEffects.slash(player.root.position,forward,player.cfg.color,i);
     particleBurst(player.root.position.clone().addScaledVector(forward,.85).setY(.75),0xffe5a1,18,.08);
     tone(620,.06,'sawtooth',.028,-240);
   }
@@ -664,13 +668,12 @@ export function createCombatController({
           bullet.vel.copy(current.multiplyScalar(speed));
         }
       }
-      if(bullet.curveBase){
+      if(bullet.curveBase&&!bullet.curveComplete){
         bullet.curveTime+=dt;
-        if(bullet.curveTime>bullet.curveDelay){
+        if(bullet.curveTime>=bullet.curveDelay){
           const speed=bullet.vel.length();
-          const current=bullet.vel.clone().normalize();
-          current.lerp(bullet.curveBase,THREE.MathUtils.clamp((bullet.curveTime-bullet.curveDelay)*10*dt,0,1)).normalize();
-          bullet.vel.copy(current.multiplyScalar(speed));
+          bullet.vel.copy(bullet.curveBase).multiplyScalar(speed);
+          bullet.curveComplete=true;
         }
       }
       bullet.life-=dt;

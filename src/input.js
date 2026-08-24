@@ -7,6 +7,10 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';
   let floatingStick={clear(){},isMoving(){return false}};
 
+  function rememberMoveSide(player,horizontalInput){
+    if(Math.abs(horizontalInput)>.1)player.lastMoveSide=Math.sign(horizontalInput);
+  }
+
   function gestureClearance(){
     const value=getComputedStyle(document.documentElement).getPropertyValue('--gesture-clearance');
     return Math.max(0,Number.parseFloat(value)||0);
@@ -86,6 +90,8 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
           players[player].fireHeld=mag>.35;
           if(players[player].fireHeld)shoot(player);
         }
+      }else{
+        rememberMoveSide(players[player],vx);
       }
     }
 
@@ -164,7 +170,10 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     onTouchInput:()=>syncInputMode('touch'),
     onMove:(player,x,y)=>{
       const fighter=getPlayers()[player];
-      if(fighter)fighter.move.copy(mapControl(player,x,y));
+      if(fighter){
+        fighter.move.copy(mapControl(player,x,y));
+        rememberMoveSide(fighter,x);
+      }
     },
     onMoveEnd:player=>getPlayers()[player]?.move.set(0,0),
     onTap:(player,x,y)=>{
@@ -201,7 +210,10 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   function applyKeyboardMove(player,x,y){
     const players=getPlayers();
     if(!players[player])return;
-    if(x||y)players[player].move.copy(mapControl(player,x,y)).normalize();
+    if(x||y){
+      players[player].move.copy(mapControl(player,x,y)).normalize();
+      rememberMoveSide(players[player],x);
+    }
     else if(!floatingStick.isMoving(player)&&![...activePointers.values()].some(v=>v.player===player&&v.kind==='move'))players[player].move.set(0,0);
   }
 

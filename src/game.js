@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6210';
-import { createInputController } from './input.js?v=6200';
+import { createInputController } from './input.js?v=6320';
 import { createHudUI } from './hud-ui.js?v=6170';
 import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6240';
-import { createCombatController } from './combat.js?v=6310';
+import { createPlayerController, defenseLabel } from './player.js?v=6320';
+import { createCombatController } from './combat.js?v=6320';
 import { createAudioController } from './audio.js?v=6210';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
