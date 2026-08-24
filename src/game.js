@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult } from './ui.js?v=695';
+import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6104';
 import { createInputController } from './input.js?v=695';
 import { createHudUI } from './hud-ui.js?v=695';
 import { createCameraController } from './camera.js?v=695';
 import { createArenaController } from './arena.js?v=695';
 import { createPlayerController, defenseLabel } from './player.js?v=695';
 import { createCombatController } from './combat.js?v=695';
-import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=695';
+import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6104';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -118,19 +118,10 @@ function refreshLoadoutSummary(i){
   const card=document.querySelector(`.loadout-card[data-player="${i}"]`);
   if(!card)return;
   const cfg=buildCustomConfig(i);
-  const summary=card.querySelector('.loadout-summary');
   const cost=buildCostFromCard(card);
   const over=cost>BUILD_LIMIT;
 
-  if(summary)summary.innerHTML=`
-    <strong>${cfg.name}</strong><br>
-    <span>${defenseLabel(cfg.defense)} / ${cfg.super.toUpperCase()}</span><br>
-    <small>HP ${cfg.hp} · SPD ${cfg.speed} · DMG ${cfg.damage}</small><br>
-    <small class="body-meta">${cfg.bodyLabel} · HIT ${cfg.radius.toFixed(2)} · KB RES ${Math.round((cfg.knockbackResist||0)*100)}%</small><br>
-    <small class="passive-meta">PASSIVE: <b>${cfg.passiveName}</b> · ${cfg.passiveDesc}</small>
-    <div class="build-cost ${over?'over':''}">COST <b>${cost}</b> / ${BUILD_LIMIT}</div>
-  `;
-
+  renderLoadoutSummary(card,cfg,cost,over);
   card.classList.toggle('over-budget',over);
   saveLoadout(i);
   updateStartAvailability();
@@ -643,7 +634,6 @@ function update(dt){
         tone(210,.12,'square',.035,260);
       }
     }else{
-      // If nobody scores in the 30-second sudden-death window, keep the duel alive.
       matchTime=30;
       showBanner('KEEP FIGHTING!',500);
     }
@@ -688,7 +678,6 @@ function update(dt){
     playerController.updatePlayerVisuals(p,dt,inBush);
   });
 
-  // Keep both fighters from occupying the exact same space.
   if(players.length===2&&players[0].alive&&players[1].alive){
     const a=players[0],b=players[1];
     const dx=b.root.position.x-a.root.position.x;
