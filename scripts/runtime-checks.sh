@@ -18,7 +18,7 @@ for file in \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
   src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
-  src/field-weapons.js src/help-ui.js; do
+  src/field-weapons.js src/help-ui.js src/floating-stick.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -37,6 +37,9 @@ check "game settings exported" grep -Fq 'export function updateGameSettings' src
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "field weapon controller exported" grep -Fq 'export function createFieldWeaponController' src/field-weapons.js
 check "help UI exported" grep -Fq 'export function initHelpUI' src/help-ui.js
+check "floating stick controller exported" grep -Fq 'export function createFloatingStickController' src/floating-stick.js
+check "floating stick is delegated through input" grep -Fq 'createFloatingStickController({' src/input.js
+check "floating stick logic stays out of game orchestrator" bash -c '! grep -Fq "MOVE_THRESHOLD" src/game.js'
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js

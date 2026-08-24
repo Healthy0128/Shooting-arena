@@ -33,14 +33,14 @@ export function initHelpUI(){
             </figure>
             <ol class="help-legend">
               <li><b>1　P2ステータス</b><span>上側のプレイヤーは画面を反対向きに見ます。</span></li>
-              <li><b>2　移動スティック</b><span>左スティックで自分のキャラを移動します。</span></li>
+              <li><b>2　移動ぷにコン</b><span>画面をスワイプすると、触れた位置に移動スティックが現れます。</span></li>
               <li><b>3　中央タイマー</b><span>先に3ポイント取るか、時間終了時に優勢なら勝利です。</span></li>
-              <li><b>4　P1移動</b><span>下側も同じ操作。相手と向かい合って遊びます。</span></li>
+              <li><b>4　P1移動</b><span>下側もスワイプで移動。指を離すとスティックが消えます。</span></li>
               <li><b>5　防御・必殺</b><span>青が防御、紫が必殺。必殺はゲージ100で発動できます。</span></li>
               <li><b>6　P1ステータス</b><span>HP、必殺ゲージ、取得ポイントを確認できます。</span></li>
             </ol>
           </div>
-          <p class="help-tip">タッチ操作は「左スティックで移動＋自分側の画面をタップした地点へ射撃」です。画面を押し続けると連射します。</p>
+          <p class="help-tip">タッチ操作は「スワイプで移動＋タップした地点へ射撃」です。動かさず押し続けると、その地点を狙って連射します。</p>
         </article>
 
         <article class="help-page" data-help-content="gauges" hidden>

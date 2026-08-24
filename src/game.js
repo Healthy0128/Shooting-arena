@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6180';
-import { createInputController } from './input.js?v=6151';
+import { createInputController } from './input.js?v=6200';
 import { createHudUI } from './hud-ui.js?v=6170';
 import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
