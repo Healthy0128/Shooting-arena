@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
-import { createProjectileVisualController } from './projectile-visuals.js?v=6290';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6300';
+import { createProjectileVisualController } from './projectile-visuals.js?v=6310';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6310';
 
 export function createCombatController({
   scene,
@@ -119,7 +119,7 @@ export function createCombatController({
         disposeBullet(bullet);bullets.splice(n,1);
       }
     }
-    weaponEffects.slash(player.root.position.clone().addScaledVector(forward,.68),forward,player.cfg.color);
+    weaponEffects.slash?.(player.root.position.clone().addScaledVector(forward,.68),forward,player.cfg.color);
     particleBurst(player.root.position.clone().addScaledVector(forward,.85).setY(.75),0xffe5a1,18,.08);
     tone(620,.06,'sawtooth',.028,-240);
   }
