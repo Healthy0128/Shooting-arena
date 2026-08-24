@@ -30,7 +30,7 @@ function colorHex(value){
 
 function detailAttrs(kind,title,text){
   const esc=value=>String(value||'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
-  return `class="detail-target" tabindex="0" role="button" data-detail-kind="${esc(kind)}" data-detail-title="${esc(title)}" data-detail-text="${esc(text)}"`;
+  return `tabindex="0" role="button" data-detail-kind="${esc(kind)}" data-detail-title="${esc(title)}" data-detail-text="${esc(text)}"`;
 }
 
 function ensureDetailModal(){
@@ -138,7 +138,7 @@ export function renderLoadoutSummary(card,cfg,cost,over){
   card.style.setProperty('--player-accent',colorHex(cfg.color));
   summary.innerHTML=`
     <div class="loadout-head">
-      <div ${detailAttrs('キャラクター',`${cfg.name}・${body.role}`,body.longDesc||body.desc)}>
+      <div class="detail-target" ${detailAttrs('キャラクター',`${cfg.name}・${body.role}`,body.longDesc||body.desc)}>
         <strong>${cfg.name}</strong>
         <small>${body.label} · 攻撃${Math.round(bodyDamageMul*100)}% · 被ダメ${Math.round(incoming*100)}% · 必殺${Math.round(superGain*100)}%</small>
       </div>
@@ -151,13 +151,13 @@ export function renderLoadoutSummary(card,cfg,cost,over){
       ${meter('連射',fireRate,`${fireRate.toFixed(1)}/秒`,10.5)}
       ${meter('射程',range,range.toFixed(1),30)}
     </div>
-    <div ${detailAttrs('武器',`${weapon.name}・${weapon.role}`,weapon.longDesc||weapon.desc)} class="weapon-profile detail-target">
+    <div class="weapon-profile detail-target" ${detailAttrs('武器',`${weapon.name}・${weapon.role}`,weapon.longDesc||weapon.desc)}>
       <span>武器</span><b>${weapon.name} · ${weapon.role}</b><small>${weapon.desc}</small>
     </div>
     <div class="ability-grid">
-      <div ${detailAttrs('防御',defense.name,defense.longDesc||defense.desc)} class="ability-card detail-target"><span>防御</span><b>${defense.name}</b><small>${defense.desc}</small></div>
-      <div ${detailAttrs('必殺技',superInfo.name,superInfo.longDesc||superInfo.desc)} class="ability-card detail-target"><span>必殺</span><b>${superInfo.name}</b><small>${superInfo.desc}</small></div>
-      <div ${detailAttrs('パッシブ',passive.name,passive.longDesc||passive.desc)} class="ability-card detail-target"><span>パッシブ</span><b>${passive.name}</b><small>${passive.desc}</small></div>
+      <div class="ability-card detail-target" ${detailAttrs('防御',defense.name,defense.longDesc||defense.desc)}><span>防御</span><b>${defense.name}</b><small>${defense.desc}</small></div>
+      <div class="ability-card detail-target" ${detailAttrs('必殺技',superInfo.name,superInfo.longDesc||superInfo.desc)}><span>必殺</span><b>${superInfo.name}</b><small>${superInfo.desc}</small></div>
+      <div class="ability-card detail-target" ${detailAttrs('パッシブ',passive.name,passive.longDesc||passive.desc)}><span>パッシブ</span><b>${passive.name}</b><small>${passive.desc}</small></div>
     </div>
     <div class="hold-hint">長押しで詳しい説明</div>`;
 }
