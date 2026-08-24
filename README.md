@@ -15,7 +15,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `index.html` — 画面UIとゲームエントリ。ロードアウト候補や初期値は持たず、構造だけを定義
 - `src/main.js` — 安定した起動用エントリポイント
 - `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
-- `src/arena-config.js` — アリーナ共通定数（`ARENA` / `SPAWN_X`）。`PROPS` / `STAGE_THEMES` は原子移動できるまで `game.js` が唯一の所有者
+- `src/arena-config.js` — アリーナ共通定数とステージ静的設定（`ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES`）
 - `src/ui.js` — ロードアウトUI初期化、ビルド上限表示、バナー表示、試合結果統計
 - `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。候補一覧、初期ロードアウト、BUILD LIMITもここを正とする
 - `style.css` — UI・画面レイアウト
@@ -42,10 +42,10 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 
 ### 分割進捗
 
-1. **アリーナ設定 — 進行中**
-   - `ARENA` / `SPAWN_X` は `arena-config.js` へ移動済み
-   - `PROPS` / `STAGE_THEMES` は `game.js` が現在の唯一の所有者
-   - `game.js` から同一変更で削除できる時だけ `arena-config.js` へ移す
+1. **アリーナ設定 — 完了**
+   - `ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` を `arena-config.js` へ原子移動済み
+   - `game.js` 側の旧定義は同じ変更で削除済み
+   - CIで `game.js` への再定義を禁止
 2. **キャラクター・装備・ビルド設定 — 完了**
    - `loadout-config.js` へ分離済み
    - `BODY_SOURCE`、`WEAPON_SOURCE`、キャラ由来色、PASSIVEコストの二重管理を解消済み
