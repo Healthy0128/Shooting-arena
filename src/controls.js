@@ -13,12 +13,14 @@ export function createControlMapper({getMode,getTpsBasis,getPortrait}){
   }
 
   function mapTps(player,x,y){
-    const local=normalizeFaceToFace(player,x,y);
+    // TPS input is already local to each player's own viewport/camera.
+    // Do not apply the face-to-face P2 inversion here: up must always mean
+    // forward from that player's camera, and right must always mean camera-right.
     const basis=getTpsBasis(player);
     const forward=basis.forward;
     const right=basis.right;
-    const worldX=right.x*local.x+forward.x*(-local.y);
-    const worldZ=right.y*local.x+forward.y*(-local.y);
+    const worldX=right.x*x+forward.x*(-y);
+    const worldZ=right.y*x+forward.y*(-y);
     const result=new THREE.Vector2(worldX,worldZ);
     if(result.lengthSq()>1)result.normalize();
     return result;
