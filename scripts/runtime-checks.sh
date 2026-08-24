@@ -35,6 +35,9 @@ check "super descriptions centralized" grep -Fq 'export const SUPER_INFO=' src/l
 check "visual menu stylesheet loaded" grep -Fq 'menu-stats.css' index.html
 check "stat meters rendered" grep -Fq "meter('HP'" src/menu-ui.js
 check "ability cards rendered" grep -Fq 'class="ability-grid"' src/menu-ui.js
+check "stage spawn pads visualized" grep -Fq 'function addSpawnPads(theme,type)' src/arena.js
+check "stage architecture visualized" grep -Fq 'function addStageArchitecture(type,theme)' src/arena.js
+check "stage architecture built" grep -Fq 'addStageArchitecture(type,theme);' src/arena.js
 
 check "countdown generation guard" grep -Fq 'async function battleCountdown(generation)' src/game.js
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
@@ -45,8 +48,6 @@ check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMo
 check "camera render delegated" grep -Fq 'cameraController.render();' src/game.js
 check "input update delegated" grep -Fq 'input.update();' src/game.js
 
-# Match exact function declarations only. Substrings such as damagePop must not
-# be mistaken for a returned combat implementation named damage().
 for symbol in \
   projectileGeometryFor muzzleFlash weaponShotSound applyShotRecoil disposeBullet \
   spawnBullet shoot defenseAction sourceFrontDot parryBullet superPulse superFlash \
