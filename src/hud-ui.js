@@ -16,6 +16,13 @@ export function createHudUI({getPlayers,getCamera,defenseLabel}){
 
   function updateWorldStatus(){
     const players=getPlayers();
+    if(document.body.classList.contains('split-arena')){
+      players.forEach(p=>{
+        if(p.worldStatus)p.worldStatus.style.display='none';
+      });
+      return;
+    }
+
     const camera=getCamera();
     players.forEach(p=>{
       ensureWorldStatus(p);
