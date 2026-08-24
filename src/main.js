@@ -1,4 +1,4 @@
-import { initMenuUI } from './ui.js?v=6104';
+import { initMenuUI } from './ui.js?v=6106';
 
 initMenuUI();
 import('./game.js?v=6105').catch(err=>{

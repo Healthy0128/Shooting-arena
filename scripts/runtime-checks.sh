@@ -87,6 +87,12 @@ if grep -Fq 'id="build-limit-value"' index.html || grep -Fq 'budget-legend' inde
 fi
 echo 'PASS: build limit UI remains removed'
 
+if grep -Fq "querySelector('#build-limit-value')" src/menu-ui.js || grep -Fq 'buildLimitValue.textContent' src/menu-ui.js; then
+  echo '::error::stale build limit DOM access remains in menu-ui.js'
+  exit 1
+fi
+echo 'PASS: no stale build limit DOM access'
+
 if grep -Fq '<option ' index.html; then
   echo '::error::duplicated loadout options returned to HTML'
   exit 1

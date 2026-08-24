@@ -59,7 +59,6 @@ export function renderLoadoutSummary(card,cfg,cost,over){
 }
 
 export function initMenuUI(){
-  const buildLimitValue=document.querySelector('#build-limit-value');
   const arenaButtons=document.querySelector('.arena-buttons');
 
   document.querySelectorAll('.loadout-card').forEach(card=>{
@@ -90,6 +89,4 @@ export function initMenuUI(){
     if(index===0)button.classList.add('selected');
     return button;
   }));
-
-  buildLimitValue.textContent=BUILD_LIMIT;
 }
