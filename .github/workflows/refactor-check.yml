@@ -1,0 +1,41 @@
+name: Refactor safety checks
+
+on:
+  push:
+    branches: [refactor/hud-camera]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and module checks
+        run: |
+          set -euo pipefail
+
+          check() {
+            local name="$1"
+            shift
+            echo "CHECK: $name"
+            if "$@"; then
+              echo "PASS: $name"
+            else
+              echo "::error::$name"
+              exit 1
+            fi
+          }
+
+          check "hud-ui.js syntax" node --check src/hud-ui.js
+          check "camera.js syntax" node --check src/camera.js
+          check "HUD factory exported" grep -Fq 'export function createHudUI' src/hud-ui.js
+          check "camera factory exported" grep -Fq 'export function createCameraController' src/camera.js
+          check "camera owns split renderer" grep -Fq 'function renderSplitArena' src/camera.js
+          check "camera owns top updater" grep -Fq 'function updateTopCamera' src/camera.js
+          check "camera exposes screen transform" grep -Fq 'screenVectorToWorld' src/camera.js
+          check "HUD exposes update functions" grep -Fq 'return {updateHUD,updateWorldStatus,clearWorldStatus};' src/hud-ui.js
+
+          echo "Candidate refactor modules are syntactically valid."
