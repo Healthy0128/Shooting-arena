@@ -61,6 +61,13 @@ jobs:
           check "SPAWN_X is exported" grep -Fq 'export const SPAWN_X=' src/arena-config.js
           check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
           check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
+          check "ARENA_OPTIONS is exported" grep -Fq 'export const ARENA_OPTIONS=' src/arena-config.js
+          check "ui uses ARENA_OPTIONS" grep -Fq 'ARENA_OPTIONS' src/ui.js
+          check "arena button host exists" grep -Fq 'class="arena-buttons"' index.html
+
+          echo "CHECK: no HTML-owned arena options"
+          if grep -Fq 'data-arena=' index.html; then echo '::error::HTML-owned arena options returned'; exit 1; fi
+          echo "PASS: no HTML-owned arena options"
 
           for symbol in PROP_BASE PROPS STAGE_THEMES; do
             echo "CHECK: no local $symbol stage config in game.js"
