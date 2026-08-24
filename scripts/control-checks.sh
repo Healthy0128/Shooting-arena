@@ -58,9 +58,11 @@ check "camera safe frame scale exists" grep -Fq 'function safeFrameScale(w,h)' s
 check "top camera shifts away from cutout" grep -Fq 'safeTopCameraCenter(mx,mz' src/camera.js
 check "split camera widens for outer inset" grep -Fq 'baseFov*(1+safeRatio*.45)' src/camera.js
 check "P2 camera shifts below Dynamic Island" grep -Fq '(i===1?outerInset:-outerInset)/viewportH' src/camera.js
+check "safe inset moves own character inward" grep -Fq 'function safeSelfWeight(outerInset,viewportHeight)' src/camera.js
+check "chase target uses adaptive self weight" grep -Fq 'a.x*selfWeight+b.x*opponentWeight' src/camera.js
 check "bottom tap safety zone is ignored" grep -Fq 'if(localY>r.height-gestureClearance())return;' src/input.js
 check "P1 stick respects gesture clearance" grep -Fq '.stick-zone.p1{bottom:var(--gesture-clearance)}' style.css
-check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js
+check "3D framing keeps low target height" grep -Fq 'b.x*opponentWeight,1.15,a.z*selfWeight' src/camera.js
 
 if grep -Fq 'if(player===1){x=-x;y=-y}' src/camera.js; then
   echo '::error::face-to-face inversion returned to camera mapping'
