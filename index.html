@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.20.0</title>
-  <link rel="stylesheet" href="./style.css?v=6200" />
+  <title>Duel Arena v6.21.0</title>
+  <link rel="stylesheet" href="./style.css?v=6210" />
   <link rel="stylesheet" href="./menu-stats.css?v=6130" />
   <link rel="stylesheet" href="./help-ui.css?v=6191" />
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -28,7 +28,7 @@
             <p class="sub">キャラクターと武器を組み合わせて戦おう</p>
           </div>
           <div class="build-badge">
-            <strong>v6.20.0</strong><span>スワイプぷにコン · 2026.08.24</span>
+            <strong>v6.21.0</strong><span>サンクチュアリ表示 · 決着演出 · 射撃SE · 2026.08.24</span>
           </div>
         </div>
 
@@ -97,6 +97,11 @@
     </section>
 
     <div id="banner"></div>
+    <section id="match-finish" class="match-finish" hidden aria-live="assertive">
+      <div class="match-finish-kicker">FINAL K.O.</div>
+      <div id="match-finish-title">P1 WIN</div>
+      <div id="match-finish-score">3 - 0</div>
+    </section>
 
     <section id="controls" hidden>
       <div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div>
@@ -131,6 +136,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main.js?v=6200"></script>
+  <script type="module" src="./src/main.js?v=6210"></script>
 </body>
 </html>

@@ -1,5 +1,8 @@
 const banner=document.querySelector('#banner');
 const resultStats=document.querySelector('#match-result-stats');
+const matchFinish=document.querySelector('#match-finish');
+const matchFinishTitle=document.querySelector('#match-finish-title');
+const matchFinishScore=document.querySelector('#match-finish-score');
 let bannerTimer=null;
 
 export function showBanner(text,ms=650){
@@ -30,3 +33,17 @@ export function renderMatchResult(_winner,players){
 }
 
 export function hideMatchResult(){resultStats.replaceChildren()}
+
+export function showMatchFinish(winner,players,suddenDeath=false){
+  if(!matchFinish)return;
+  matchFinishTitle.textContent=suddenDeath?'SUDDEN DEATH WIN':`P${winner+1} WIN`;
+  matchFinishScore.textContent=`${players[0].score} - ${players[1].score}`;
+  matchFinish.hidden=false;
+  requestAnimationFrame(()=>matchFinish.classList.add('show'));
+}
+
+export function hideMatchFinish(){
+  if(!matchFinish)return;
+  matchFinish.classList.remove('show');
+  matchFinish.hidden=true;
+}
