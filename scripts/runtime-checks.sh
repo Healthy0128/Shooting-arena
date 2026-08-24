@@ -34,6 +34,9 @@ check "loadout summary delegated" grep -Fq 'renderLoadoutSummary(card,cfg,cost,o
 check "defense descriptions centralized" grep -Fq 'export const DEFENSE_INFO=' src/loadout-config.js
 check "super descriptions centralized" grep -Fq 'export const SUPER_INFO=' src/loadout-config.js
 check "weapon descriptions centralized" grep -Fq 'export const WEAPON_INFO=' src/loadout-config.js
+check "Japanese character names" grep -Fq "name:'レンジャー'" src/loadout-config.js
+check "Japanese weapon names" grep -Fq "name:'ショットガン'" src/loadout-config.js
+check "long body descriptions" grep -Fq 'longDesc:' src/loadout-config.js
 check "body attack tradeoffs defined" grep -Fq 'damageMul:' src/loadout-config.js
 check "body defense tradeoffs defined" grep -Fq 'damageTakenMul:' src/loadout-config.js
 check "body super tradeoffs defined" grep -Fq 'superGainMul:' src/loadout-config.js
@@ -50,9 +53,13 @@ check "body damage affects shots" grep -Fq 'const attackMul=bodyDamageMul(player
 check "body toughness affects incoming damage" grep -Fq 'amount*=bodyIncomingMul(player)' src/combat.js
 check "body super gain affects meter" grep -Fq 'superGainMul(players[attacker])' src/combat.js
 check "visual menu stylesheet loaded" grep -Fq 'menu-stats.css' index.html
-check "stat meters rendered" grep -Fq "meter('HP'" src/menu-ui.js
-check "weapon profile rendered" grep -Fq 'class="weapon-profile"' src/menu-ui.js
+check "Japanese stat meters rendered" grep -Fq "meter('体力'" src/menu-ui.js
+check "weapon profile rendered" grep -Fq 'class="weapon-profile detail-target"' src/menu-ui.js
 check "ability cards rendered" grep -Fq 'class="ability-grid"' src/menu-ui.js
+check "long press detail modal" grep -Fq 'function installDetailInteraction()' src/menu-ui.js
+check "detail hold threshold" grep -Fq '},520);' src/menu-ui.js
+check "detail modal styled" grep -Fq '.detail-modal{' menu-stats.css
+check "Japanese menu labels" grep -Fq '<label>武器<select data-slot="weapon"></select></label>' index.html
 check "stage spawn pads visualized" grep -Fq 'function addSpawnPads(arenaRoot,theme,type)' src/stage-visuals.js
 check "stage architecture visualized" grep -Fq 'function addStageArchitecture(arenaRoot,type,theme' src/stage-visuals.js
 check "stage visuals delegated" grep -Fq 'addStageVisuals({arenaRoot,type,theme,attachPropVisual,buildId});' src/arena.js
