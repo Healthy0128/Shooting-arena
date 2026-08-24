@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6160';
 import { createInputController } from './input.js?v=6151';
 import { createHudUI } from './hud-ui.js?v=6170';
-import { createCameraController } from './camera.js?v=6171';
+import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6170';
 import { createCombatController } from './combat.js?v=6170';
