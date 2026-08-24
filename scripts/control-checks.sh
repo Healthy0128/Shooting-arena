@@ -26,10 +26,16 @@ check "TPS normalizes P2 physical orientation once" bash -c 'sed -n "/function m
 check "TPS maps normalized local axes" grep -Fq 'right.x*local.x+forward.x*(-local.y)' src/controls.js
 check "camera uses correct ground-plane right basis" grep -Fq 'new THREE.Vector3(-forward3.z,0,forward3.x)' src/camera.js
 check "camera delegates stick mapping" grep -Fq 'return controlMapper.mapStick(player,x,y);' src/camera.js
+check "camera owns TPS tap raycaster" grep -Fq 'const tapRaycaster=new THREE.Raycaster();' src/camera.js
+check "camera raycasts against ground plane" grep -Fq 'tapRaycaster.ray.intersectPlane(groundPlane,hit)' src/camera.js
+check "camera mapping exposes ground projection" grep -Fq "if(projection==='ground')return screenPointToGround(player,x,y);" src/camera.js
 check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||screenVectorToWorld;' src/input.js
 check "input separates touch and keyboard modes" grep -Fq "let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';" src/input.js
 check "TPS touch hides aim sticks" grep -Fq "zone.style.display=hideAim?'none':'';" src/input.js
-check "TPS tap sets aim from tapped direction" grep -Fq 'players[player].aim.copy(mapControl(player,vx,vy)).normalize();' src/input.js
+check "TPS tap computes split-view NDC" grep -Fq 'const ndcY=1-viewportY/half*2;' src/input.js
+check "TPS tap requests ground projection" grep -Fq "const target=mapControl(player,ndcX,ndcY,'ground');" src/input.js
+check "TPS tap aims from player to ground point" grep -Fq 'fighter.aim.set(dx/len,dz/len);' src/input.js
+check "TPS tap shows aim feedback" grep -Fq 'showTapMarker(e.clientX,e.clientY,player);' src/input.js
 check "TPS tap fires from canvas" grep -Fq "canvas?.addEventListener('pointerdown'" src/input.js
 check "keyboard aim always shoots" grep -Fq 'shoot(player);' src/input.js
 check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
