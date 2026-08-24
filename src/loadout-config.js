@@ -37,7 +37,7 @@ export const WEAPON_INFO={
   sniper:{name:'スナイパー',role:'超長射程',desc:'高威力・低連射',longDesc:'射程と弾速に特化した単発武器です。'},
   katana:{name:'刀',role:'近距離斬撃',desc:'短射程・高威力',longDesc:'短い斬撃弾を飛ばす近距離武器です。'}
 };
-export const WEAPON_PROFILES={boomerang:{weaponStyle:'boomerang',fireCd:.62,damage:28,bulletSpeed:10,spread:0,bulletRadius:.16,bulletLife:2.2,recovery:.16,recoil:.12},sniper:{weaponStyle:'sniper',fireCd:1.15,damage:72,bulletSpeed:28,spread:0,bulletRadius:.13,bulletLife:2.8,recovery:.38,recoil:.42},katana:{weaponStyle:'katana',fireCd:.38,damage:34,bulletSpeed:12,spread:0,bulletRadius:.12,bulletLife:.8,recovery:.2,recoil:.08}};
+export const WEAPON_PROFILES={boomerang:{weaponStyle:'boomerang',fireCd:.62,damage:28,bulletSpeed:16,spread:0,bulletRadius:.16,bulletLife:3,recovery:.16,recoil:.12},sniper:{weaponStyle:'sniper',fireCd:1.15,damage:72,bulletSpeed:28,spread:0,bulletRadius:.13,bulletLife:2.8,recovery:.38,recoil:.42},katana:{weaponStyle:'katana',fireCd:.38,damage:34,bulletSpeed:12,spread:0,bulletRadius:.12,bulletLife:.8,recovery:.2,recoil:.08}};
 
 export const OVERDRIVE_PROFILES={
   rifle:{bursts:10,pellets:1,interval:58,damage:17,speed:18,style:'rifle',radius:.12,life:1.7,spread:0},

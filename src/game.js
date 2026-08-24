@@ -11,7 +11,7 @@ import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
 import { createFieldWeaponController } from './field-weapons.js?v=6170';
-import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6220';
+import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -92,7 +92,7 @@ function buildCustomConfig(i){
   const passiveCfg=PASSIVES[passive]||PASSIVES.coolant;
   return {
     ...body,
-    name:`${body.name} / ${weapon.name||selectedWeapon||'WEAPON'}`,
+    name:`${body.name} / ${WEAPON_INFO[selectedWeapon]?.name||weapon.name||selectedWeapon||'WEAPON'}`,
     hp:Math.round(body.hp*meta.hpMul),
     speed:Number((body.speed*meta.speedMul*(passive==='sprinter'?1.06:1)).toFixed(2)),
     radius:meta.radius,

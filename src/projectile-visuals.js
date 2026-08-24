@@ -96,7 +96,7 @@ export function createProjectileVisualController(){
     const meta=STYLE_META[key];
     const size=Math.max(.32,radius*3.2);
     const root=new THREE.Group();
-    const directional=key==='rifle'||key==='rapid'||key==='seeker'||key==='rail';
+    const directional=key==='rifle'||key==='rapid'||key==='seeker'||key==='rail'||key==='sniper'||key==='boomerang';
     root.userData.visualParts=[];
     root.userData.directional=directional;
 
