@@ -4,8 +4,8 @@ import { createInputController } from './input.js?v=6120';
 import { createHudUI } from './hud-ui.js?v=6120';
 import { createCameraController } from './camera.js?v=6120';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6140';
-import { createCombatController } from './combat.js?v=6140';
+import { createPlayerController, defenseLabel } from './player.js?v=6141';
+import { createCombatController } from './combat.js?v=6141';
 import { createAudioController } from './audio.js?v=6140';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 

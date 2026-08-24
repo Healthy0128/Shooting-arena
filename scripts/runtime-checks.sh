@@ -74,6 +74,10 @@ check "battle BGM delegated" grep -Fq "playBattleBGM(arenaSelection==='hex'?'spa
 check "projectile visuals delegated" grep -Fq 'projectileVisuals.update(bullet,dt,performance.now());' src/combat.js
 check "shoot animation delegated" grep -Fq "playPlayerAction(player,'shoot');" src/combat.js
 check "death animation delegated" grep -Fq "playPlayerAction(player,'death');" src/game.js
+check "hit reaction always triggered" grep -Fq "if(name==='hit')" src/player.js
+check "hit reaction moves visual rig" grep -Fq 'player.visualRig.position.z=.24*impulse;' src/player.js
+check "directional projectile planes" grep -Fq 'root.add(horizontal,vertical);' src/projectile-visuals.js
+check "directional projectile follows velocity" grep -Fq 'Math.atan2(-bullet.vel.z,bullet.vel.x)' src/projectile-visuals.js
 check "combat projectile update delegated" grep -Fq 'combatController.updateProjectiles(dt);' src/game.js
 check "player visuals delegated" grep -Fq 'playerController.updatePlayerVisuals(p,dt,inBush);' src/game.js
 check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMoveTo;' src/game.js

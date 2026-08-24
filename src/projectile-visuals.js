@@ -81,24 +81,50 @@ export function createProjectileVisualController(){
   function create(style,radius,powered=false){
     const key=STYLE_META[style]?style:'rifle';
     const meta=STYLE_META[key];
-    const material=new THREE.SpriteMaterial({
-      map:textureFor(key),
-      color:powered?0xffffff:meta.color,
-      transparent:true,
-      depthWrite:false,
-      blending:THREE.AdditiveBlending
-    });
-    const sprite=new THREE.Sprite(material);
     const size=Math.max(.32,radius*3.2);
-    sprite.scale.set(size*meta.scale[0],size*meta.scale[1],1);
     const root=new THREE.Group();
-    root.add(sprite);
-    root.userData.projectileSprite=sprite;
-    root.userData.baseScale=sprite.scale.clone();
+    const directional=key==='rifle'||key==='rapid';
+    root.userData.visualParts=[];
+    root.userData.directional=directional;
+
+    if(directional){
+      const geometry=new THREE.PlaneGeometry(size*meta.scale[0],size*meta.scale[1]);
+      const makeMaterial=()=>new THREE.MeshBasicMaterial({
+        map:textureFor(key),
+        color:powered?0xffffff:meta.color,
+        transparent:true,
+        depthWrite:false,
+        side:THREE.DoubleSide,
+        blending:THREE.AdditiveBlending
+      });
+      const horizontal=new THREE.Mesh(geometry,makeMaterial());
+      horizontal.rotation.x=-Math.PI/2;
+      const vertical=new THREE.Mesh(geometry.clone(),makeMaterial());
+      root.add(horizontal,vertical);
+      root.userData.visualParts.push(horizontal,vertical);
+    }else{
+      const material=new THREE.SpriteMaterial({
+        map:textureFor(key),
+        color:powered?0xffffff:meta.color,
+        transparent:true,
+        depthWrite:false,
+        blending:THREE.AdditiveBlending
+      });
+      const sprite=new THREE.Sprite(material);
+      sprite.scale.set(size*meta.scale[0],size*meta.scale[1],1);
+      root.add(sprite);
+      root.userData.projectileSprite=sprite;
+      root.userData.baseScale=sprite.scale.clone();
+      root.userData.visualParts.push(sprite);
+    }
     return root;
   }
 
   function update(bullet,dt,elapsed){
+    if(bullet.mesh.userData.directional){
+      bullet.mesh.rotation.y=Math.atan2(-bullet.vel.z,bullet.vel.x);
+      return;
+    }
     const sprite=bullet.mesh.userData.projectileSprite;
     if(!sprite)return;
     const base=bullet.mesh.userData.baseScale;
@@ -115,15 +141,22 @@ export function createProjectileVisualController(){
   }
 
   function ricochet(bullet){
+    const parts=bullet.mesh.userData.visualParts||[];
+    parts.forEach(part=>part.material?.color?.offsetHSL?.(.02,.04,.08));
     const sprite=bullet.mesh.userData.projectileSprite;
-    if(!sprite)return;
-    sprite.material.color.offsetHSL(.02,.04,.08);
-    sprite.scale.multiplyScalar(1.08);
-    bullet.mesh.userData.baseScale.copy(sprite.scale);
+    if(sprite){
+      sprite.scale.multiplyScalar(1.08);
+      bullet.mesh.userData.baseScale.copy(sprite.scale);
+    }else{
+      bullet.mesh.scale.multiplyScalar(1.08);
+    }
   }
 
   function dispose(root){
-    root.userData.projectileSprite?.material?.dispose?.();
+    (root.userData.visualParts||[]).forEach(part=>{
+      part.geometry?.dispose?.();
+      part.material?.dispose?.();
+    });
   }
 
   return {create,update,ricochet,dispose};
