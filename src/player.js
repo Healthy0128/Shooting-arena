@@ -112,8 +112,11 @@ export function createPlayerController({scene}){
     shadow.position.y=.015;
     root.add(shadow);
 
+    const visualRig=new THREE.Group();
+    root.add(visualRig);
+
     const primitive=new THREE.Group();
-    root.add(primitive);
+    visualRig.add(primitive);
     const body=new THREE.Mesh(
       new THREE.CapsuleGeometry(.48,.72,5,10),
       new THREE.MeshStandardMaterial({color:cfg.color,roughness:.58})
@@ -128,11 +131,11 @@ export function createPlayerController({scene}){
     primitive.add(head);
 
     const modelHost=new THREE.Group();
-    root.add(modelHost);
+    visualRig.add(modelHost);
 
     const weaponPivot=new THREE.Group();
     weaponPivot.position.y=1.05;
-    root.add(weaponPivot);
+    visualRig.add(weaponPivot);
     const gunLen=key==='crusher'?1.0:key==='skeleton'?1.4:1.25;
     const gunColor=key==='mage'?0x5be0d0:key==='skeleton'?0x8f826c:0x202735;
     const gun=new THREE.Mesh(
@@ -176,13 +179,14 @@ export function createPlayerController({scene}){
     defenseFx.add(parryRing);
 
     const player={
-      i,key,cfg,root,primitive,modelHost,weaponPivot,weaponPrimitive:gun,weaponReal:null,
+      i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,weaponPrimitive:gun,weaponReal:null,
       hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
-      mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0
+      mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,
+      hitReaction:0,hitReactionDuration:.26,hitSide:1,bodyScale
     };
     attachRealModel(player);
     attachWeaponModel(player);
@@ -205,6 +209,9 @@ export function createPlayerController({scene}){
     player.parryActive=0;
     player.parryChain=0;
     player.flashTime=0;
+    player.hitReaction=0;
+    player.visualRig.position.set(0,0,0);
+    player.visualRig.rotation.set(0,0,0);
     player.actionTime=0;
     if(player.oneShotAction){
       player.oneShotAction.stop();
@@ -252,6 +259,11 @@ export function createPlayerController({scene}){
   }
 
   function playPlayerAction(player,name){
+    if(!player)return false;
+    if(name==='hit'){
+      player.hitReaction=player.hitReactionDuration||.26;
+      player.hitSide=Math.random()<.5?-1:1;
+    }
     const action=player?.actionAnimations?.[name];
     if(!action)return false;
     if(player.oneShotAction&&player.oneShotAction!==action){
@@ -270,6 +282,19 @@ export function createPlayerController({scene}){
   function updatePlayerVisuals(player,dt,inBush=false){
     if(!player.guardShield)return;
     player.flashTime=Math.max(0,(player.flashTime||0)-dt);
+    player.hitReaction=Math.max(0,(player.hitReaction||0)-dt);
+    if(player.hitReaction>0){
+      const duration=player.hitReactionDuration||.26;
+      const phase=1-player.hitReaction/duration;
+      const impulse=Math.sin(THREE.MathUtils.clamp(phase,0,1)*Math.PI);
+      player.visualRig.position.z=.24*impulse;
+      player.visualRig.rotation.x=-.2*impulse;
+      player.visualRig.rotation.z=(player.hitSide||1)*.09*impulse;
+    }else{
+      player.visualRig.position.z=0;
+      player.visualRig.rotation.x=0;
+      player.visualRig.rotation.z=0;
+    }
 
     const guardOn=player.guarding&&player.alive;
     player.guardShield.material.opacity=guardOn?.42:0;
@@ -326,7 +351,7 @@ export function createPlayerController({scene}){
     if(player.alive){
       player.root.visible=player.invuln>0?Math.floor(player.invuln*12)%2===0:true;
     }
-    if(player.realModel)player.modelHost.scale.setScalar(inBush?0.96:1);
+    if(player.realModel)player.modelHost.scale.setScalar(player.bodyScale*(inBush?.96:1));
   }
 
   function removePlayers(players){
