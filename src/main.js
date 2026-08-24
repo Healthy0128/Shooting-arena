@@ -3,6 +3,6 @@ import { initHelpUI } from './help-ui.js?v=6200';
 
 initMenuUI();
 initHelpUI();
-import('./game.js?v=6260').catch(err=>{
+import('./game.js?v=6270').catch(err=>{
   console.error('Failed to start game:',err);
 });
