@@ -117,6 +117,7 @@ check "tutorial opens from initial menu" grep -Fq 'id="open-help"' index.html
 check "tutorial screenshot has annotations" grep -Fq 'help-pin pin-6' src/help-ui.js
 check "tutorial has four focused pages" grep -Fq "const HELP_PAGES=['controls','gauges','field','supers'];" src/help-ui.js
 check "tutorial logic stays out of game orchestrator" bash -c '! grep -Fq "initHelpUI" src/game.js'
+check "tutorial screenshot frame follows image ratio" grep -Fq '.help-shot-frame{width:100%;height:auto;aspect-ratio:707/1436' help-ui.css
 check "overdrive weapon profiles are centralized" grep -Fq 'export const OVERDRIVE_PROFILES=' src/loadout-config.js
 check "overdrive ignores temporary field weapon" grep -Fq 'OVERDRIVE_PROFILES[player.cfg.weaponStyle]' src/combat.js
 check "overdrive cannon total is normalized" grep -Fq "cannon:{bursts:2,pellets:1,interval:260,damage:85" src/loadout-config.js
