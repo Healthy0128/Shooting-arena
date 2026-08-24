@@ -1,15 +1,16 @@
 import * as THREE from 'three';
 import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6160';
 import { createInputController } from './input.js?v=6151';
-import { createHudUI } from './hud-ui.js?v=6150';
-import { createCameraController } from './camera.js?v=6151';
+import { createHudUI } from './hud-ui.js?v=6170';
+import { createCameraController } from './camera.js?v=6170';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6150';
-import { createCombatController } from './combat.js?v=6160';
+import { createPlayerController, defenseLabel } from './player.js?v=6170';
+import { createCombatController } from './combat.js?v=6170';
 import { createAudioController } from './audio.js?v=6160';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
+import { createFieldWeaponController } from './field-weapons.js?v=6170';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 
 const $ = s => document.querySelector(s);
@@ -210,6 +211,15 @@ function damagePop(amount){
   setTimeout(()=>el.remove(),480);
 }
 
+const fieldWeaponController=createFieldWeaponController({
+  scene,
+  getPlayers:()=>players,
+  canMoveTo,
+  showBanner,
+  tone,
+  particleBurst
+});
+
 const combatController=createCombatController({
   scene,
   getPlayers:()=>players,
@@ -229,6 +239,8 @@ const combatController=createCombatController({
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
   cameraShake:feedbackController.shake,
   vibrate:feedbackController.vibrate,
+  consumeFieldWeapon:fieldWeaponController.consume,
+  onDamage:fieldWeaponController.noteDamage,
   onKO:ko
 });
 const shoot=combatController.shoot;
@@ -278,6 +290,7 @@ function finish(winner){
   pauseUI.hide();
   pauseUI.setAvailable(false);
   stopAllBGM();
+  fieldWeaponController.reset();
   renderMatchResult(winner,players);
   $('#winner').textContent=`P${winner+1} WIN!`;
   $('#result-score').textContent=`${players[0].score} - ${players[1].score}`;
@@ -354,6 +367,7 @@ function startBattle(){
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
+  fieldWeaponController.reset();
   removePlayers();
   clearProjectiles();
   buildArena(arenaSelection);
@@ -381,6 +395,7 @@ function fullReset(){
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
+  fieldWeaponController.reset();
   clearProjectiles();
   players.forEach((p,i)=>{
     p.score=0;
@@ -406,6 +421,7 @@ function backToMenu(){
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
+  fieldWeaponController.reset();
   running=false;
   paused=false;
   input.clear();
@@ -703,6 +719,7 @@ function update(dt){
     }
   }
 
+  fieldWeaponController.update(dt);
   combatController.updateProjectiles(dt);
 
   for(let i=particles.length-1;i>=0;i--){

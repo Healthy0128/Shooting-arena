@@ -6,7 +6,10 @@ const EFFECTS={
   rapid:{color:0x78d8ff,length:.32,radius:.045,impact:0x65cfff,count:7,shake:.8},
   arcane:{color:0x62f6df,length:.56,radius:.09,impact:0x74ffe8,count:13,shake:1.5},
   bladegun:{color:0xff83c6,length:.48,radius:.06,impact:0xff8fd0,count:11,shake:1.2},
-  cannon:{color:0xff7048,length:.72,radius:.16,impact:0xff653f,count:22,shake:5.4}
+  cannon:{color:0xff7048,length:.72,radius:.16,impact:0xff653f,count:22,shake:5.4},
+  seeker:{color:0x63f4db,length:.58,radius:.1,impact:0x72ffe8,count:16,shake:2.2},
+  shock:{color:0xffb14f,length:.4,radius:.15,impact:0xffc663,count:18,shake:3.5},
+  rail:{color:0xff5e78,length:.95,radius:.11,impact:0xff7890,count:24,shake:6.2}
 };
 
 export function createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake}){
@@ -42,13 +45,13 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
     scene.add(glow);
     transientMeshes.add(glow);
     matchLater(()=>disposeMesh(glow),72);
-    cameraShake?.(cfg.shake,style==='cannon'?150:85);
+    cameraShake?.(cfg.shake,style==='cannon'||style==='rail'?150:85);
   }
 
   function impact(style,position,kind='player',bounces=0){
     const cfg=config(style);
     const color=style==='bladegun'&&bounces>0?0xffffff:cfg.impact;
-    particleBurst(position.clone().setY(Math.max(.35,position.y||.75)),color,kind==='player'?cfg.count:Math.ceil(cfg.count*.65),style==='cannon'?.105:.065);
+    particleBurst(position.clone().setY(Math.max(.35,position.y||.75)),color,kind==='player'?cfg.count:Math.ceil(cfg.count*.65),(style==='cannon'||style==='rail') ? .105 : .065);
     if(kind==='player')cameraShake?.(cfg.shake*.65,95);
 
     const ring=new THREE.Mesh(
@@ -64,7 +67,13 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
   }
 
   function shotSound(style){
-    if(style==='scatter'){
+    if(style==='shock'){
+      tone(118,.08,'square',.032,90);matchLater(()=>tone(76,.07,'sawtooth',.02,-25),28);
+    }else if(style==='seeker'){
+      tone(330,.07,'sine',.026,210);matchLater(()=>tone(510,.05,'triangle',.018,80),32);
+    }else if(style==='rail'){
+      tone(740,.045,'sawtooth',.035,-520);matchLater(()=>tone(92,.1,'square',.03,-28),25);
+    }else if(style==='scatter'){
       tone(92,.065,'square',.03,35);matchLater(()=>tone(138,.04,'square',.018,-25),24);
     }else if(style==='rapid')tone(245,.028,'square',.016,95);
     else if(style==='arcane'){

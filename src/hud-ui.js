@@ -9,6 +9,7 @@ export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
       <div class="world-status-head"><span>P${p.i+1}</span><strong class="world-heat-label">HEAT 0</strong></div>
       <div class="world-hp-track"><div class="world-hp-fill"></div></div>
       <div class="world-heat-track"><div class="world-heat-fill"></div></div>
+      <div class="world-field-weapon"></div>
       <div class="world-def-state"></div>
     `;
     document.body.appendChild(el);
@@ -43,6 +44,12 @@ export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
       el.classList.toggle('is-overheated',!!p.overheated);
       el.classList.toggle('is-recovering',(p.recovery||0)>0);
       el.classList.toggle('is-powered',(p.powerBuff||0)>0);
+      const fieldWeapon=el.querySelector('.world-field-weapon');
+      if(p.fieldWeapon){
+        fieldWeapon.textContent=`${p.fieldWeapon.name} ×${p.fieldWeapon.ammo}`;
+        fieldWeapon.style.display='block';
+        fieldWeapon.style.color=`#${p.fieldWeapon.color.toString(16).padStart(6,'0')}`;
+      }else fieldWeapon.style.display='none';
       const defState=el.querySelector('.world-def-state');
       if(p.cfg.defense==='guard'){
         defState.textContent=p.guarding?`GUARD ${Math.ceil(p.guard)}`:(p.defenseCd>0?`BREAK ${p.defenseCd.toFixed(1)}s`:`GUARD ${Math.ceil(p.guard)}`);

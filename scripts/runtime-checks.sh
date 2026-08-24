@@ -17,7 +17,8 @@ for file in \
   src/main.js src/game.js src/input.js src/controls.js src/hud-ui.js src/camera.js \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
-  src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js; do
+  src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
+  src/field-weapons.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -34,6 +35,7 @@ check "pause UI controller exported" grep -Fq 'export function createPauseUI' sr
 check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
+check "field weapon controller exported" grep -Fq 'export function createFieldWeaponController' src/field-weapons.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
@@ -98,11 +100,18 @@ check "audio follows BGM setting" grep -Fq 'realBGMBaseVolume*settings.bgmVolume
 check "synth BGM uses BGM channel" grep -Fq "0,'bgm'" src/audio.js
 check "feedback setting gates vibration" grep -Fq '!getGameSettings().vibration' src/feedback.js
 check "feedback setting gates screen shake" grep -Fq '!getGameSettings().screenShake' src/feedback.js
-check "combat vibration delegated" grep -Fq 'vibrate(player.cfg.weaponStyle' src/combat.js
+check "combat vibration delegated" grep -Fq 'vibrate(weapon.vibration??' src/combat.js
 check "pause settings persist through controller" grep -Fq 'updateGameSettings({bgmVolume:value/100})' src/pause-ui.js
 check "two pause buttons are created" grep -Fq 'const buttons=[0,1].map' src/pause-ui.js
 check "split HUD uses camera projection" grep -Fq 'projectWorldToScreen(p.i,q)' src/hud-ui.js
 check "HUD no longer hidden in split mode" bash -c '! grep -Fq "classList.contains(\x27split-arena\x27)" src/hud-ui.js'
+check "field weapons updated by orchestrator" grep -Fq 'fieldWeaponController.update(dt);' src/game.js
+check "field weapon ammo consumed by combat" grep -Fq 'consumeFieldWeapon?.(player);' src/combat.js
+check "field weapon radial pattern exists" grep -Fq "weapon.pattern==='radial'" src/combat.js
+check "field weapon homing exists" grep -Fq 'if(bullet.homing)' src/combat.js
+check "field projectiles have unique styles" grep -Fq "seeker:{color:" src/projectile-visuals.js
+check "stalemate accelerates pickup" grep -Fq 'quietTime>=7?2.5:1' src/field-weapons.js
+check "field weapon is shown over player" grep -Fq 'class="world-field-weapon"' src/hud-ui.js
 
 if grep -Fq 'navigator.vibrate' src/game.js src/combat.js src/menu-ui.js; then
   echo '::error::direct vibration bypasses feedback settings'

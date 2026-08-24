@@ -48,8 +48,12 @@ check "renderer uses published viewport height" grep -Fq "canvas.style.height='v
 check "standalone viewport considers full screen" grep -Fq 'standaloneScreenSize(baseW,baseH)' src/camera.js
 check "standalone viewport guards implausible screen sizes" grep -Fq 'const plausible=' src/camera.js
 check "camera publishes app height" grep -Fq "setProperty('--app-height'" src/camera.js
-check "iOS safe area is measured" grep -Fq 'function safeAreaBottom()' src/camera.js
+check "iOS safe area is measured" grep -Fq 'function safeAreaInsets()' src/camera.js
 check "iOS gesture clearance is published" grep -Fq "setProperty('--gesture-clearance'" src/camera.js
+check "Dynamic Island top clearance is published" grep -Fq "setProperty('--ui-safe-top'" src/camera.js
+check "Dynamic Island side clearance is published" grep -Fq "setProperty('--ui-safe-left'" src/camera.js
+check "P2 HUD respects measured safe top" grep -Fq '.hud.two{top:calc(10px + var(--ui-safe-top))' style.css
+check "P2 controls respect measured safe top" grep -Fq '.stick-zone.p2{top:var(--ui-safe-top)}' style.css
 check "bottom tap safety zone is ignored" grep -Fq 'if(localY>r.height-gestureClearance())return;' src/input.js
 check "P1 stick respects gesture clearance" grep -Fq '.stick-zone.p1{bottom:var(--gesture-clearance)}' style.css
 check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js

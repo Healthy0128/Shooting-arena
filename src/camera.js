@@ -30,18 +30,29 @@ export function createCameraController({renderer,scene,getPlayers}){
     return navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
   }
 
-  function safeAreaBottom(){
+  function safeAreaInsets(){
     const probe=document.createElement('div');
-    probe.style.cssText='position:fixed;left:0;bottom:0;padding-bottom:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+    probe.style.cssText='position:fixed;inset:0;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);pointer-events:none;visibility:hidden';
     document.body.appendChild(probe);
-    const value=Number.parseFloat(getComputedStyle(probe).paddingBottom)||0;
+    const style=getComputedStyle(probe);
+    const insets={
+      top:Number.parseFloat(style.paddingTop)||0,
+      right:Number.parseFloat(style.paddingRight)||0,
+      bottom:Number.parseFloat(style.paddingBottom)||0,
+      left:Number.parseFloat(style.paddingLeft)||0
+    };
     probe.remove();
-    return value;
+    return insets;
   }
 
-  function updateGestureClearance(){
-    const clearance=isIOSDevice()?Math.max(58,safeAreaBottom()+28):0;
+  function updateSafeAreas(){
+    const insets=safeAreaInsets();
+    const ios=isIOSDevice();
+    const clearance=ios?Math.max(58,insets.bottom+28):insets.bottom;
     document.documentElement.style.setProperty('--gesture-clearance',`${clearance}px`);
+    document.documentElement.style.setProperty('--ui-safe-top',`${insets.top}px`);
+    document.documentElement.style.setProperty('--ui-safe-right',`${insets.right}px`);
+    document.documentElement.style.setProperty('--ui-safe-left',`${insets.left}px`);
   }
 
   function standaloneScreenSize(layoutW,layoutH){
@@ -221,7 +232,7 @@ export function createCameraController({renderer,scene,getPlayers}){
 
   function resize(){
     const {w,h}=getLayoutSize();
-    updateGestureClearance();
+    updateSafeAreas();
     document.documentElement.style.setProperty('--app-width',`${w}px`);
     document.documentElement.style.setProperty('--app-height',`${h}px`);
     renderer.setSize(w,h,false);
