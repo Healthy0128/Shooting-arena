@@ -76,12 +76,15 @@ export function createCombatController({
     const radius=weapon.bulletRadius||.16;
     const mesh=projectileVisuals.create(style,radius,player?.powerBuff>0);
     const forward=dir.clone().normalize();
-    mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(forward,.08);
+    const launch=forward.clone();
+    const curveDirection=style==='boomerang'?(Math.random()<.5?-1:1):0;
+    if(curveDirection)launch.applyAxisAngle(new THREE.Vector3(0,1,0),curveDirection*Math.PI*40/180);
+    mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(launch,.08);
     scene.add(mesh);
 
     bullets.push({
       mesh,
-      vel:forward.multiplyScalar(speed),
+      vel:launch.multiplyScalar(speed),
       owner,
       life:weapon.bulletLife||1.45,
       radius,
@@ -90,11 +93,11 @@ export function createCombatController({
       bounces:0,
       ricochetMax:style==='bladegun'?3:0,
       homing:weapon.homing||0
-      ,curve:style==='boomerang'?1.35:0,curveTime:0
+      ,curveBase:forward,curveDirection,curveTime:0,curveDelay:style==='boomerang'?1:0
     });
   }
 
-  function bladeAttack(i,player,damage){
+  function bladeAttack(i,player,amount){
     const forward=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
     const enemy=1-i, target=getPlayers()[enemy];
     const cosArc=Math.cos(Math.PI*65/180);
@@ -102,7 +105,7 @@ export function createCombatController({
       const to=target.root.position.clone().sub(player.root.position).setY(0);
       const distance=to.length();
       if(distance<=1.55&&distance>.01&&forward.dot(to.normalize())>=cosArc){
-        damage(enemy,damage,i,'katana',target.root.position.clone().setY(.75),0,{grantAttackerSuper:true});
+        damage(enemy,amount,i,'katana',target.root.position.clone().setY(.75),0,{grantAttackerSuper:true});
       }
     }
     for(let n=bullets.length-1;n>=0;n--){
@@ -658,11 +661,14 @@ export function createCombatController({
           bullet.vel.copy(current.multiplyScalar(speed));
         }
       }
-      if(bullet.curve){
+      if(bullet.curveBase){
         bullet.curveTime+=dt;
-        const forward=bullet.vel.clone().normalize();
-        const side=new THREE.Vector3(-forward.z,0,forward.x);
-        bullet.vel.addScaledVector(side,Math.sin(bullet.curveTime*8)*bullet.curve*dt).normalize().multiplyScalar(bullet.vel.length());
+        if(bullet.curveTime>bullet.curveDelay){
+          const speed=bullet.vel.length();
+          const current=bullet.vel.clone().normalize();
+          current.lerp(bullet.curveBase,THREE.MathUtils.clamp((bullet.curveTime-bullet.curveDelay)*2.2*dt,0,1)).normalize();
+          bullet.vel.copy(current.multiplyScalar(speed));
+        }
       }
       bullet.life-=dt;
       bullet.mesh.position.addScaledVector(bullet.vel,dt);
