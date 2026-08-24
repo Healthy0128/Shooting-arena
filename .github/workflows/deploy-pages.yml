@@ -44,6 +44,8 @@ jobs:
           check "hud-ui.js syntax" node --check src/hud-ui.js
           check "camera.js syntax" node --check src/camera.js
           check "arena.js syntax" node --check src/arena.js
+          check "player.js syntax" node --check src/player.js
+          check "combat.js syntax" node --check src/combat.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
           check "menu-ui.js syntax" node --check src/menu-ui.js
@@ -109,6 +111,48 @@ jobs:
           if grep -Eq '\b(PROPS|STAGE_THEMES)\b' src/game.js; then echo '::error::stage prop/theme ownership returned to game.js'; exit 1; fi
           echo "PASS: no stage prop/theme imports in game.js"
 
+          echo "CHECK: player controller import count"
+          test "$(grep -Fc "from './player.js?v=695'" src/game.js)" -eq 1 || { echo '::error::player controller import count'; exit 1; }
+          echo "PASS: player controller import count"
+          check "player controller is created" grep -Fq 'const playerController=createPlayerController({scene});' src/game.js
+          check "player controller is exported" grep -Fq 'export function createPlayerController' src/player.js
+          check "player owns character loader" grep -Fq 'const gltfLoader=new GLTFLoader();' src/player.js
+          check "player owns skeleton cloning" grep -Fq "from 'three/addons/utils/SkeletonUtils.js';" src/player.js
+          check "game uses player visual updater" grep -Fq 'playerController.updatePlayerVisuals(p,dt,inBush);' src/game.js
+          check "game uses player reset API" grep -Fq 'playerController.resetPlayer(players[i],i);' src/game.js
+
+          for symbol in loadCharacterAsset findClip attachWeaponModel attachRealModel makePlayer flashPlayer defenseTrail updateDefenseFx updatePlayerVisuals; do
+            echo "CHECK: no local $symbol player implementation in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol player implementation returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol player implementation in game.js"
+          done
+
+          for symbol in gltfLoader assetCache; do
+            echo "CHECK: no local $symbol player state in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol player state returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol player state in game.js"
+          done
+
+          echo "CHECK: combat controller import count"
+          test "$(grep -Fc "from './combat.js?v=695'" src/game.js)" -eq 1 || { echo '::error::combat controller import count'; exit 1; }
+          echo "PASS: combat controller import count"
+          check "combat controller is created" grep -Fq 'const combatController=createCombatController({' src/game.js
+          check "combat controller is exported" grep -Fq 'export function createCombatController' src/combat.js
+          check "game uses combat projectile updater" grep -Fq 'combatController.updateProjectiles(dt);' src/game.js
+          check "combat owns XZ bullet collision safeguard" grep -Fq 'Top-down game: hit testing must use the XZ plane only.' src/combat.js
+
+          for symbol in projectileGeometryFor muzzleFlash weaponShotSound applyShotRecoil disposeBullet spawnBullet shoot defenseAction sourceFrontDot parryBullet superPulse superFlash superShot activateSuper damageObstacle damage; do
+            echo "CHECK: no local $symbol combat implementation in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol combat implementation returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol combat implementation in game.js"
+          done
+
+          for symbol in bullets weaponBulletMats bulletMats; do
+            echo "CHECK: no local $symbol combat state in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol combat state returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol combat state in game.js"
+          done
+
           echo "CHECK: input import count"
           test "$(grep -Fc "from './input.js?v=695'" src/game.js)" -eq 1 || { echo '::error::input import count'; exit 1; }
           echo "PASS: input import count"
@@ -139,12 +183,14 @@ jobs:
           test "$(grep -Fc "from './loadout-config.js?v=695'" src/game.js)" -eq 1 || { echo '::error::loadout import count'; exit 1; }
           echo "PASS: loadout import count"
 
-          check "arena import exists" grep -Fq "from './arena-config.js?v=695';" src/game.js
           check "ARENA is exported" grep -Fq 'export const ARENA=' src/arena-config.js
           check "SPAWN_X is exported" grep -Fq 'export const SPAWN_X=' src/arena-config.js
           check "PROPS is exported" grep -Fq 'export const PROPS=' src/arena-config.js
           check "STAGE_THEMES is exported" grep -Fq 'export const STAGE_THEMES=' src/arena-config.js
           check "ARENA_OPTIONS is exported" grep -Fq 'export const ARENA_OPTIONS=' src/arena-config.js
+          check "arena module uses arena config" grep -Fq "from './arena-config.js?v=695';" src/arena.js
+          check "player module uses arena config" grep -Fq "from './arena-config.js?v=695';" src/player.js
+          check "combat module uses arena config" grep -Fq "from './arena-config.js?v=695';" src/combat.js
           check "menu UI uses ARENA_OPTIONS" grep -Fq 'ARENA_OPTIONS' src/menu-ui.js
           check "arena button host exists" grep -Fq 'class="arena-buttons"' index.html
 
