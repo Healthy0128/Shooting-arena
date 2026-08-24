@@ -19,6 +19,7 @@ export function createCameraController({renderer,scene,getPlayers}){
   let initialized=false;
   let shakeUntil=0;
   let shakeStrength=0;
+  let measuredInsets={top:0,right:0,bottom:0,left:0};
 
   function isIOSDevice(){
     return /iPad|iPhone|iPod/.test(navigator.userAgent)||(
@@ -47,6 +48,7 @@ export function createCameraController({renderer,scene,getPlayers}){
 
   function updateSafeAreas(){
     const insets=safeAreaInsets();
+    measuredInsets=insets;
     const ios=isIOSDevice();
     const clearance=ios?Math.max(58,insets.bottom+28):insets.bottom;
     document.documentElement.style.setProperty('--gesture-clearance',`${clearance}px`);
@@ -94,6 +96,20 @@ export function createCameraController({renderer,scene,getPlayers}){
     return h>=w;
   }
 
+  function safeFrameScale(w,h){
+    const vertical=(measuredInsets.top+measuredInsets.bottom)/Math.max(1,h);
+    const horizontal=(measuredInsets.left+measuredInsets.right)/Math.max(1,w);
+    return 1+THREE.MathUtils.clamp(Math.max(vertical,horizontal)*.75,0,.14);
+  }
+
+  function safeTopCameraCenter(mx,mz,viewW,viewH,w,h,portrait){
+    const screenUp=portrait?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,-1);
+    const screenRight=portrait?new THREE.Vector3(0,0,1):new THREE.Vector3(1,0,0);
+    const vertical=viewH*(measuredInsets.top-measuredInsets.bottom)/(2*Math.max(1,h));
+    const horizontal=viewW*(measuredInsets.right-measuredInsets.left)/(2*Math.max(1,w));
+    return new THREE.Vector3(mx,0,mz).addScaledVector(screenUp,vertical).addScaledVector(screenRight,horizontal);
+  }
+
   function updateTopCamera(){
     if(mode!=='top')return;
     const players=getPlayers();
@@ -106,14 +122,16 @@ export function createCameraController({renderer,scene,getPlayers}){
       const screenSpanX=portrait?dz:dx,screenSpanY=portrait?dx:dz;
       const needW=screenSpanX+7.0,needH=screenSpanY+9.0;
       let viewH=Math.max(portrait?34:19,needH,needW/Math.max(.25,aspect));
-      viewH=Math.min(viewH,portrait?42:27);
+      viewH=Math.min(viewH,portrait?42:27)*safeFrameScale(w,h);
       const viewW=viewH*aspect;
+      const center=safeTopCameraCenter(mx,mz,viewW,viewH,w,h,portrait);
       topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
-      topCamera.position.set(mx,38,mz+.01);topCamera.lookAt(mx,0,mz);
+      topCamera.position.set(center.x,38,center.z+.01);topCamera.lookAt(center.x,0,center.z);
     }else{
-      const viewH=h>=w?38:23,viewW=viewH*aspect;
+      const viewH=(h>=w?38:23)*safeFrameScale(w,h),viewW=viewH*aspect;
+      const center=safeTopCameraCenter(0,0,viewW,viewH,w,h,portrait);
       topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
-      topCamera.position.set(0,38,.01);topCamera.lookAt(0,0,0);
+      topCamera.position.set(center.x,38,center.z+.01);topCamera.lookAt(center.x,0,center.z);
     }
     topCamera.updateProjectionMatrix();
   }
@@ -128,8 +146,15 @@ export function createCameraController({renderer,scene,getPlayers}){
     const target=new THREE.Vector3(a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38);
     let cx=a.x-ux*back,cz=a.z-uz*back;
     cx=THREE.MathUtils.clamp(cx,-ARENA.halfW+1.1,ARENA.halfW-1.1);cz=THREE.MathUtils.clamp(cz,-ARENA.halfH+1.1,ARENA.halfH-1.1);
-    cam.position.lerp(new THREE.Vector3(cx,height,cz),.22);cam.aspect=Math.max(.55,aspect);cam.fov=THREE.MathUtils.clamp(66+Math.max(0,10-dist)*.25,64,72);
+    const {w,h}=getLayoutSize(),viewportH=Math.max(1,h/2);
+    const outerInset=i===1?measuredInsets.top:measuredInsets.bottom;
+    const safeRatio=Math.max(outerInset/viewportH,(measuredInsets.left+measuredInsets.right)/Math.max(1,w));
+    const baseFov=THREE.MathUtils.clamp(66+Math.max(0,10-dist)*.25,64,72);
+    cam.position.lerp(new THREE.Vector3(cx,height,cz),.22);cam.aspect=Math.max(.55,aspect);cam.fov=THREE.MathUtils.clamp(baseFov*(1+safeRatio*.45),64,78);
     cam.up.set(0,i===1?-1:1,0);cam.lookAt(target);cam.updateProjectionMatrix();
+    cam.projectionMatrix.elements[8]+=(measuredInsets.right-measuredInsets.left)/Math.max(1,w);
+    cam.projectionMatrix.elements[9]+=(i===1?outerInset:-outerInset)/viewportH;
+    cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
   }
 
   function getTpsBasis(player){

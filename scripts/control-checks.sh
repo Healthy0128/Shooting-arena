@@ -54,6 +54,10 @@ check "Dynamic Island top clearance is published" grep -Fq "setProperty('--ui-sa
 check "Dynamic Island side clearance is published" grep -Fq "setProperty('--ui-safe-left'" src/camera.js
 check "P2 HUD respects measured safe top" grep -Fq '.hud.two{top:calc(10px + var(--ui-safe-top))' style.css
 check "P2 controls respect measured safe top" grep -Fq '.stick-zone.p2{top:var(--ui-safe-top)}' style.css
+check "camera safe frame scale exists" grep -Fq 'function safeFrameScale(w,h)' src/camera.js
+check "top camera shifts away from cutout" grep -Fq 'safeTopCameraCenter(mx,mz' src/camera.js
+check "split camera widens for outer inset" grep -Fq 'baseFov*(1+safeRatio*.45)' src/camera.js
+check "P2 camera shifts below Dynamic Island" grep -Fq '(i===1?outerInset:-outerInset)/viewportH' src/camera.js
 check "bottom tap safety zone is ignored" grep -Fq 'if(localY>r.height-gestureClearance())return;' src/input.js
 check "P1 stick respects gesture clearance" grep -Fq '.stick-zone.p1{bottom:var(--gesture-clearance)}' style.css
 check "3D framing target is lowered on screen" grep -Fq 'a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38' src/camera.js
