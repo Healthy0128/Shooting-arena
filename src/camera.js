@@ -17,19 +17,22 @@ export function createCameraController({renderer,scene,getPlayers}){
   let initialized=false;
 
   function getLayoutSize(){
+    const canvas=renderer.domElement;
+    const rect=canvas?.getBoundingClientRect?.();
     const root=document.documentElement;
     const vv=globalThis.visualViewport;
-    // iOS can report a shorter documentElement.clientHeight than the actual
-    // drawable viewport. Use the largest live viewport measurement so the
-    // WebGL canvas reaches the physical bottom edge instead of leaving a band.
+    const rectW=Math.round(rect?.width||0);
+    const rectH=Math.round(rect?.height||0);
     const w=Math.max(
       1,
+      rectW,
       Math.round(globalThis.innerWidth||0),
       Math.round(root.clientWidth||0),
       Math.round(vv?.width||0)
     );
     const h=Math.max(
       1,
+      rectH,
       Math.round(globalThis.innerHeight||0),
       Math.round(root.clientHeight||0),
       Math.round(vv?.height||0)
@@ -73,7 +76,6 @@ export function createCameraController({renderer,scene,getPlayers}){
     const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1;
     const ux=dx/len,uz=dz/len,dist=THREE.MathUtils.clamp(len,3,28);
     const back=THREE.MathUtils.clamp(6.2+dist*.11,6.6,9.2),height=THREE.MathUtils.clamp(8.0+dist*.09,8.2,10.8);
-    // Aim the camera slightly higher so the arena/characters sit a little lower in each split-screen view.
     const target=new THREE.Vector3(a.x*.62+b.x*.38,1.15,a.z*.62+b.z*.38);
     let cx=a.x-ux*back,cz=a.z-uz*back;
     cx=THREE.MathUtils.clamp(cx,-ARENA.halfW+1.1,ARENA.halfW-1.1);cz=THREE.MathUtils.clamp(cz,-ARENA.halfH+1.1,ARENA.halfH-1.1);
@@ -88,8 +90,6 @@ export function createCameraController({renderer,scene,getPlayers}){
     forward3.y=0;
     if(forward3.lengthSq()<1e-6)forward3.set(player===0?1:-1,0,0);
     else forward3.normalize();
-    // Ground-plane camera-right = forward × world-up.
-    // For forward (0,0,-1), this correctly gives +X as screen-right.
     const right3=new THREE.Vector3(-forward3.z,0,forward3.x).normalize();
     return {
       forward:new THREE.Vector2(forward3.x,forward3.z),
@@ -108,8 +108,6 @@ export function createCameraController({renderer,scene,getPlayers}){
   }
 
   function renderSplitArena(){
-    // setViewport/setScissor take logical CSS-pixel units and apply renderer pixelRatio internally.
-    // Using getDrawingBufferSize here would double-apply DPR and shift the split on high-DPI phones.
     const size=new THREE.Vector2();renderer.getSize(size);
     const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y));
     const lower=Math.floor(h/2),upper=h-lower;
@@ -144,12 +142,20 @@ export function createCameraController({renderer,scene,getPlayers}){
   function init(){
     if(initialized)return;
     initialized=true;
+    const canvas=renderer.domElement;
+    if(canvas){
+      canvas.style.position='fixed';
+      canvas.style.inset='0';
+      canvas.style.width='100vw';
+      canvas.style.height='100dvh';
+    }
     document.querySelector('#camera-mode')?.addEventListener('click',()=>setMode('top'));
     document.querySelector('#camera-tilt-test')?.addEventListener('click',()=>setMode('arena'));
     addEventListener('resize',resize);
     addEventListener('orientationchange',()=>setTimeout(resize,80));
     globalThis.visualViewport?.addEventListener('resize',resize);
     resize();
+    requestAnimationFrame(resize);
   }
 
   return {
