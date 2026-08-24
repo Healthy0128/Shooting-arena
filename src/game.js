@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
-import { ARENA, SPAWN_X, PROPS, STAGE_THEMES } from './arena-config.js?v=695';
+import { ARENA, SPAWN_X } from './arena-config.js?v=695';
 import { showBanner, renderMatchResult, hideMatchResult } from './ui.js?v=695';
 import { createInputController } from './input.js?v=695';
 import { createHudUI } from './hud-ui.js?v=695';
 import { createCameraController } from './camera.js?v=695';
+import { createArenaController } from './arena.js?v=695';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=695';
 
 const $ = s => document.querySelector(s);
@@ -23,18 +24,6 @@ scene.add(new THREE.HemisphereLight(0xeaf2ff,0x202534,2.1));
 const sun = new THREE.DirectionalLight(0xffffff,2.2);
 sun.position.set(7,14,8);
 scene.add(sun);
-
-let arenaRoot = new THREE.Group();
-scene.add(arenaRoot);
-let obstacles=[];
-let bushes=[];
-
-function getArenaTheme(type){
-  return STAGE_THEMES[type]||STAGE_THEMES.square;
-}
-
-
-
 
 function loadoutValue(card,slot){
   return card?.querySelector(`[data-slot="${slot}"]`)?.value||'';
@@ -87,7 +76,6 @@ function randomizeLoadout(i){
   saveLoadout(i);
 }
 
-
 function buildCustomConfig(i){
   const card=document.querySelector(`.loadout-card[data-player="${i}"]`);
   if(!card)return {...CHARACTERS.ranger,weaponKey:'ranger'};
@@ -127,6 +115,7 @@ function buildCustomConfig(i){
     weaponKey
   };
 }
+
 function refreshLoadoutSummary(i){
   const card=document.querySelector(`.loadout-card[data-player="${i}"]`);
   if(!card)return;
@@ -168,11 +157,8 @@ function updateStartAvailability(){
   msg.hidden=!invalid;
 }
 
-
 const gltfLoader = new GLTFLoader();
 const assetCache = new Map();
-const propCache = new Map();
-let arenaBuildId=0;
 
 async function loadCharacterAsset(url){
   if(assetCache.has(url)) return assetCache.get(url);
@@ -181,27 +167,6 @@ async function loadCharacterAsset(url){
   });
   assetCache.set(url,promise);
   return promise;
-}
-
-
-async function loadProp(url){
-  if(propCache.has(url)) return propCache.get(url);
-  const promise=new Promise((resolve,reject)=>gltfLoader.load(url,resolve,undefined,reject));
-  propCache.set(url,promise);return promise;
-}
-async function attachPropVisual(url, holder, opts={}, buildId=arenaBuildId){
-  try{
-    const gltf=await loadProp(url);
-    if(buildId!==arenaBuildId || !holder.parent)return;
-    const model=gltf.scene.clone(true);
-    const s=opts.scale??1;
-    if(Array.isArray(s)) model.scale.set(s[0],s[1],s[2]); else model.scale.setScalar(s);
-    model.rotation.y=opts.rotY||0;
-    model.position.set(opts.ox||0,opts.oy||0,opts.oz||0);
-    model.traverse(n=>{if(n.isMesh){n.castShadow=false;n.receiveShadow=false}});
-    holder.add(model);
-    if(opts.fallback)opts.fallback.visible=false;
-  }catch(err){console.warn('Stage prop fallback:',url,err)}
 }
 
 function findClip(clips, patterns){
@@ -261,295 +226,16 @@ async function attachRealModel(player){
   }
 }
 
-
 let arenaSelection='square';
 let players=[];
 let bullets=[];
 let particles=[];
 let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
-
-function clearGroup(g){
-  // Cached GLTF clones share geometry/material resources. Removing a stage must
-  // not dispose those shared resources or later stage/model loads can render broken.
-  while(g.children.length)g.remove(g.children[g.children.length-1]);
-}
-
-function makeFallbackBox(w,h,d,color=0x65748c){
-  return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.78}));
-}
-function addRealBox(x,z,w,d,h=1.35,opts={}){
-  const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
-  const fallback=makeFallbackBox(w,h,d,opts.color||0x66758e);fallback.position.y=h/2;holder.add(fallback);
-  const collider={x,z,hw:w/2,hd:d/2,mesh:holder,destructible:!!opts.destructible,hp:opts.hp??0};
-  obstacles.push(collider);
-  const url=opts.url||PROPS.wall;
-  // KayKit assets are modular: scale visible mesh toward collider size while collision remains simple/fast.
-  attachPropVisual(url,holder,{scale:opts.scale||[Math.max(.55,w/2),Math.max(.55,h/1.4),Math.max(.55,d/2)],rotY:opts.rotY||0,oy:opts.oy||0,fallback},arenaBuildId);
-  return collider;
-}
-function addRealPillar(x,z,r=.8,h=1.8,variant='A'){
-  const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
-  const fallback=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,18),new THREE.MeshStandardMaterial({color:0x71819a,roughness:.75}));
-  fallback.position.y=h/2;holder.add(fallback);
-  obstacles.push({x,z,hw:r,hd:r,circle:true,r,mesh:holder});
-  attachPropVisual(variant==='B'?PROPS.pillarB:PROPS.pillarA,holder,{scale:Math.max(.7,r*1.35),fallback},arenaBuildId);
-}
-function addBush(x,z,r=1.25){
-  const group=new THREE.Group();
-  const mat=new THREE.MeshStandardMaterial({color:0x3f8c56,roughness:1,transparent:true,opacity:.76,depthWrite:false});
-  for(let i=0;i<9;i++){
-    const m=new THREE.Mesh(new THREE.ConeGeometry(.46,1.05,7),mat.clone());const a=i/9*Math.PI*2;
-    m.position.set(Math.cos(a)*r*.45,.52,Math.sin(a)*r*.45);m.rotation.y=a;group.add(m);
-  }
-  group.position.set(x,0,z);arenaRoot.add(group);bushes.push({x,z,r,group});
-  // Add real props to give the bush cluster physical visual richness without making it solid.
-  const deco=new THREE.Group();deco.position.set(x,0,z);arenaRoot.add(deco);
-  attachPropVisual(PROPS.pallet,deco,{scale:.42,rotY:Math.PI/2},arenaBuildId);
-}
-function addWallRun(x,z,length,vertical=false,decorated=false){
-  const seg=2.2,count=Math.max(1,Math.round(length/seg));
-  for(let i=0;i<count;i++){
-    const offset=(i-(count-1)/2)*seg;
-    addRealBox(x+(vertical?0:offset),z+(vertical?offset:0),vertical?.72:2.0,vertical?2.0:.72,1.25,{url:decorated?PROPS.wallDecorated:PROPS.wall,scale:1,rotY:vertical?Math.PI/2:0});
-  }
-}
-function addCrate(x,z,hp=48,variant=0){
-  const urls=[PROPS.ammo,PROPS.boxA,PROPS.boxB,PROPS.boxC];
-  return addRealBox(x,z,1.35,1.35,1.05,{destructible:true,hp,url:urls[variant%urls.length],scale:.88,color:0xb17b45});
-}
-function addBarrel(x,z,variant=0){
-  const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
-  const fallback=new THREE.Mesh(new THREE.CylinderGeometry(.62,.62,1.15,16),new THREE.MeshStandardMaterial({color:0x6f7e98,roughness:.75}));fallback.position.y=.58;holder.add(fallback);
-  obstacles.push({x,z,hw:.62,hd:.62,circle:true,r:.62,mesh:holder});
-  const urls=[PROPS.barrelA,PROPS.barrelB,PROPS.barrelC];attachPropVisual(urls[variant%3],holder,{scale:.9,fallback},arenaBuildId);
-}
-
-function applyArenaTheme(theme){
-  scene.background.setHex(theme.bg);
-  scene.fog.color.setHex(theme.fog);
-  scene.fog.near=34;
-  scene.fog.far=66;
-}
-
-function addPaintStripe(parent,x,z,w,h,color,rot=0,y=.015,opacity=.92){
-  const m=new THREE.Mesh(
-    new THREE.PlaneGeometry(w,h),
-    new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false})
-  );
-  m.rotation.x=-Math.PI/2;
-  m.rotation.z=rot;
-  m.position.set(x,y,z);
-  parent.add(m);
-  return m;
-}
-
-function addStageGlow(parent,x,z,r,color,height=.02,opacity=.48){
-  const ring=new THREE.Mesh(
-    new THREE.CircleGeometry(r,28),
-    new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false})
-  );
-  ring.rotation.x=-Math.PI/2;
-  ring.position.set(x,height,z);
-  parent.add(ring);
-  return ring;
-}
-
-function addArenaPerimeter(theme){
-  const group=new THREE.Group();arenaRoot.add(group);
-  const wallMat=new THREE.MeshStandardMaterial({color:theme.edge,roughness:.9,metalness:.08});
-  const beamMat=new THREE.MeshStandardMaterial({color:theme.rim,roughness:.45,metalness:.35,emissive:theme.accent,emissiveIntensity:.18});
-  const sideX=ARENA.halfW+.7, sideZ=ARENA.halfH+.7;
-
-  const north=new THREE.Mesh(new THREE.BoxGeometry(ARENA.halfW*2+1.6,.8,1.15),wallMat);north.position.set(0,.34,-sideZ);group.add(north);
-  const south=north.clone();south.position.set(0,.34,sideZ);group.add(south);
-  const west=new THREE.Mesh(new THREE.BoxGeometry(1.15,.8,ARENA.halfH*2+1.6),wallMat);west.position.set(-sideX,.34,0);group.add(west);
-  const east=west.clone();east.position.set(sideX,.34,0);group.add(east);
-
-  const innerLine=new THREE.MeshStandardMaterial({color:theme.accentSoft,roughness:.2,metalness:.0,emissive:theme.accent,emissiveIntensity:.4});
-  const stripN=new THREE.Mesh(new THREE.BoxGeometry(ARENA.halfW*2,.12,.12),innerLine);stripN.position.set(0,.77,-ARENA.halfH-.1);group.add(stripN);
-  const stripS=stripN.clone();stripS.position.set(0,.77,ARENA.halfH+.1);group.add(stripS);
-  const stripW=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,ARENA.halfH*2),innerLine);stripW.position.set(-ARENA.halfW-.1,.77,0);group.add(stripW);
-  const stripE=stripW.clone();stripE.position.set(ARENA.halfW+.1,.77,0);group.add(stripE);
-
-  [[-sideX,-sideZ],[-sideX,sideZ],[sideX,-sideZ],[sideX,sideZ]].forEach(([x,z],i)=>{
-    const col=new THREE.Mesh(new THREE.CylinderGeometry(.42,.52,2.2,10),beamMat);
-    col.position.set(x,1.1,z);group.add(col);
-    const orb=new THREE.Mesh(new THREE.SphereGeometry(.28,12,8),new THREE.MeshStandardMaterial({color:theme.accentSoft,emissive:theme.glow,emissiveIntensity:.8,roughness:.15}));
-    orb.position.set(x,2.35,z);group.add(orb);
-    const glow=new THREE.PointLight(theme.glow,.55,8,2);
-    glow.position.set(x,2.5,z);group.add(glow);
-  });
-}
-
-function addArenaAccentLights(theme,type){
-  const group=new THREE.Group();arenaRoot.add(group);
-  const xs=[-9.5,9.5], zs=[-5.5,5.5];
-  xs.forEach(x=>zs.forEach(z=>{
-    const p=new THREE.PointLight(theme.glow,type==='hex'?0.85:0.55,10,2);
-    p.position.set(x,3.8,z);group.add(p);
-  }));
-  const down=new THREE.SpotLight(theme.accentSoft,.4,50,Math.PI/4,.5,2);
-  down.position.set(0,17,0);down.target.position.set(0,0,0);group.add(down);group.add(down.target);
-}
-
-function addArenaScenery(type,theme){
-  if(type==='square' || type==='cross' || type==='crates' || type==='fort'){
-    [[-13.2,-7.5,PROPS.locker,Math.PI/2,.55], [13.2,7.5,PROPS.workbench,-Math.PI/2,.55], [-12.8,7.4,PROPS.pallet,0,.45], [12.8,-7.4,PROPS.pallet,Math.PI,.45]].forEach(([x,z,url,rot,scale])=>{
-      const holder=new THREE.Group();holder.position.set(x,0,z);arenaRoot.add(holder);
-      attachPropVisual(url,holder,{scale,rotY:rot},arenaBuildId);
-    });
-  }
-  if(type==='hex'){
-    for(let i=0;i<6;i++){
-      const a=Math.PI*2*i/6 + Math.PI/6;
-      const x=Math.sin(a)*11.2,z=Math.cos(a)*6.9;
-      const pole=new THREE.Mesh(
-        new THREE.CylinderGeometry(.18,.22,2.8,8),
-        new THREE.MeshStandardMaterial({color:0x5b4d89,roughness:.35,metalness:.5,emissive:theme.accent,emissiveIntensity:.25})
-      );
-      pole.position.set(x,1.3,z);arenaRoot.add(pole);
-      const cap=new THREE.Mesh(
-        new THREE.IcosahedronGeometry(.38,0),
-        new THREE.MeshStandardMaterial({color:0xe9deff,emissive:theme.glow,emissiveIntensity:.75,roughness:.18})
-      );
-      cap.position.set(x,2.95,z);arenaRoot.add(cap);
-    }
-  }
-  if(type==='bush'){
-    [[-11,-6.3],[11,6.3],[-11,6.3],[11,-6.3],[0,-7.1],[0,7.1]].forEach(([x,z],i)=>addBush(x,z,i<4?1.1:1.4));
-  }
-  if(type==='pillars' || type==='ring'){
-    [[-12,0],[12,0],[0,-7.2],[0,7.2]].forEach(([x,z],i)=>{
-      const pad=new THREE.Mesh(
-        new THREE.CylinderGeometry(.85,.95,.24,18),
-        new THREE.MeshStandardMaterial({color:0x5b5158,roughness:.9,emissive:theme.accent,emissiveIntensity:.08})
-      );
-      pad.position.set(x,.12,z);arenaRoot.add(pad);
-      addStageGlow(arenaRoot,x,z,1.08,theme.accent,.02,.26);
-    });
-  }
-}
-
-function addCenterPattern(type,holder,theme){
-  if(type==='ring'){
-    const r1=new THREE.Mesh(new THREE.RingGeometry(2.8,3.4,48),new THREE.MeshBasicMaterial({color:theme.accent,transparent:true,opacity:.8,side:THREE.DoubleSide,depthWrite:false}));
-    r1.rotation.x=-Math.PI/2;r1.position.y=.02;holder.add(r1);
-    const r2=new THREE.Mesh(new THREE.RingGeometry(5.0,5.35,56),new THREE.MeshBasicMaterial({color:theme.accentSoft,transparent:true,opacity:.48,side:THREE.DoubleSide,depthWrite:false}));
-    r2.rotation.x=-Math.PI/2;r2.position.y=.021;holder.add(r2);
-  }else if(type==='cross'){
-    addPaintStripe(holder,0,0,1.0,10.6,theme.accent,0,.02,.9);
-    addPaintStripe(holder,0,0,18.2,1.0,theme.accent,0,.02,.9);
-  }else if(type==='hex'){
-    const hex=new THREE.Mesh(new THREE.CircleGeometry(3.1,6),new THREE.MeshBasicMaterial({color:theme.accent,transparent:true,opacity:.45,side:THREE.DoubleSide,depthWrite:false}));
-    hex.rotation.x=-Math.PI/2;hex.rotation.z=Math.PI/6;hex.position.y=.02;holder.add(hex);
-    const hex2=new THREE.Mesh(new THREE.RingGeometry(4.1,4.45,6),new THREE.MeshBasicMaterial({color:theme.accentSoft,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
-    hex2.rotation.x=-Math.PI/2;hex2.rotation.z=Math.PI/6;hex2.position.y=.021;holder.add(hex2);
-  }else if(type==='fort'){
-    addPaintStripe(holder,0,0,8.6,.95,theme.accent,0,.02,.82);
-    addPaintStripe(holder,-5.6,-3.75,2.8,.72,theme.accentSoft,0,.02,.58);
-    addPaintStripe(holder,5.6,3.75,2.8,.72,theme.accentSoft,0,.02,.58);
-  }else if(type==='bush'){
-    addStageGlow(holder,0,0,3.2,theme.accent,.02,.18);
-    addStageGlow(holder,-5.4,0,1.3,theme.accentSoft,.021,.15);
-    addStageGlow(holder,5.4,0,1.3,theme.accentSoft,.021,.15);
-  }else if(type==='pillars'){
-    addPaintStripe(holder,0,-3.2,14.4,.74,theme.accent,0,.02,.72);
-    addPaintStripe(holder,0,3.2,14.4,.74,theme.accent,0,.02,.72);
-  }else if(type==='crates'){
-    addPaintStripe(holder,0,0,8.0,.92,theme.accent,Math.PI/4,.02,.75);
-    addPaintStripe(holder,0,0,8.0,.92,theme.accent,-Math.PI/4,.02,.75);
-  }else{
-    addPaintStripe(holder,0,0,9.0,.9,theme.accent,0,.02,.84);
-    addPaintStripe(holder,0,0,.9,6.6,theme.accent,0,.02,.84);
-  }
-}
-
-function addFloorVisual(type){
-  const theme=getArenaTheme(type);
-  applyArenaTheme(theme);
-  const holder=new THREE.Group();holder.position.y=-.28;arenaRoot.add(holder);
-
-  const base=new THREE.Mesh(
-    new THREE.BoxGeometry(ARENA.halfW*2+3.8,.9,ARENA.halfH*2+3.8),
-    new THREE.MeshStandardMaterial({color:theme.edge,roughness:.96})
-  );
-  base.position.y=-.45;holder.add(base);
-
-  const fallback=new THREE.Mesh(
-    new THREE.BoxGeometry(ARENA.halfW*2,.45,ARENA.halfH*2),
-    new THREE.MeshStandardMaterial({color:theme.floor,roughness:.88,metalness:.08})
-  );
-  fallback.position.y=-.05;holder.add(fallback);
-
-  const rim=new THREE.Mesh(
-    new THREE.BoxGeometry(ARENA.halfW*2+.35,.12,ARENA.halfH*2+.35),
-    new THREE.MeshStandardMaterial({color:theme.rim,roughness:.45,metalness:.22,emissive:theme.accent,emissiveIntensity:.1})
-  );
-  rim.position.y=.18;holder.add(rim);
-
-  attachPropVisual(theme.floorProp||PROPS.floor,holder,{scale:[ARENA.halfW,1,ARENA.halfH],fallback},arenaBuildId);
-
-  const gridGroup=new THREE.Group();holder.add(gridGroup);
-  for(let x=-12;x<=12;x+=4){
-    if(x===0) continue;
-    addPaintStripe(gridGroup,x,0,.18,ARENA.halfH*2-1.2,theme.accentSoft,0,.015,.18);
-  }
-  for(let z=-8;z<=8;z+=4){
-    if(z===0) continue;
-    addPaintStripe(gridGroup,0,z,ARENA.halfW*2-1.2,.18,theme.accentSoft,0,.015,.18);
-  }
-
-  addPaintStripe(holder,0,-ARENA.halfH+.95,ARENA.halfW*2-2.2,.22,theme.accent,0,.02,.4);
-  addPaintStripe(holder,0,ARENA.halfH-.95,ARENA.halfW*2-2.2,.22,theme.accent,0,.02,.4);
-  addPaintStripe(holder,-ARENA.halfW+.95,0,.22,ARENA.halfH*2-2.2,theme.accent,0,.02,.4);
-  addPaintStripe(holder,ARENA.halfW-.95,0,.22,ARENA.halfH*2-2.2,theme.accent,0,.02,.4);
-
-  addCenterPattern(type,holder,theme);
-
-  if(type==='bush' || type==='fort'){
-    [[-6.5,-2.4,2.2],[6.2,2.6,1.8],[-8.4,4.5,1.4],[8.2,-4.7,1.6]].forEach(([x,z,r])=>{
-      addStageGlow(holder,x,z,r,theme.accentSoft,.018,.08);
-    });
-  }
-}
-
-function buildArena(type){
-  arenaBuildId++;clearGroup(arenaRoot);obstacles=[];bushes=[];
-  const theme=getArenaTheme(type);
-  addFloorVisual(type);
-  addArenaPerimeter(theme);
-  addArenaAccentLights(theme,type);
-  addArenaScenery(type,theme);
-
-  if(type==='square'){
-    [[-5,-3],[5,3],[5,-3],[-5,3]].forEach(([x,z],i)=>addCrate(x,z,60,i));
-    addWallRun(-9,0,4.5,true);addWallRun(9,0,4.5,true);
-  }else if(type==='pillars'){
-    [[-5,-3],[5,-3],[-5,3],[5,3]].forEach(([x,z],i)=>addRealPillar(x,z,.9,2.0,i%2?'B':'A'));
-    addBarrel(0,-3.2,0);addBarrel(0,3.2,1);
-  }else if(type==='ring'){
-    const rr=4.2;for(let i=0;i<8;i++){const a=i*Math.PI/4;addBarrel(Math.sin(a)*rr,Math.cos(a)*rr,i)}
-    addWallRun(-10,0,4.5,true,true);addWallRun(10,0,4.5,true,true);
-  }else if(type==='cross'){
-    addWallRun(0,0,7.0,true);addWallRun(0,0,7.0,false);
-    addCrate(-7,-4,48,1);addCrate(7,4,48,2);addCrate(7,-4,48,3);addCrate(-7,4,48,0);
-  }else if(type==='hex'){
-    const rr=5.4;for(let i=0;i<6;i++){const a=Math.PI*2*i/6;addRealPillar(Math.sin(a)*rr,Math.cos(a)*rr,.8,1.8,i%2?'B':'A')}
-    addCrate(0,0,75,0);
-  }else if(type==='fort'){
-    addWallRun(-7,4.3,5.0,false,true);addWallRun(7,-4.3,5.0,false,true);
-    addWallRun(-9,2.4,4.0,true);addWallRun(9,-2.4,4.0,true);
-    addWallRun(-2.5,0,3.0,true);addWallRun(2.5,0,3.0,true);
-    addCrate(-10,-4.6,48,1);addCrate(10,4.6,48,2);
-  }else if(type==='bush'){
-    addWallRun(-7,0,4.0,true);addWallRun(7,0,4.0,true);
-    [[-3.4,-3],[3.4,3],[-3.4,3],[3.4,-3],[0,0],[-9,4.5],[9,-4.5]].forEach(([x,z])=>addBush(x,z,1.35));
-  }else if(type==='crates'){
-    const spots=[[-5,-3],[5,3],[5,-3],[-5,3],[0,0],[-9,0],[9,0],[0,-5],[0,5],[-10,-5],[10,5]];
-    spots.forEach(([x,z],i)=>addCrate(x,z,i===4?85:52,i));
-  }
-}
+const arenaController=createArenaController({scene});
+const buildArena=arenaController.build;
+const canMoveTo=arenaController.canMoveTo;
+const hitObstacle=arenaController.hitObstacle;
 
 function makePlayer(i,keyOrCfg){
   const cfg=typeof keyOrCfg==='string'?CHARACTERS[keyOrCfg]:keyOrCfg;
@@ -609,7 +295,6 @@ function makePlayer(i,keyOrCfg){
   attachRealModel(player);attachWeaponModel(player);
   return player;
 }
-
 
 const weaponBulletMats={
   rifle:new THREE.MeshBasicMaterial({color:0x8fd7ff}),
@@ -734,7 +419,6 @@ function startBGM(){
 }
 function stopBGM(){if(bgmTimer){clearInterval(bgmTimer);bgmTimer=null}}
 
-
 function particleBurst(pos,color=0xffffff,count=9,scale=.08){
   for(let i=0;i<count;i++){
     const m=new THREE.Mesh(new THREE.SphereGeometry(scale,6,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:1}));
@@ -761,6 +445,7 @@ function spawnBullet(owner,dir,damage,speed){
 
   bullets.push({mesh,vel:forward.multiplyScalar(speed),owner,life:p?.cfg.bulletLife||1.45,radius,damage,style});
 }
+
 function shoot(i){
   const p=players[i];
   if(!running||!p?.alive||p.fireCd>0||p.recovery>0||p.overheated||p.guarding||p.aim.lengthSq()<.12)return;
@@ -786,9 +471,6 @@ function shoot(i){
   weaponShotSound(p.cfg.weaponStyle||'rifle');
   if(navigator.vibrate) navigator.vibrate(p.cfg.weaponStyle==='cannon'?18:p.cfg.weaponStyle==='scatter'?12:8);
 }
-
-
-
 
 function defenseTrail(p,color=p.cfg.color){
   const ghost=new THREE.Mesh(
@@ -981,7 +663,6 @@ function matchLater(fn,ms){
   },ms);
 }
 
-
 function superPulse(p,color=0xffffff,scale=1){
   const ring=new THREE.Mesh(
     new THREE.RingGeometry(.65*scale,1.0*scale,48),
@@ -1136,15 +817,6 @@ function activateSuper(i){
 
   if(navigator.vibrate)navigator.vibrate([20,18,35]);
 }
-function canMoveTo(pos,r){
-  if(Math.abs(pos.x)>ARENA.halfW-r||Math.abs(pos.z)>ARENA.halfH-r)return false;
-  return !obstacles.some(o=>{
-    if(o.circle){
-      const dx=pos.x-o.x,dz=pos.z-o.z; return dx*dx+dz*dz<(o.r+r)*(o.r+r);
-    }
-    return Math.abs(pos.x-o.x)<o.hw+r&&Math.abs(pos.z-o.z)<o.hd+r;
-  });
-}
 
 const result=$('#result');
 
@@ -1157,24 +829,18 @@ function resetPlayer(i){
   p.fireCd=.18;p.root.visible=true;
   p.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);p.move.set(0,0);p.aim.set(i===0?1:-1,0);
 }
+
 function damagePop(amount){
   const el=document.createElement('div');
   el.className='damage-pop';el.textContent=`-${Math.round(amount)}`;
   document.body.appendChild(el);setTimeout(()=>el.remove(),480);
 }
-function hitObstacle(pos,r=.15){
-  return obstacles.find(o=>{
-    if(o.circle){const dx=pos.x-o.x,dz=pos.z-o.z;return dx*dx+dz*dz<(o.r+r)*(o.r+r)}
-    return Math.abs(pos.x-o.x)<o.hw+r&&Math.abs(pos.z-o.z)<o.hd+r;
-  }) || null;
-}
+
 function damageObstacle(o,amount,pos){
-  if(!o?.destructible)return false;
-  o.hp-=amount;
+  const {handled,destroyed}=arenaController.damageObstacle(o,amount);
+  if(!handled)return false;
   particleBurst(pos.clone().setY(.55),0xd6a05d,7,.065);
-  if(o.hp<=0){
-    arenaRoot.remove(o.mesh);
-    obstacles=obstacles.filter(x=>x!==o);
+  if(destroyed){
     particleBurst(pos.clone().setY(.6),0xc58b4a,18,.09);
     tone(70,.12,'sawtooth',.035,-25);
   }
@@ -1244,6 +910,7 @@ function damage(victim,amount,attacker){
   if(navigator.vibrate)navigator.vibrate(18);
   if(p.hp<=0)ko(victim,attacker);
 }
+
 function ko(victim,attacker){
   const p=players[victim];p.alive=false;
   const pos=p.root.position.clone().setY(.9);
@@ -1272,9 +939,11 @@ function finish(w){
   $('#result-score').textContent=`${players[0].score} - ${players[1].score}`;
   result.hidden=false;
 }
+
 function removePlayers(){
   players.forEach(p=>scene.remove(p.root));players=[];
 }
+
 function clearProjectiles(){
   bullets.forEach(disposeBullet);bullets=[];
   particles.forEach(p=>{scene.remove(p.mesh);p.mesh.geometry?.dispose?.();p.mesh.material?.dispose?.()});particles=[];
@@ -1292,6 +961,7 @@ function buildShortLabel(p){
   const passive=p.cfg.passiveName||'NONE';
   return `${weapon} · ${defense} · ${passive}`;
 }
+
 function showVsIntro(){
   let el=document.querySelector('#vs-intro');
   if(!el){
@@ -1327,6 +997,7 @@ function startBattle(){
   $('#menu').hidden=true;$('#hud').hidden=false;$('#controls').hidden=false;
   updateHUD();updateWorldStatus();battleCountdown();
 }
+
 function fullReset(){
   hideMatchResult();
   matchGeneration++;
@@ -1336,6 +1007,7 @@ function fullReset(){
   players.forEach((p,i)=>{p.score=0;p.super=0;p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0};resetPlayer(i)});
   matchTime=90;running=true;result.hidden=true;playRealBGM(arenaSelection==='hex'?'space':'normal');updateHUD();showBanner('FIGHT!',900);
 }
+
 $('#rematch').addEventListener('click',fullReset);
 $('#back-menu').addEventListener('click',()=>{
   hideMatchResult();
@@ -1362,6 +1034,7 @@ $('.arena-buttons').addEventListener('click',e=>{
   const b=e.target.closest('button[data-arena]');if(!b)return;
   arenaSelection=b.dataset.arena;$$('.arena-buttons button').forEach(x=>x.classList.toggle('selected',x===b));
 });
+
 $('#start').addEventListener('click',()=>{
   const cards=[...document.querySelectorAll('.loadout-card')];
   if(cards.some(card=>buildCostFromCard(card)>BUILD_LIMIT)){
@@ -1372,12 +1045,12 @@ $('#start').addEventListener('click',()=>{
   ac();
   startBattle();
 });
+
 $$('.def-btn').forEach(b=>b.addEventListener('pointerdown',e=>{
   e.preventDefault();
   defenseAction(Number(b.dataset.player));
 }));
 $$('.super-btn').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();activateSuper(Number(b.dataset.player))}));
-
 
 const input=createInputController({
   getPlayers:()=>players,
@@ -1390,7 +1063,6 @@ let powerCore=null;
 let powerCoreTimer=7;
 let powerCoreWarning=null;
 let powerCoreOneSecondCue=false;
-
 
 function clearPowerCoreWarning(){
   if(powerCoreWarning){
@@ -1560,9 +1232,8 @@ function update(dt){
       p.mixer.update(dt);
     }
     p.root.visible=p.invuln>0?Math.floor(p.invuln*12)%2===0:true;
-    const inBush=bushes.some(b=>{const dx=p.root.position.x-b.x,dz=p.root.position.z-b.z;return dx*dx+dz*dz<b.r*b.r});
+    const inBush=arenaController.isInBush(p.root.position);
     if(p.realModel)p.modelHost.scale.setScalar(inBush?0.96:1);
-
   });
 
   // Keep both fighters from occupying the exact same space.
@@ -1627,13 +1298,13 @@ function update(dt){
   updateHUD();updateWorldStatus();$('#timer').textContent=Math.ceil(matchTime);
 }
 
-
 function loop(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(hitStop>0)hitStop=Math.max(0,hitStop-dt);else update(dt);
   cameraController.render();
   requestAnimationFrame(loop);
 }
+
 cameraController.init();
 buildArena('square');requestAnimationFrame(loop);
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}));}
