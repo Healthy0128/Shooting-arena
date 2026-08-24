@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
-import { createProjectileVisualController } from './projectile-visuals.js?v=6170';
+import { createProjectileVisualController } from './projectile-visuals.js?v=6290';
 import { createWeaponEffectsController } from './weapon-effects.js?v=6280';
 
 export function createCombatController({

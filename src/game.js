@@ -5,12 +5,12 @@ import { createHudUI } from './hud-ui.js?v=6170';
 import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6240';
-import { createCombatController } from './combat.js?v=6270';
+import { createCombatController } from './combat.js?v=6290';
 import { createAudioController } from './audio.js?v=6210';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
-import { createFieldWeaponController } from './field-weapons.js?v=6270';
+import { createFieldWeaponController } from './field-weapons.js?v=6290';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
 
 const $ = s => document.querySelector(s);

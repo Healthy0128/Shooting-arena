@@ -16,12 +16,12 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
   function ensureIndicator(player){
     if(directionIndicators.has(player))return directionIndicators.get(player);
     const group=new THREE.Group();
-    group.position.y=.08;
-    const ring=new THREE.Mesh(new THREE.RingGeometry(.72,.77,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.34,side:THREE.DoubleSide,depthWrite:false}));
+    group.position.y=.3;
+    const ring=new THREE.Mesh(new THREE.RingGeometry(1.02,1.08,40),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false}));
     ring.rotation.x=-Math.PI/2;
-    const arrow=new THREE.Mesh(new THREE.ConeGeometry(.13,.28,3),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false}));
+    const arrow=new THREE.Mesh(new THREE.ConeGeometry(.18,.42,3),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:1,depthWrite:false}));
     arrow.rotation.x=Math.PI/2;
-    arrow.position.z=-.88;
+    arrow.position.z=-1.22;
     group.add(ring,arrow);player.root.add(group);
     const indicator={group,ring,arrow};directionIndicators.set(player,indicator);return indicator;
   }
@@ -156,6 +156,7 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
       indicator.arrow.material.color.setHex(pickup.definition.color);
       indicator.ring.material.color.setHex(pickup.definition.color);
       indicator.arrow.rotation.y=Math.atan2(dx,dz)-player.root.rotation.y;
+      indicator.ring.material.opacity=.56+.16*Math.sin(performance.now()*.008);
       if(!player.alive)continue;
       const pdx=player.root.position.x-pickup.position.x;
       const pdz=player.root.position.z-pickup.position.z;
