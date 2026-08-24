@@ -40,6 +40,7 @@ jobs:
 
           check "main.js syntax" node --check src/main.js
           check "game.js syntax" node --check src/game.js
+          check "input.js syntax" node --check src/input.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
           check "menu-ui.js syntax" node --check src/menu-ui.js
@@ -55,6 +56,19 @@ jobs:
           echo "PASS: ui import count"
           check "ui initializes menu UI" grep -Fq "from './menu-ui.js?v=695';" src/ui.js
           check "ui re-exports match UI" grep -Fq "from './match-ui.js?v=695';" src/ui.js
+
+          echo "CHECK: input import count"
+          test "$(grep -Fc "from './input.js?v=695'" src/game.js)" -eq 1 || { echo '::error::input import count'; exit 1; }
+          echo "PASS: input import count"
+          check "input controller is created" grep -Fq 'const input=createInputController({' src/game.js
+          check "input controller is updated" grep -Fq 'input.update();' src/game.js
+          check "input controller is exported" grep -Fq 'export function createInputController' src/input.js
+
+          for symbol in activePointers keys keyboardInput; do
+            echo "CHECK: no local $symbol input state in game.js"
+            if grep -Eq "^(const|let|var|function) ${symbol}([ (=]|$)" src/game.js; then echo "::error::$symbol input state returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol input state in game.js"
+          done
 
           echo "CHECK: loadout import count"
           test "$(grep -Fc "from './loadout-config.js?v=695'" src/game.js)" -eq 1 || { echo '::error::loadout import count'; exit 1; }
