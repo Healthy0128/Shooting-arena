@@ -9,7 +9,10 @@ const STYLE_META={
   cannon:{color:'#ff765f',glow:'#b81d22',shape:'core',scale:[2.2,2.2]},
   seeker:{color:'#8affeb',glow:'#18a99a',shape:'missile',scale:[3.1,.9]},
   shock:{color:'#ffd071',glow:'#ff7a28',shape:'wave',scale:[2.5,2.5]},
-  rail:{color:'#ff8ea0',glow:'#ff254d',shape:'rail',scale:[4.2,.62]}
+  rail:{color:'#ff8ea0',glow:'#ff254d',shape:'rail',scale:[4.2,.62]},
+  boomerang:{color:'#82e8ff',glow:'#1689b0',shape:'blade',scale:[2.3,1.1]},
+  sniper:{color:'#ffffff',glow:'#9fb7ff',shape:'rail',scale:[4.8,.42]},
+  katana:{color:'#ffe5a1',glow:'#ff8a28',shape:'blade',scale:[3.2,.48]}
 };
 
 function makeTexture(meta){
