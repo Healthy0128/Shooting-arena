@@ -20,6 +20,41 @@ export function createCameraController({renderer,scene,getPlayers}){
   let shakeUntil=0;
   let shakeStrength=0;
 
+  function isIOSDevice(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)||(
+      navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1
+    );
+  }
+
+  function isStandaloneApp(){
+    return navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+  }
+
+  function safeAreaBottom(){
+    const probe=document.createElement('div');
+    probe.style.cssText='position:fixed;left:0;bottom:0;padding-bottom:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+    document.body.appendChild(probe);
+    const value=Number.parseFloat(getComputedStyle(probe).paddingBottom)||0;
+    probe.remove();
+    return value;
+  }
+
+  function updateGestureClearance(){
+    const clearance=isIOSDevice()?Math.max(58,safeAreaBottom()+28):0;
+    document.documentElement.style.setProperty('--gesture-clearance',`${clearance}px`);
+  }
+
+  function standaloneScreenSize(layoutW,layoutH){
+    if(!isStandaloneApp()||!globalThis.screen)return {w:0,h:0};
+    const screenW=Number(globalThis.screen.width)||0;
+    const screenH=Number(globalThis.screen.height)||0;
+    const short=Math.min(screenW,screenH),long=Math.max(screenW,screenH);
+    const portrait=layoutH>=layoutW;
+    const w=portrait?short:long,h=portrait?long:short;
+    const plausible=w>=layoutW*.9&&w<=layoutW*1.25&&h>=layoutH*.9&&h<=layoutH*1.25;
+    return plausible?{w,h}:{w:0,h:0};
+  }
+
   function getLayoutSize(){
     const canvas=renderer.domElement;
     const rect=canvas?.getBoundingClientRect?.();
@@ -27,19 +62,18 @@ export function createCameraController({renderer,scene,getPlayers}){
     const vv=globalThis.visualViewport;
     const rectW=Math.round(rect?.width||0);
     const rectH=Math.round(rect?.height||0);
+    const baseW=Math.max(1,rectW,Math.round(globalThis.innerWidth||0),Math.round(root.clientWidth||0),Math.round(vv?.width||0));
+    const baseH=Math.max(1,rectH,Math.round(globalThis.innerHeight||0),Math.round(root.clientHeight||0),Math.round((vv?.height||0)+(vv?.offsetTop||0)));
+    const standalone=standaloneScreenSize(baseW,baseH);
     const w=Math.max(
       1,
-      rectW,
-      Math.round(globalThis.innerWidth||0),
-      Math.round(root.clientWidth||0),
-      Math.round(vv?.width||0)
+      baseW,
+      standalone.w
     );
     const h=Math.max(
       1,
-      rectH,
-      Math.round(globalThis.innerHeight||0),
-      Math.round(root.clientHeight||0),
-      Math.round(vv?.height||0)
+      baseH,
+      standalone.h
     );
     return {w,h};
   }
@@ -187,6 +221,9 @@ export function createCameraController({renderer,scene,getPlayers}){
 
   function resize(){
     const {w,h}=getLayoutSize();
+    updateGestureClearance();
+    document.documentElement.style.setProperty('--app-width',`${w}px`);
+    document.documentElement.style.setProperty('--app-height',`${h}px`);
     renderer.setSize(w,h,false);
     updateTopCamera();
   }
@@ -202,12 +239,16 @@ export function createCameraController({renderer,scene,getPlayers}){
   function init(){
     if(initialized)return;
     initialized=true;
+    document.documentElement.classList.toggle('ios-device',isIOSDevice());
+    document.documentElement.classList.toggle('standalone-app',isStandaloneApp());
     const canvas=renderer.domElement;
     if(canvas){
       canvas.style.position='fixed';
-      canvas.style.inset='0';
-      canvas.style.width='100vw';
-      canvas.style.height='100dvh';
+      canvas.style.inset='auto';
+      canvas.style.left='0';
+      canvas.style.top='0';
+      canvas.style.width='var(--app-width,100vw)';
+      canvas.style.height='var(--app-height,100dvh)';
     }
     document.querySelector('#camera-mode')?.addEventListener('click',()=>setMode('top'));
     document.querySelector('#camera-tilt-test')?.addEventListener('click',()=>setMode('arena'));
