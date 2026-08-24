@@ -16,8 +16,10 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `src/main.js` — 安定した起動用エントリポイント
 - `src/game.js` — 現在のゲーム本体。段階的に責務を分離中
 - `src/arena-config.js` — アリーナ共通定数、ステージ静的設定、アリーナ候補一覧（`ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` / `ARENA_OPTIONS`）
-- `src/ui.js` — ロードアウトUI初期化、アリーナ選択UI生成、ビルド上限表示、バナー表示、試合結果統計
 - `src/loadout-config.js` — キャラクター・装備・ビルドの静的設定。候補一覧、初期ロードアウト、BUILD LIMITもここを正とする
+- `src/ui.js` — UIの薄い窓口。メニューUIを初期化し、試合UI APIを再公開する
+- `src/menu-ui.js` — ロードアウトUI初期化、アリーナ選択UI生成、ビルド上限表示
+- `src/match-ui.js` — バナー表示、試合結果統計
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
 - `assets/models/weapons/` — 使用中の6武器と依存ファイル
@@ -39,23 +41,25 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - 既に分離済みの責務を `game.js` に再定義しない。CIでも再発を検出する
 - 同じ設定値を複数の表へ手書きせず、可能なら1つの設定から派生させる
 - 原子移動できない責務は、新旧を並存させず旧側を唯一の所有者として維持する
+- 薄い窓口ファイルへ実装を再集約せず、実装責務は専用モジュールに置く
 
 ### 分割進捗
 
 1. **アリーナ設定 — 完了**
    - `ARENA` / `SPAWN_X` / `PROPS` / `STAGE_THEMES` を `arena-config.js` へ原子移動済み
    - 8アリーナのキーと表示名も `ARENA_OPTIONS` へ一本化済み
-   - HTMLのアリーナボタン直書きを削除し、`ui.js` が設定から生成
+   - HTMLのアリーナボタン直書きを削除し、`menu-ui.js` が設定から生成
    - `game.js` 側の旧定義は同じ変更で削除済み
    - CIで `game.js` への再定義とHTMLへの候補直書きを禁止
 2. **キャラクター・装備・ビルド設定 — 完了**
    - `loadout-config.js` へ分離済み
    - `BODY_SOURCE`、`WEAPON_SOURCE`、キャラ由来色、PASSIVEコストの二重管理を解消済み
    - ロードアウト候補、初期ロードアウト、BUILD LIMITも設定側へ一本化済み
-3. **UI表示処理 — 第1段階完了**
-   - バナーと試合結果統計を `ui.js` へ分離済み
+3. **UI表示処理 — 第2段階完了**
+   - `ui.js` は薄い窓口だけに縮小済み
+   - メニュー初期化を `menu-ui.js` へ分離済み
+   - バナーと試合結果統計を `match-ui.js` へ分離済み
    - 旧結果オーバーレイと追加結果カードの二重実装を統合済み
-   - ロードアウト候補生成、初期値反映、アリーナ候補生成も `ui.js` が担当
    - HUD / ワールドステータスはまだ `game.js` 側
 4. **入力処理 — 候補作成・未反映**
    - `input.js` は依存注入型の候補を再設計・検証済み
@@ -129,8 +133,8 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `src/main.js` の構文
 - `src/game.js` の構文
 - `src/arena-config.js` の構文
-- `src/ui.js` の構文
 - `src/loadout-config.js` の構文
+- `src/ui.js` / `src/menu-ui.js` / `src/match-ui.js` の構文
 - `index.html` が正しいエントリポイントを参照していること
 - 分離済み定義が `src/game.js` に重複していないこと
 - 移動途中の責務が新旧両方に重複していないこと
