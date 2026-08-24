@@ -56,17 +56,12 @@ export function createCameraController({renderer,scene,getPlayers}){
     const a=me.root.position,b=op.root.position;
     const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1;
     const ux=dx/len,uz=dz/len,dist=THREE.MathUtils.clamp(len,3,28);
-    const back=THREE.MathUtils.clamp(4.8+dist*.09,5.0,7.3),height=THREE.MathUtils.clamp(6.8+dist*.08,7.0,9.5);
-    const target=new THREE.Vector3((a.x+b.x)*.5,.8,(a.z+b.z)*.5);
+    const back=THREE.MathUtils.clamp(6.2+dist*.11,6.6,9.2),height=THREE.MathUtils.clamp(8.0+dist*.09,8.2,10.8);
+    const target=new THREE.Vector3(a.x*.62+b.x*.38,.75,a.z*.62+b.z*.38);
     let cx=a.x-ux*back,cz=a.z-uz*back;
-    cx=THREE.MathUtils.clamp(cx,-ARENA.halfW+1.1,ARENA.halfW-1.1);
-    cz=THREE.MathUtils.clamp(cz,-ARENA.halfH+1.1,ARENA.halfH-1.1);
-    cam.position.lerp(new THREE.Vector3(cx,height,cz),.24);
-    cam.aspect=Math.max(.55,aspect);
-    cam.fov=THREE.MathUtils.clamp(61+Math.max(0,8-dist)*.35,59,68);
-    cam.up.set(0,i===1?-1:1,0);
-    cam.lookAt(target);
-    cam.updateProjectionMatrix();
+    cx=THREE.MathUtils.clamp(cx,-ARENA.halfW+1.1,ARENA.halfW-1.1);cz=THREE.MathUtils.clamp(cz,-ARENA.halfH+1.1,ARENA.halfH-1.1);
+    cam.position.lerp(new THREE.Vector3(cx,height,cz),.22);cam.aspect=Math.max(.55,aspect);cam.fov=THREE.MathUtils.clamp(66+Math.max(0,10-dist)*.25,64,72);
+    cam.up.set(0,i===1?-1:1,0);cam.lookAt(target);cam.updateProjectionMatrix();
   }
 
   function getTpsBasis(player){
