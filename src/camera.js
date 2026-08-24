@@ -89,8 +89,11 @@ export function createCameraController({renderer,scene,getPlayers}){
   }
 
   function renderSplitArena(){
-    const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
-    const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y)),lower=Math.floor(h/2),upper=h-lower;
+    // setViewport/setScissor take logical CSS-pixel units and apply renderer pixelRatio internally.
+    // Using getDrawingBufferSize here would double-apply DPR and shift the split on high-DPI phones.
+    const size=new THREE.Vector2();renderer.getSize(size);
+    const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y));
+    const lower=Math.floor(h/2),upper=h-lower;
     renderer.setScissorTest(true);
     updateChaseCamera(0,chaseCameras[0],w/lower);
     renderer.setViewport(0,0,w,lower);renderer.setScissor(0,0,w,lower);baseRender(scene,chaseCameras[0]);
@@ -126,6 +129,7 @@ export function createCameraController({renderer,scene,getPlayers}){
     document.querySelector('#camera-tilt-test')?.addEventListener('click',()=>setMode('arena'));
     addEventListener('resize',resize);
     addEventListener('orientationchange',()=>setTimeout(resize,80));
+    globalThis.visualViewport?.addEventListener('resize',resize);
     resize();
   }
 
