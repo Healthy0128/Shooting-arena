@@ -1,8 +1,10 @@
 import { BUILD_LIMIT, LOADOUT_OPTIONS, DEFAULT_LOADOUTS } from './loadout-config.js?v=695';
+import { ARENA_OPTIONS } from './arena-config.js?v=695';
 
 const banner=document.querySelector('#banner');
 const resultStats=document.querySelector('#match-result-stats');
 const buildLimitValue=document.querySelector('#build-limit-value');
+const arenaButtons=document.querySelector('.arena-buttons');
 let bannerTimer=null;
 
 document.querySelectorAll('.loadout-card').forEach(card=>{
@@ -25,6 +27,14 @@ document.querySelectorAll('.loadout-card').forEach(card=>{
     if(defaultValue in options)select.value=defaultValue;
   });
 });
+
+arenaButtons.replaceChildren(...Object.entries(ARENA_OPTIONS).map(([value,label],index)=>{
+  const button=document.createElement('button');
+  button.dataset.arena=value;
+  button.textContent=label;
+  if(index===0)button.classList.add('selected');
+  return button;
+}));
 
 buildLimitValue.textContent=BUILD_LIMIT;
 

@@ -21,3 +21,14 @@ export const STAGE_THEMES={
   bush:{bg:0x0e1812,fog:0x0e1812,floor:0x39523d,edge:0x223126,accent:0x72d98c,accentSoft:0xd6ffe1,rim:0x568061,glow:0x9effb0,floorProp:PROPS.floorDirt},
   crates:{bg:0x171412,fog:0x171412,floor:0x4d443d,edge:0x28231f,accent:0xffa85e,accentSoft:0xffddbc,rim:0x866c55,glow:0xffc178,floorProp:PROPS.floor}
 };
+
+export const ARENA_OPTIONS={
+  square:'SQUARE',
+  pillars:'4 PILLARS',
+  ring:'RING',
+  cross:'CROSS',
+  hex:'HEX',
+  fort:'TWIN FORT',
+  bush:'BUSH FIELD',
+  crates:'CRATE YARD'
+};
