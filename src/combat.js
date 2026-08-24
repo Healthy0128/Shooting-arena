@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
+import { BODY_META } from './loadout-config.js?v=6120';
 
 export function createCombatController({
   scene,
@@ -32,11 +33,28 @@ export function createCombatController({
     new THREE.MeshBasicMaterial({color:0xff7b92})
   ];
 
+  function bodyMeta(player){
+    return BODY_META[player?.cfg?.bodyKey]||BODY_META.knight;
+  }
+
+  function bodyDamageMul(player){
+    return bodyMeta(player).damageMul||1;
+  }
+
+  function bodyIncomingMul(player){
+    return bodyMeta(player).damageTakenMul||1;
+  }
+
+  function superGainMul(player){
+    return (bodyMeta(player).superGainMul||1)*(player?.cfg?.superGainMul||1);
+  }
+
   function projectileGeometryFor(style,radius){
     if(style==='arcane')return new THREE.IcosahedronGeometry(radius,1);
     if(style==='cannon')return new THREE.SphereGeometry(radius,12,8);
     if(style==='scatter')return new THREE.SphereGeometry(radius,8,6);
     if(style==='rapid')return new THREE.CapsuleGeometry(radius*.6,radius*1.4,3,6);
+    if(style==='bladegun')return new THREE.OctahedronGeometry(radius*1.15,0);
     return new THREE.SphereGeometry(radius,10,7);
   }
 
@@ -117,7 +135,9 @@ export function createCombatController({
       life:player?.cfg.bulletLife||1.45,
       radius,
       damage,
-      style
+      style,
+      bounces:0,
+      ricochetMax:style==='bladegun'?3:0
     });
   }
 
@@ -127,7 +147,7 @@ export function createCombatController({
     player.fireCd=player.cfg.fireCd;
     player.recovery=player.cfg.recovery||0;
     player.stats.shots++;
-    player.heat=Math.min(100,(player.heat||0)+(player.cfg.pellets>1?28:player.cfg.fireCd<.2?11:player.cfg.fireCd>.6?38:18));
+    player.heat=Math.min(100,(player.heat||0)+(player.cfg.pellets>1?30:player.cfg.fireCd<.12?9:player.cfg.fireCd>.75?42:18));
     if(player.heat>=100&&!player.overheated){
       player.overheated=true;
       showBanner(`P${i+1} OVERHEAT!`,420);
@@ -136,17 +156,18 @@ export function createCombatController({
     }
     const base=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
     const count=player.cfg.pellets||1;
+    const attackMul=bodyDamageMul(player)*(player.powerBuff>0?1.18:1);
     for(let n=0;n<count;n++){
       const ang=count===1
         ?(Math.random()-.5)*(player.cfg.spread||0)
         :THREE.MathUtils.lerp(-player.cfg.spread,player.cfg.spread,n/(count-1));
       const dir=base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),ang);
-      spawnBullet(i,dir,player.cfg.damage*(player.powerBuff>0?1.18:1),player.cfg.bulletSpeed);
+      spawnBullet(i,dir,player.cfg.damage*attackMul,player.cfg.bulletSpeed);
     }
     muzzleFlash(player);
     applyShotRecoil(player);
     weaponShotSound(player.cfg.weaponStyle||'rifle');
-    if(navigator.vibrate)navigator.vibrate(player.cfg.weaponStyle==='cannon'?18:player.cfg.weaponStyle==='scatter'?12:8);
+    if(navigator.vibrate)navigator.vibrate(player.cfg.weaponStyle==='cannon'?24:player.cfg.weaponStyle==='scatter'?14:8);
   }
 
   function defenseAction(i){
@@ -236,7 +257,7 @@ export function createCombatController({
     player.parryActive=0;
     player.parryChain++;
     player.stats.parries++;
-    player.defenseCd=0; // successful parry can chain immediately
+    player.defenseCd=0;
     addHitStop(.085);
 
     bullet.owner=victim;
@@ -293,7 +314,7 @@ export function createCombatController({
     const forward=dir.clone().normalize();
     mesh.position.addScaledVector(forward,.9);
     scene.add(mesh);
-    bullets.push({mesh,vel:forward.multiplyScalar(speed),owner,life,radius,damage,style});
+    bullets.push({mesh,vel:forward.multiplyScalar(speed),owner,life,radius,damage:damage*bodyDamageMul(player),style,bounces:0,ricochetMax:0});
   }
 
   function activateSuper(i){
@@ -308,7 +329,6 @@ export function createCombatController({
     const type=player.cfg.super;
 
     if(type==='rapid'){
-      // OVERDRIVE: short burst of forced rapid fire.
       superPulse(player,0x8fd7ff,1.0);
       superFlash(player,0x8fd7ff);
       showBanner(`P${i+1} OVERDRIVE!`,520);
@@ -324,7 +344,6 @@ export function createCombatController({
         },k*62);
       }
     }else if(type==='blast'){
-      // BLAST RING: 360-degree close control.
       superPulse(player,0xffb05a,1.25);
       superFlash(player,0xffb05a);
       showBanner(`P${i+1} BLAST RING!`,520);
@@ -334,7 +353,6 @@ export function createCombatController({
         superShot(i,new THREE.Vector3(Math.sin(a),0,Math.cos(a)),17,11.2,'scatter',.14,1.15);
       }
     }else if(type==='dash'){
-      // PHANTOM DASH: high-speed invulnerable charge.
       const dir=new THREE.Vector3(player.aim.x,0,player.aim.y);
       if(dir.lengthSq()<.01)dir.set(0,0,i===0?-1:1);
       dir.normalize();
@@ -352,7 +370,6 @@ export function createCombatController({
       }
       matchLater(()=>particleBurst(player.root.position.clone().setY(.6),0xa98cff,22,.09),260);
     }else if(type==='nova'){
-      // NOVA: large radial magic burst + heal.
       superPulse(player,0x5be0d0,1.35);
       superFlash(player,0x5be0d0);
       showBanner(`P${i+1} NOVA!`,520);
@@ -363,7 +380,6 @@ export function createCombatController({
         superShot(i,new THREE.Vector3(Math.sin(a),0,Math.cos(a)),19,9.6,'arcane',.21,2.0);
       }
     }else if(type==='fan'){
-      // BLADE FAN: broad forward burst.
       const base=new THREE.Vector3(player.aim.x,0,player.aim.y);
       if(base.lengthSq()<.01)base.set(0,0,i===0?-1:1);
       base.normalize();
@@ -375,7 +391,6 @@ export function createCombatController({
         superShot(i,base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),k*.105),18,15.5,'bladegun',.14,1.5);
       }
     }else if(type==='boneStorm'){
-      // STORM: two delayed radial waves, enabling timing pressure.
       superPulse(player,0xff6a54,1.25);
       superFlash(player,0xff6a54);
       showBanner(`P${i+1} STORM!`,520);
@@ -439,7 +454,7 @@ export function createCombatController({
       }
     }
 
-    amount*=player.cfg.damageTakenMul||1;
+    amount*=bodyIncomingMul(player)*(player.cfg.damageTakenMul||1);
     const finalDamage=amount;
     player.stats.damageTaken+=finalDamage;
     if(players[attacker]){
@@ -448,8 +463,8 @@ export function createCombatController({
     }
     player.hp=Math.max(0,player.hp-finalDamage);
     damagePop(finalDamage);
-    players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*(players[attacker].cfg.superGainMul||1));
-    player.super=Math.min(100,player.super+finalDamage*.35*(player.cfg.superGainMul||1));
+    if(players[attacker])players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*superGainMul(players[attacker]));
+    player.super=Math.min(100,player.super+finalDamage*.35*superGainMul(player));
 
     flashPlayer(player,.11);
     const src=players[attacker]?.root.position;
@@ -473,6 +488,64 @@ export function createCombatController({
     if(player.hp<=0)onKO(victim,attacker);
   }
 
+  function ricochetMultiplier(bullet){
+    if(bullet.style!=='bladegun')return 1;
+    if(bullet.bounces<=0)return .8;
+    if(bullet.bounces===1)return 1;
+    if(bullet.bounces===2)return 1.3;
+    return 2;
+  }
+
+  function registerRicochet(bullet){
+    bullet.bounces++;
+    bullet.mesh.material?.color?.offsetHSL?.(.02,.04,.08);
+    particleBurst(bullet.mesh.position.clone().setY(.65),0xff9fd0,7,.045);
+    tone(340+bullet.bounces*90,.035,'triangle',.018,70);
+    bullet.mesh.position.addScaledVector(bullet.vel.clone().normalize(),.10);
+  }
+
+  function reflectFromObstacle(bullet,obstacle){
+    if(bullet.style!=='bladegun'||bullet.bounces>=bullet.ricochetMax||obstacle.destructible)return false;
+    if(obstacle.circle){
+      const normal=new THREE.Vector3(
+        bullet.mesh.position.x-obstacle.x,
+        0,
+        bullet.mesh.position.z-obstacle.z
+      );
+      if(normal.lengthSq()<.001)normal.set(1,0,0);
+      normal.normalize();
+      bullet.vel.reflect(normal);
+    }else{
+      const dx=bullet.mesh.position.x-obstacle.x;
+      const dz=bullet.mesh.position.z-obstacle.z;
+      const nx=Math.abs(dx)/Math.max(.01,obstacle.hw);
+      const nz=Math.abs(dz)/Math.max(.01,obstacle.hd);
+      if(nx>nz)bullet.vel.x*=-1;
+      else bullet.vel.z*=-1;
+    }
+    registerRicochet(bullet);
+    return true;
+  }
+
+  function reflectFromArenaEdge(bullet){
+    const limitX=ARENA.halfW-bullet.radius;
+    const limitZ=ARENA.halfH-bullet.radius;
+    const hitX=Math.abs(bullet.mesh.position.x)>limitX;
+    const hitZ=Math.abs(bullet.mesh.position.z)>limitZ;
+    if(!hitX&&!hitZ)return false;
+    if(bullet.style!=='bladegun'||bullet.bounces>=bullet.ricochetMax)return false;
+    if(hitX){
+      bullet.mesh.position.x=THREE.MathUtils.clamp(bullet.mesh.position.x,-limitX,limitX);
+      bullet.vel.x*=-1;
+    }
+    if(hitZ){
+      bullet.mesh.position.z=THREE.MathUtils.clamp(bullet.mesh.position.z,-limitZ,limitZ);
+      bullet.vel.z*=-1;
+    }
+    registerRicochet(bullet);
+    return true;
+  }
+
   function updateProjectiles(dt){
     const players=getPlayers();
     for(let i=bullets.length-1;i>=0;i--){
@@ -488,27 +561,30 @@ export function createCombatController({
         bullet.mesh.rotation.y+=dt*2.2;
       }else if(bullet.style==='rapid'){
         bullet.mesh.rotation.z+=dt*10;
+      }else if(bullet.style==='bladegun'){
+        bullet.mesh.rotation.x+=dt*11;
+        bullet.mesh.rotation.z+=dt*14;
       }
 
       let remove=bullet.life<=0;
       if(!remove){
         const obstacle=hitObstacle(bullet.mesh.position,bullet.radius);
         if(obstacle){
-          damageObstacle(obstacle,bullet.damage,bullet.mesh.position);
-          remove=true;
+          if(!reflectFromObstacle(bullet,obstacle)){
+            damageObstacle(obstacle,bullet.damage,bullet.mesh.position);
+            remove=true;
+          }
         }else if(
           Math.abs(bullet.mesh.position.x)>ARENA.halfW-bullet.radius||
           Math.abs(bullet.mesh.position.z)>ARENA.halfH-bullet.radius
         ){
-          remove=true;
+          if(!reflectFromArenaEdge(bullet))remove=true;
         }
       }
 
       if(!remove){
         const enemy=1-bullet.owner;
         const player=players[enemy];
-        // Top-down game: hit testing must use the XZ plane only.
-        // Bullet y=.82 while player root y=0, so 3D distance made normal shots impossible to hit.
         const dx=bullet.mesh.position.x-player.root.position.x;
         const dz=bullet.mesh.position.z-player.root.position.z;
         if(player.alive&&dx*dx+dz*dz<(player.radius+bullet.radius)**2){
@@ -516,7 +592,7 @@ export function createCombatController({
             parryBullet(enemy,bullet);
             remove=false;
           }else{
-            damage(enemy,bullet.damage,bullet.owner);
+            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner);
             remove=true;
           }
         }
