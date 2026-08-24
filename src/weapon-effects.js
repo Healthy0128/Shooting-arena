@@ -90,7 +90,9 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
   }
 
   function slash(position,direction,color=0xffe5a1){
+    if([...transientMeshes].filter(mesh=>mesh.userData.katanaSlash).length>=2)return;
     const arc=new THREE.Mesh(new THREE.RingGeometry(.2,1.75,48,-Math.PI*65/180,Math.PI*130/180),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false}));
+    arc.userData.katanaSlash=true;
     arc.rotation.x=-Math.PI/2;
     arc.rotation.y=Math.atan2(direction.x,direction.z);
     arc.position.copy(position).setY(.72);
