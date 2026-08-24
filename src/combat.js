@@ -93,7 +93,7 @@ export function createCombatController({
       bounces:0,
       ricochetMax:style==='bladegun'?3:0,
       homing:weapon.homing||0
-      ,curveBase:forward,curveDirection,curveTime:0,curveDelay:style==='boomerang'?1:0
+      ,curveBase:forward,curveDirection,curveTime:0,curveDelay:style==='boomerang'?.3:0
     });
   }
 
