@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.12.0</title>
+  <title>Duel Arena v6.13.0</title>
   <link rel="stylesheet" href="./style.css?v=698" />
-  <link rel="stylesheet" href="./menu-stats.css?v=6120" />
+  <link rel="stylesheet" href="./menu-stats.css?v=6130" />
   <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 <body>
@@ -22,64 +22,64 @@
 
         <div class="lobby-top">
           <div>
-            <div class="eyebrow">LOCAL BATTLE LAB</div>
+            <div class="eyebrow">ローカル対戦</div>
             <h1>DUEL ARENA</h1>
-            <p class="sub">BUILD YOUR FIGHTER. OUTPLAY YOUR RIVAL.</p>
+            <p class="sub">キャラクターと武器を組み合わせて戦おう</p>
           </div>
           <div class="build-badge">
-            <strong>v6.12.0</strong><span>WEAPON IDENTITY · 2026.08.24</span>
+            <strong>v6.13.0</strong><span>日本語メニュー · 2026.08.24</span>
           </div>
         </div>
 
         <div class="select-grid custom-grid">
           <div class="side-card loadout-card" data-player="0">
-            <div class="player-chip">PLAYER 1</div>
-            <div class="loadout-summary"></div><button class="random-build" data-player="0" type="button">🎲 RANDOM BUILD</button>
+            <div class="player-chip">プレイヤー 1</div>
+            <div class="loadout-summary"></div><button class="random-build" data-player="0" type="button">🎲 ランダム</button>
             <div class="slot-grid">
-              <label>BODY<select data-slot="body"></select></label>
-              <label>WEAPON<select data-slot="weapon"></select></label>
-              <label>DEFENSE<select data-slot="defense"></select></label>
-              <label>SUPER<select data-slot="super"></select></label>
-              <label>COLOR<select data-slot="color"></select></label>
-              <label>PASSIVE<select data-slot="passive"></select></label>
+              <label>キャラ<select data-slot="body"></select></label>
+              <label>武器<select data-slot="weapon"></select></label>
+              <label>防御<select data-slot="defense"></select></label>
+              <label>必殺<select data-slot="super"></select></label>
+              <label>カラー<select data-slot="color"></select></label>
+              <label>パッシブ<select data-slot="passive"></select></label>
             </div>
           </div>
 
           <div class="side-card loadout-card p2-card" data-player="1">
-            <div class="player-chip">PLAYER 2</div>
-            <div class="loadout-summary"></div><button class="random-build" data-player="1" type="button">🎲 RANDOM BUILD</button>
+            <div class="player-chip">プレイヤー 2</div>
+            <div class="loadout-summary"></div><button class="random-build" data-player="1" type="button">🎲 ランダム</button>
             <div class="slot-grid">
-              <label>BODY<select data-slot="body"></select></label>
-              <label>WEAPON<select data-slot="weapon"></select></label>
-              <label>DEFENSE<select data-slot="defense"></select></label>
-              <label>SUPER<select data-slot="super"></select></label>
-              <label>COLOR<select data-slot="color"></select></label>
-              <label>PASSIVE<select data-slot="passive"></select></label>
+              <label>キャラ<select data-slot="body"></select></label>
+              <label>武器<select data-slot="weapon"></select></label>
+              <label>防御<select data-slot="defense"></select></label>
+              <label>必殺<select data-slot="super"></select></label>
+              <label>カラー<select data-slot="color"></select></label>
+              <label>パッシブ<select data-slot="passive"></select></label>
             </div>
           </div>
         </div>
 
         <div class="camera-select">
-          <h2>CAMERA</h2>
+          <h2>カメラ</h2>
           <div class="camera-buttons">
-            <button id="camera-mode" data-mode="top" class="selected">TOP-DOWN</button>
-            <button id="camera-tilt-test" data-mode="arena">3D SPLIT CHASE</button>
+            <button id="camera-mode" data-mode="top" class="selected">2D トップビュー</button>
+            <button id="camera-tilt-test" data-mode="arena">3D 分割TPS</button>
           </div>
           <p class="camera-note">タッチ：左スティック移動＋自分側をタップして狙って射撃 / キーボード操作は独立</p>
         </div>
 
         <div class="arena-select">
-          <h2>ARENA</h2>
+          <h2>ステージ</h2>
           <div class="arena-buttons"></div>
         </div>
 
-        <button id="start" class="primary battle-start"><span>⚔</span> ENTER THE ARENA <span>⚔</span></button><p class="kenney-credit">Countdown voice: Kenney · CC0</p><p id="asset-status" class="asset-status">3D assets ready to load</p>
+        <button id="start" class="primary battle-start"><span>⚔</span> 対戦開始 <span>⚔</span></button><p class="kenney-credit">Countdown voice: Kenney · CC0</p><p id="asset-status" class="asset-status">3D assets ready to load</p>
       </div>
     </section>
 
     <section id="hud" aria-hidden="true" hidden>
       <div class="hud player two">
-        <div id="p2-name" class="name">RANGER</div>
+        <div id="p2-name" class="name">プレイヤー2</div>
         <div class="hp"><div id="p2-hp" class="hp-fill"></div></div>
         <div class="super"><div id="p2-super" class="super-fill"></div></div>
         <div id="p2-score" class="score">○ ○ ○</div>
@@ -88,7 +88,7 @@
       <div id="timer">90</div>
 
       <div class="hud player one">
-        <div id="p1-name" class="name">RANGER</div>
+        <div id="p1-name" class="name">プレイヤー1</div>
         <div class="hp"><div id="p1-hp" class="hp-fill"></div></div>
         <div class="super"><div id="p1-super" class="super-fill"></div></div>
         <div id="p1-score" class="score">○ ○ ○</div>
@@ -100,23 +100,23 @@
     <section id="controls" hidden>
       <div class="stick-zone p2 move" data-player="1" data-kind="move"><div class="stick"><i></i></div></div>
       <div class="stick-zone p2 aim" data-player="1" data-kind="aim"><div class="stick"><i></i></div></div>
-      <button class="def-btn p2" data-player="1">DEF</button>
-      <button class="super-btn p2" data-player="1">SUPER</button>
+      <button class="def-btn p2" data-player="1">防御</button>
+      <button class="super-btn p2" data-player="1">必殺</button>
 
       <div class="stick-zone p1 move" data-player="0" data-kind="move"><div class="stick"><i></i></div></div>
       <div class="stick-zone p1 aim" data-player="0" data-kind="aim"><div class="stick"><i></i></div></div>
-      <button class="def-btn p1" data-player="0">DEF</button>
-      <button class="super-btn p1" data-player="0">SUPER</button>
+      <button class="def-btn p1" data-player="0">防御</button>
+      <button class="super-btn p1" data-player="0">必殺</button>
     </section>
 
     <section id="result" class="overlay" hidden>
       <div class="panel result-panel">
-        <h1 id="winner">P1 WIN!</h1>
+        <h1 id="winner">プレイヤー1 勝利！</h1>
         <p id="result-score">3 - 1</p>
         <div id="match-result-stats"></div>
         <div class="result-buttons">
-          <button id="rematch" class="primary">REMATCH</button>
-          <button id="back-menu">CHANGE SETUP</button>
+          <button id="rematch" class="primary">もう一度</button>
+          <button id="back-menu">設定を変更</button>
         </div>
       </div>
     </section>
@@ -130,6 +130,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main.js?v=6120"></script>
+  <script type="module" src="./src/main.js?v=6130"></script>
 </body>
 </html>
