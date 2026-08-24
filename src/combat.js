@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6170';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6210';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6280';
 
 export function createCombatController({
   scene,
@@ -117,6 +117,7 @@ export function createCombatController({
         disposeBullet(bullet);bullets.splice(n,1);
       }
     }
+    weaponEffects.slash(player.root.position.clone().addScaledVector(forward,.68),forward,player.cfg.color);
     particleBurst(player.root.position.clone().addScaledVector(forward,.85).setY(.75),0xffe5a1,18,.08);
     tone(620,.06,'sawtooth',.028,-240);
   }
@@ -318,10 +319,11 @@ export function createCombatController({
   function createNovaField(owner){
     const player=getPlayers()[owner];
     const position=player.root.position.clone();
-    const fill=new THREE.Mesh(new THREE.CircleGeometry(3.35,64),new THREE.MeshBasicMaterial({color:0x5be0d0,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));
-    fill.rotation.x=-Math.PI/2;fill.position.copy(position).setY(.055);
-    const border=makeGroundRing(position,2.85,3.35,0x5be0d0,.72);
-    const mesh=new THREE.Group();mesh.add(fill);mesh.add(border);
+    const fill=new THREE.Mesh(new THREE.CircleGeometry(3.35,64),new THREE.MeshBasicMaterial({color:player.cfg.color,transparent:true,opacity:.25,side:THREE.DoubleSide,depthWrite:false}));
+    fill.rotation.x=-Math.PI/2;fill.position.y=.055;
+    const border=new THREE.Mesh(new THREE.RingGeometry(2.85,3.35,64),new THREE.MeshBasicMaterial({color:player.cfg.color,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false}));
+    border.rotation.x=-Math.PI/2;border.position.y=.07;
+    const mesh=new THREE.Group();mesh.position.copy(position);mesh.add(fill);mesh.add(border);
     scene.add(mesh);
     superEffects.push({type:'novaField',owner,position,radius:3.35,life:6,tick:.05,mesh,fill,border});
   }
@@ -339,8 +341,8 @@ export function createCombatController({
         effect.life-=dt;
         effect.tick-=dt;
         effect.mesh.rotation.z+=dt*.8;
-        effect.fill.material.opacity=.12+.06*Math.sin(effect.life*7);
-        effect.border.material.opacity=.56+.24*Math.sin(effect.life*7);
+        effect.fill.material.opacity=.2+.08*Math.sin(effect.life*7);
+        effect.border.material.opacity=.72+.2*Math.sin(effect.life*7);
         const owner=players[effect.owner],enemy=players[1-effect.owner];
         if(!owner?.alive)remove=true;
         while(!remove&&effect.tick<=0){
