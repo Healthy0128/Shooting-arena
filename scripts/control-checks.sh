@@ -27,9 +27,16 @@ check "camera exposes TPS basis" grep -Fq 'function getTpsBasis' src/camera.js
 check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||screenVectorToWorld;' src/input.js
 check "input maps pointer input" grep -Fq 'const world=mapControl(player,vx,vy);' src/input.js
 check "input maps keyboard movement" grep -Fq 'players[player].move.copy(mapControl(player,x,y))' src/input.js
+check "split viewport uses logical renderer size" grep -Fq 'renderer.getSize(size);' src/camera.js
+check "split reacts to visual viewport resize" grep -Fq "visualViewport?.addEventListener('resize',resize)" src/camera.js
 
 if grep -Fq 'if(player===1){x=-x;y=-y}' src/camera.js; then
   echo '::error::face-to-face inversion returned to camera mapping'
+  exit 1
+fi
+
+if sed -n '/function renderSplitArena/,/function setMode/p' src/camera.js | grep -Fq 'getDrawingBufferSize'; then
+  echo '::error::split viewport returned to drawing-buffer coordinates'
   exit 1
 fi
 
