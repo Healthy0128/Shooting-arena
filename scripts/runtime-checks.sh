@@ -28,6 +28,13 @@ check "combat controller exported" grep -Fq 'export function createCombatControl
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
+check "loadout renderer exported" grep -Fq 'export function renderLoadoutSummary' src/menu-ui.js
+check "loadout summary delegated" grep -Fq 'renderLoadoutSummary(card,cfg,cost,over);' src/game.js
+check "defense descriptions centralized" grep -Fq 'export const DEFENSE_INFO=' src/loadout-config.js
+check "super descriptions centralized" grep -Fq 'export const SUPER_INFO=' src/loadout-config.js
+check "visual menu stylesheet loaded" grep -Fq 'menu-stats.css' index.html
+check "stat meters rendered" grep -Fq "meter('HP'" src/menu-ui.js
+check "ability cards rendered" grep -Fq 'class="ability-grid"' src/menu-ui.js
 
 check "countdown generation guard" grep -Fq 'async function battleCountdown(generation)' src/game.js
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
