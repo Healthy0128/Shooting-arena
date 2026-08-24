@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
-import { createControlMapper } from './controls.js?v=697';
+import { createControlMapper } from './controls.js?v=6100';
 
 export function createCameraController({renderer,scene,getPlayers}){
   const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
@@ -72,7 +72,9 @@ export function createCameraController({renderer,scene,getPlayers}){
     forward3.y=0;
     if(forward3.lengthSq()<1e-6)forward3.set(player===0?1:-1,0,0);
     else forward3.normalize();
-    const right3=new THREE.Vector3(forward3.z,0,-forward3.x).normalize();
+    // Ground-plane camera-right = forward × world-up.
+    // For forward (0,0,-1), this correctly gives +X as screen-right.
+    const right3=new THREE.Vector3(-forward3.z,0,forward3.x).normalize();
     return {
       forward:new THREE.Vector2(forward3.x,forward3.z),
       right:new THREE.Vector2(right3.x,right3.z)
