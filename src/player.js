@@ -188,7 +188,7 @@ export function createPlayerController({scene}){
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
-      mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,
+      mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,fieldWeapon:null,
       hitReaction:0,hitReactionDuration:.26,hitSide:1,shotReaction:0,shotReactionDuration:.12,bodyScale
     };
     attachRealModel(player);

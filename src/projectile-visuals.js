@@ -6,7 +6,10 @@ const STYLE_META={
   rapid:{color:'#b8ff7a',glow:'#39d85c',shape:'tracer',scale:[2.8,.58]},
   arcane:{color:'#c692ff',glow:'#7138ff',shape:'rune',scale:[2.1,2.1]},
   bladegun:{color:'#ff8bc4',glow:'#ff397f',shape:'blade',scale:[2.0,2.0]},
-  cannon:{color:'#ff765f',glow:'#b81d22',shape:'core',scale:[2.2,2.2]}
+  cannon:{color:'#ff765f',glow:'#b81d22',shape:'core',scale:[2.2,2.2]},
+  seeker:{color:'#8affeb',glow:'#18a99a',shape:'missile',scale:[3.1,.9]},
+  shock:{color:'#ffd071',glow:'#ff7a28',shape:'wave',scale:[2.5,2.5]},
+  rail:{color:'#ff8ea0',glow:'#ff254d',shape:'rail',scale:[4.2,.62]}
 };
 
 function makeTexture(meta){
@@ -34,6 +37,13 @@ function makeTexture(meta){
     ctx.arc(0,0,17,0,Math.PI*2);
   }else if(meta.shape==='tracer'){
     ctx.roundRect(-46,-7,88,14,7);
+  }else if(meta.shape==='missile'){
+    ctx.moveTo(-44,-10);ctx.lineTo(24,-10);ctx.lineTo(45,0);ctx.lineTo(24,10);ctx.lineTo(-44,10);ctx.lineTo(-31,0);ctx.closePath();
+  }else if(meta.shape==='rail'){
+    ctx.moveTo(-49,-5);ctx.lineTo(35,-5);ctx.lineTo(49,0);ctx.lineTo(35,5);ctx.lineTo(-49,5);ctx.closePath();
+  }else if(meta.shape==='wave'){
+    ctx.arc(0,0,29,0,Math.PI*2);
+    ctx.arc(0,0,16,0,Math.PI*2,true);
   }else if(meta.shape==='rune'){
     for(let i=0;i<6;i++){
       const angle=i*Math.PI/3-Math.PI/2;
@@ -83,7 +93,7 @@ export function createProjectileVisualController(){
     const meta=STYLE_META[key];
     const size=Math.max(.32,radius*3.2);
     const root=new THREE.Group();
-    const directional=key==='rifle'||key==='rapid';
+    const directional=key==='rifle'||key==='rapid'||key==='seeker'||key==='rail';
     root.userData.visualParts=[];
     root.userData.directional=directional;
 
@@ -134,7 +144,7 @@ export function createProjectileVisualController(){
       sprite.scale.copy(base).multiplyScalar(pulse);
     }else if(bullet.style==='bladegun'){
       sprite.material.rotation+=dt*11;
-    }else if(bullet.style==='cannon'){
+    }else if(bullet.style==='cannon'||bullet.style==='shock'){
       const pulse=1+.08*Math.sin(elapsed*.015);
       sprite.scale.copy(base).multiplyScalar(pulse);
     }

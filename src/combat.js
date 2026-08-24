@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META } from './loadout-config.js?v=6120';
-import { createProjectileVisualController } from './projectile-visuals.js?v=6141';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6150';
+import { createProjectileVisualController } from './projectile-visuals.js?v=6170';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6170';
 
 export function createCombatController({
   scene,
@@ -23,6 +23,8 @@ export function createCombatController({
   addHitStop,
   cameraShake,
   vibrate,
+  consumeFieldWeapon,
+  onDamage,
   onKO
 }){
   const bullets=[];
@@ -50,8 +52,12 @@ export function createCombatController({
     projectileVisuals.dispose(bullet.mesh);
   }
 
-  function applyShotRecoil(player){
-    let recoil=player.cfg.recoil||0;
+  function activeWeapon(player){
+    return player?.fieldWeapon?.stats||player.cfg;
+  }
+
+  function applyShotRecoil(player,weapon){
+    let recoil=weapon.recoil||0;
     recoil*=THREE.MathUtils.clamp(1-(player.cfg.recoilResist||0),.55,1.15);
     if(recoil<=0)return;
     const dir=new THREE.Vector3(player.aim.x,0,player.aim.y);
@@ -61,11 +67,11 @@ export function createCombatController({
     if(canMoveTo(next,player.radius))player.root.position.copy(next);
   }
 
-  function spawnBullet(owner,dir,damage,speed){
+  function spawnBullet(owner,dir,damage,speed,weapon){
     const players=getPlayers();
     const player=players[owner];
-    const style=player?.cfg.weaponStyle||'rifle';
-    const radius=player?.cfg.bulletRadius||.16;
+    const style=weapon.weaponStyle||'rifle';
+    const radius=weapon.bulletRadius||.16;
     const mesh=projectileVisuals.create(style,radius,player?.powerBuff>0);
     const forward=dir.clone().normalize();
     mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(forward,.08);
@@ -75,23 +81,26 @@ export function createCombatController({
       mesh,
       vel:forward.multiplyScalar(speed),
       owner,
-      life:player?.cfg.bulletLife||1.45,
+      life:weapon.bulletLife||1.45,
       radius,
       damage,
       style,
       bounces:0,
-      ricochetMax:style==='bladegun'?3:0
+      ricochetMax:style==='bladegun'?3:0,
+      homing:weapon.homing||0
     });
   }
 
   function shoot(i){
     const player=getPlayers()[i];
     if(!isRunning()||!player?.alive||player.fireCd>0||player.recovery>0||player.overheated||player.guarding||player.aim.lengthSq()<.12)return;
-    player.fireCd=player.cfg.fireCd;
-    player.recovery=player.cfg.recovery||0;
+    const weapon=activeWeapon(player);
+    player.fireCd=weapon.fireCd;
+    player.recovery=weapon.recovery||0;
     player.stats.shots++;
     playPlayerAction(player,'shoot');
-    player.heat=Math.min(100,(player.heat||0)+(player.cfg.pellets>1?30:player.cfg.fireCd<.12?9:player.cfg.fireCd>.75?42:18));
+    const heatGain=weapon.heatGain??(weapon.pellets>1?30:weapon.fireCd<.12?9:weapon.fireCd>.75?42:18);
+    player.heat=Math.min(100,(player.heat||0)+heatGain);
     if(player.heat>=100&&!player.overheated){
       player.overheated=true;
       showBanner(`P${i+1} OVERHEAT!`,420);
@@ -99,19 +108,28 @@ export function createCombatController({
       vibrate([20,30,20]);
     }
     const base=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
-    const count=player.cfg.pellets||1;
     const attackMul=bodyDamageMul(player)*(player.powerBuff>0?1.18:1);
-    for(let n=0;n<count;n++){
-      const ang=count===1
-        ?(Math.random()-.5)*(player.cfg.spread||0)
-        :THREE.MathUtils.lerp(-player.cfg.spread,player.cfg.spread,n/(count-1));
-      const dir=base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),ang);
-      spawnBullet(i,dir,player.cfg.damage*attackMul,player.cfg.bulletSpeed);
+    if(weapon.pattern==='radial'){
+      const count=weapon.radialCount||12;
+      for(let n=0;n<count;n++){
+        const angle=Math.PI*2*n/count;
+        spawnBullet(i,new THREE.Vector3(Math.sin(angle),0,Math.cos(angle)),weapon.damage*attackMul,weapon.bulletSpeed,weapon);
+      }
+    }else{
+      const count=weapon.pellets||1;
+      for(let n=0;n<count;n++){
+        const ang=count===1
+          ?(Math.random()-.5)*(weapon.spread||0)
+          :THREE.MathUtils.lerp(-weapon.spread,weapon.spread,n/(count-1));
+        const dir=base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),ang);
+        spawnBullet(i,dir,weapon.damage*attackMul,weapon.bulletSpeed,weapon);
+      }
     }
-    weaponEffects.muzzle(player.cfg.weaponStyle||'rifle',getMuzzlePosition(player,new THREE.Vector3()),base,player.powerBuff>0);
-    applyShotRecoil(player);
-    weaponEffects.shotSound(player.cfg.weaponStyle||'rifle');
-    vibrate(player.cfg.weaponStyle==='cannon'?24:player.cfg.weaponStyle==='scatter'?14:8);
+    weaponEffects.muzzle(weapon.weaponStyle||'rifle',getMuzzlePosition(player,new THREE.Vector3()),base,player.powerBuff>0);
+    applyShotRecoil(player,weapon);
+    weaponEffects.shotSound(weapon.weaponStyle||'rifle');
+    vibrate(weapon.vibration??(weapon.weaponStyle==='cannon'?24:weapon.weaponStyle==='scatter'?14:8));
+    consumeFieldWeapon?.(player);
   }
 
   function defenseAction(i){
@@ -408,6 +426,7 @@ export function createCombatController({
       players[attacker].stats.hits++;
     }
     player.hp=Math.max(0,player.hp-finalDamage);
+    onDamage?.(finalDamage);
     damagePop(finalDamage);
     if(players[attacker])players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*superGainMul(players[attacker]));
     player.super=Math.min(100,player.super+finalDamage*.35*superGainMul(player));
@@ -497,6 +516,16 @@ export function createCombatController({
     const players=getPlayers();
     for(let i=bullets.length-1;i>=0;i--){
       const bullet=bullets[i];
+      if(bullet.homing){
+        const target=players[1-bullet.owner];
+        if(target?.alive){
+          const speed=bullet.vel.length();
+          const desired=target.root.position.clone().sub(bullet.mesh.position).setY(0).normalize();
+          const current=bullet.vel.clone().normalize();
+          current.lerp(desired,THREE.MathUtils.clamp(bullet.homing*dt,0,1)).normalize();
+          bullet.vel.copy(current.multiplyScalar(speed));
+        }
+      }
       bullet.life-=dt;
       bullet.mesh.position.addScaledVector(bullet.vel,dt);
       projectileVisuals.update(bullet,dt,performance.now());
