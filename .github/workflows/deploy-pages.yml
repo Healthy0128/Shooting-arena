@@ -42,6 +42,7 @@ jobs:
           check "game.js syntax" node --check src/game.js
           check "input.js syntax" node --check src/input.js
           check "hud-ui.js syntax" node --check src/hud-ui.js
+          check "camera.js syntax" node --check src/camera.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
           check "menu-ui.js syntax" node --check src/menu-ui.js
@@ -49,14 +50,36 @@ jobs:
           check "loadout-config.js syntax" node --check src/loadout-config.js
 
           check "index uses stable main entry" grep -Fq './src/main.js?v=695' index.html
-          check "split renderer still exists" grep -Fq 'function renderSplitArena' src/game.js
-          check "top camera updater still exists" grep -Fq 'function updateTopCamera' src/game.js
+          check "split renderer exists in camera module" grep -Fq 'function renderSplitArena' src/camera.js
+          check "top camera updater exists in camera module" grep -Fq 'function updateTopCamera' src/camera.js
 
           echo "CHECK: ui import count"
           test "$(grep -Fc "from './ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::ui import count'; exit 1; }
           echo "PASS: ui import count"
           check "ui initializes menu UI" grep -Fq "from './menu-ui.js?v=695';" src/ui.js
           check "ui re-exports match UI" grep -Fq "from './match-ui.js?v=695';" src/ui.js
+
+          echo "CHECK: camera import count"
+          test "$(grep -Fc "from './camera.js?v=695'" src/game.js)" -eq 1 || { echo '::error::camera import count'; exit 1; }
+          echo "PASS: camera import count"
+          check "camera controller is created" grep -Fq 'const cameraController=createCameraController' src/game.js
+          check "camera controller is exported" grep -Fq 'export function createCameraController' src/camera.js
+          check "camera controller initializes" grep -Fq 'cameraController.init();' src/game.js
+          check "camera controller renders" grep -Fq 'cameraController.render();' src/game.js
+          check "camera owns screen vector mapping" grep -Fq 'screenVectorToWorld:cameraController.screenVectorToWorld' src/game.js
+          check "HUD reads projection camera from controller" grep -Fq 'getCamera:()=>cameraController.getProjectionCamera()' src/game.js
+
+          for symbol in getLayoutSize updateTopCamera updateChaseCamera renderSplitArena setCameraMode resize screenVectorToWorld; do
+            echo "CHECK: no local $symbol camera function in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol camera function returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol camera function in game.js"
+          done
+
+          for symbol in topCamera chaseCameras cameraMode _baseRender; do
+            echo "CHECK: no local $symbol camera state in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol camera state returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol camera state in game.js"
+          done
 
           echo "CHECK: input import count"
           test "$(grep -Fc "from './input.js?v=695'" src/game.js)" -eq 1 || { echo '::error::input import count'; exit 1; }
@@ -159,6 +182,5 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
-      - name: Deploy
+      - uses: actions/deploy-pages@v4
         id: deployment
-        uses: actions/deploy-pages@v4
