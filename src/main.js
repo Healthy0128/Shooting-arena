@@ -1,6 +1,6 @@
-import { initMenuUI } from './ui.js?v=695';
+import { initMenuUI } from './ui.js?v=696';
 
 initMenuUI();
-import('./game.js?v=695').catch(err=>{
+import('./game.js?v=696').catch(err=>{
   console.error('Failed to start game:',err);
 });
