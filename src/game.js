@@ -1,17 +1,17 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6160';
+import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6180';
 import { createInputController } from './input.js?v=6151';
 import { createHudUI } from './hud-ui.js?v=6170';
 import { createCameraController } from './camera.js?v=6172';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6170';
-import { createCombatController } from './combat.js?v=6170';
+import { createCombatController } from './combat.js?v=6180';
 import { createAudioController } from './audio.js?v=6160';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
 import { createFieldWeaponController } from './field-weapons.js?v=6170';
-import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
+import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6180';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];

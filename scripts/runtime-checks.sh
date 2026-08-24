@@ -112,6 +112,22 @@ check "field weapon homing exists" grep -Fq 'if(bullet.homing)' src/combat.js
 check "field projectiles have unique styles" grep -Fq "seeker:{color:" src/projectile-visuals.js
 check "stalemate accelerates pickup" grep -Fq 'quietTime>=7?2.5:1' src/field-weapons.js
 check "field weapon is shown over player" grep -Fq 'class="world-field-weapon"' src/hud-ui.js
+check "overdrive weapon profiles are centralized" grep -Fq 'export const OVERDRIVE_PROFILES=' src/loadout-config.js
+check "overdrive ignores temporary field weapon" grep -Fq 'OVERDRIVE_PROFILES[player.cfg.weaponStyle]' src/combat.js
+check "overdrive cannon total is normalized" grep -Fq "cannon:{bursts:2,pellets:1,interval:260,damage:85" src/loadout-config.js
+check "all overdrive totals are approximately 170" node --input-type=module -e "const {OVERDRIVE_PROFILES:p}=await import('./src/loadout-config.js');for(const v of Object.values(p)){if(Math.abs(v.bursts*v.pellets*v.damage-170)>.1)process.exit(1)}"
+check "repulse ring clears hostile bullets" grep -Fq 'if(bullet.owner===i||bullet.mesh.position.distanceTo(player.root.position)>radius)continue;' src/combat.js
+check "sanctuary is a persistent field" grep -Fq "type:'novaField'" src/combat.js
+check "blade wall ricochets" grep -Fq "2.8,{ricochetMax:2}" src/combat.js
+check "bone rain uses telegraphed strikes" grep -Fq 'queueBoneStrike(i,position,.48+k*.12);' src/combat.js
+check "super projectiles are tagged" grep -Fq 'isSuper:true' src/combat.js
+check "super damage cannot refund attacker meter" grep -Fq 'grantAttackerSuper:!bullet.isSuper' src/combat.js
+
+if grep -Fq 'player.cfg.damage*.78' src/combat.js; then
+  echo '::error::overdrive raw damage still depends on base weapon damage'
+  exit 1
+fi
+echo 'PASS: overdrive raw damage is normalized'
 
 if grep -Fq 'navigator.vibrate' src/game.js src/combat.js src/menu-ui.js; then
   echo '::error::direct vibration bypasses feedback settings'

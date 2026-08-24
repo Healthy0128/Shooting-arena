@@ -35,6 +35,15 @@ export const WEAPON_INFO={
   cannon:{name:'キャノン',role:'高難度・超火力',desc:'遅く当てにくいが一撃が非常に重い',longDesc:'1秒に1発、弾速も遅く、弾も小さめで命中させにくい代わりに基礎58ダメージ。読みと置き撃ちが必要な上級者向け高威力武器です。'}
 };
 
+export const OVERDRIVE_PROFILES={
+  rifle:{bursts:10,pellets:1,interval:58,damage:17,speed:18,style:'rifle',radius:.12,life:1.7,spread:0},
+  scatter:{bursts:3,pellets:5,interval:175,damage:11.33,speed:12,style:'scatter',radius:.11,life:.9,spread:.27},
+  rapid:{bursts:24,pellets:1,interval:32,damage:7.08,speed:18.8,style:'rapid',radius:.10,life:1.45,spread:.025},
+  arcane:{bursts:6,pellets:1,interval:115,damage:28.33,speed:10.8,style:'arcane',radius:.27,life:2.35,spread:.02,homing:1.8},
+  bladegun:{bursts:8,pellets:1,interval:82,damage:21.25,speed:14.5,style:'bladegun',radius:.14,life:2.8,spread:.055,ricochetMax:2},
+  cannon:{bursts:2,pellets:1,interval:260,damage:85,speed:22,style:'cannon',radius:.22,life:1.55,spread:0}
+};
+
 export const COLOR_VALUES={
   cyan:CHARACTERS.ranger.color,
   orange:CHARACTERS.crusher.color,
@@ -67,12 +76,12 @@ export const DEFENSE_INFO={
 };
 
 export const SUPER_INFO={
-  rapid:{name:'オーバードライブ',desc:'照準方向へ12連射',longDesc:'現在向いている方向へ高速で12発を連射します。瞬間的に弾幕を作れるため、相手の回避後や近距離で強力です。'},
-  blast:{name:'ブラストリング',desc:'周囲360°へ18発',longDesc:'自分を中心に18発の散弾を全方向へ同時発射します。囲まれた状況や近距離での切り返しに向いています。'},
+  rapid:{name:'オーバードライブ',desc:'装備武器に応じた基礎総火力170の集中攻撃',longDesc:'元のロードアウト武器の弾速・形状・連射性を引き継ぐ集中攻撃。BODY補正前の総火力は約170に統一されるため、キャノンだけが極端に強くなることはありません。拾ったフィールド武器の影響は受けません。'},
+  blast:{name:'リパルスリング',desc:'近距離42ダメージ＋弾消し＋吹き飛ばし',longDesc:'半径5.2以内の敵弾を消去し、近距離の相手へ42ダメージと強い吹き飛ばしを与えます。遠距離の相手には当たらない、迎撃と切り返し専用の必殺技です。'},
   dash:{name:'ファントムダッシュ',desc:'0.65秒無敵で高速突進',longDesc:'向いている方向へ高速突進し、0.65秒間無敵になります。攻撃というより位置取りと緊急離脱に特化した必殺技です。'},
-  nova:{name:'ノヴァ',desc:'全周20発＋HP24回復',longDesc:'全方向へ20発の魔法弾を放ちながらHPを24回復します。攻撃と立て直しを同時にできる万能な必殺技です。'},
-  fan:{name:'ブレードファン',desc:'前方へ扇状に11発',longDesc:'正面広範囲へ11発を扇状に一斉発射します。中距離で相手の回避先までまとめて狙いやすい必殺技です。'},
-  boneStorm:{name:'ボーンストーム',desc:'時間差で2回の全周弾幕',longDesc:'時間差で2回、16発ずつの全周弾幕を発生させます。1波目を避けた相手へ2波目を重ねて圧力をかけます。'}
+  nova:{name:'サンクチュアリ',desc:'4秒間残る回復・制圧フィールド',longDesc:'発動地点に4秒間残る領域を設置します。領域内に留まると最大24回復し、侵入した相手には継続ダメージ。回復するには同じ場所に留まる必要があります。'},
+  fan:{name:'ブレードウォール',desc:'遅く長く残る反射刃を前方へ9発',longDesc:'前方へ扇状に9発の低速反射刃を置き、約2.8秒間進路を封鎖します。即効性は低い一方、相手の移動先を制限して追い込めます。'},
+  boneStorm:{name:'ボーンレイン',desc:'相手周辺へ予告付き落下攻撃7発',longDesc:'相手の現在位置と周囲6方向へ予告円を表示し、時間差で30ダメージの落下攻撃を行います。見て避けられますが、移動先を狭めるエリア制圧技です。'}
 };
 
 export const LOADOUT_OPTIONS={

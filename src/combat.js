@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
-import { BODY_META } from './loadout-config.js?v=6120';
+import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6170';
 import { createWeaponEffectsController } from './weapon-effects.js?v=6170';
 
@@ -28,6 +28,7 @@ export function createCombatController({
   onKO
 }){
   const bullets=[];
+  const superEffects=[];
   const projectileVisuals=createProjectileVisualController();
   const weaponEffects=createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake});
 
@@ -271,13 +272,128 @@ export function createCombatController({
     addHitStop(.045);
   }
 
-  function superShot(owner,dir,damage,speed,style,radius=.18,life=1.4){
+  function disposeSuperEffect(effect){
+    effect.mesh?.removeFromParent?.();
+    effect.mesh?.geometry?.dispose?.();
+    effect.mesh?.material?.dispose?.();
+  }
+
+  function makeGroundRing(position,inner,outer,color,opacity=.72){
+    const mesh=new THREE.Mesh(
+      new THREE.RingGeometry(inner,outer,48),
+      new THREE.MeshBasicMaterial({color,transparent:true,opacity,side:THREE.DoubleSide,depthWrite:false})
+    );
+    mesh.rotation.x=-Math.PI/2;
+    mesh.position.copy(position).setY(.07);
+    scene.add(mesh);
+    return mesh;
+  }
+
+  function createNovaField(owner){
+    const player=getPlayers()[owner];
+    const position=player.root.position.clone();
+    superEffects.push({type:'novaField',owner,position,radius:3.35,life:4,tick:.05,mesh:makeGroundRing(position,2.85,3.35,0x5be0d0,.68)});
+  }
+
+  function queueBoneStrike(owner,position,delay){
+    superEffects.push({type:'boneStrike',owner,position:position.clone(),delay,mesh:makeGroundRing(position,.78,1.15,0xff6a54,.78)});
+  }
+
+  function updateSuperEffects(dt){
+    const players=getPlayers();
+    for(let i=superEffects.length-1;i>=0;i--){
+      const effect=superEffects[i];
+      let remove=false;
+      if(effect.type==='novaField'){
+        effect.life-=dt;
+        effect.tick-=dt;
+        effect.mesh.rotation.z+=dt*.8;
+        effect.mesh.material.opacity=.48+.18*Math.sin(effect.life*7);
+        const owner=players[effect.owner],enemy=players[1-effect.owner];
+        if(!owner?.alive)remove=true;
+        while(!remove&&effect.tick<=0){
+          effect.tick+=.5;
+          const ownerDistance=owner.root.position.distanceTo(effect.position);
+          if(ownerDistance<=effect.radius)owner.hp=Math.min(owner.maxHp,owner.hp+3);
+          if(enemy?.alive&&enemy.root.position.distanceTo(effect.position)<=effect.radius){
+            damage(1-effect.owner,3,effect.owner,'arcane',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false});
+          }
+        }
+        if(effect.life<=0)remove=true;
+      }else if(effect.type==='boneStrike'){
+        effect.delay-=dt;
+        effect.mesh.rotation.z+=dt*2.5;
+        effect.mesh.material.opacity=THREE.MathUtils.clamp(.25+(1-effect.delay/.9)*.65,.25,.9);
+        if(effect.delay<=0){
+          const enemy=players[1-effect.owner];
+          particleBurst(effect.position.clone().setY(.8),0xff765f,24,.095);
+          weaponEffects.impact('cannon',effect.position.clone().setY(.1),'obstacle');
+          tone(82,.09,'square',.032,-30);
+          if(enemy?.alive&&enemy.root.position.distanceTo(effect.position)<=1.15){
+            damage(1-effect.owner,30,effect.owner,'cannon',effect.position.clone().setY(.9),0,{grantAttackerSuper:false});
+          }
+          remove=true;
+        }
+      }
+      if(remove){
+        disposeSuperEffect(effect);
+        superEffects.splice(i,1);
+      }
+    }
+  }
+
+  function superShot(owner,dir,damage,speed,style,radius=.18,life=1.4,options={}){
     const player=getPlayers()[owner];
     const mesh=projectileVisuals.create(style,radius,true);
     const forward=dir.clone().normalize();
     mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(forward,.08);
     scene.add(mesh);
-    bullets.push({mesh,vel:forward.multiplyScalar(speed),owner,life,radius,damage:damage*bodyDamageMul(player),style,bounces:0,ricochetMax:0});
+    bullets.push({
+      mesh,vel:forward.multiplyScalar(speed),owner,life,radius,
+      damage:damage*bodyDamageMul(player),style,bounces:0,
+      ricochetMax:options.ricochetMax||0,
+      homing:options.homing||0,
+      isSuper:true
+    });
+  }
+
+  function activateOverdrive(i,player){
+    const profile=OVERDRIVE_PROFILES[player.cfg.weaponStyle]||OVERDRIVE_PROFILES.rifle;
+    for(let burst=0;burst<profile.bursts;burst++){
+      matchLater(()=>{
+        if(!isRunning()||!player.alive)return;
+        const base=new THREE.Vector3(player.aim.x,0,player.aim.y);
+        if(base.lengthSq()<.01)base.set(0,0,i===0?-1:1);
+        base.normalize();
+        for(let pellet=0;pellet<profile.pellets;pellet++){
+          const ratio=profile.pellets===1?0:pellet/(profile.pellets-1)*2-1;
+          const randomSpread=profile.pellets===1?(Math.random()-.5)*profile.spread:ratio*profile.spread;
+          const dir=base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),randomSpread);
+          superShot(i,dir,profile.damage,profile.speed,profile.style,profile.radius,profile.life,{homing:profile.homing,ricochetMax:profile.ricochetMax});
+        }
+        weaponEffects.muzzle(profile.style,getMuzzlePosition(player,new THREE.Vector3()),base,player.powerBuff>0);
+        weaponEffects.shotSound(profile.style);
+      },burst*profile.interval);
+    }
+  }
+
+  function activateBlastRing(i,player){
+    const radius=5.2;
+    for(let b=bullets.length-1;b>=0;b--){
+      const bullet=bullets[b];
+      if(bullet.owner===i||bullet.mesh.position.distanceTo(player.root.position)>radius)continue;
+      particleBurst(bullet.mesh.position.clone().setY(.65),0xffd08a,5,.04);
+      disposeBullet(bullet);
+      bullets.splice(b,1);
+    }
+    const enemy=getPlayers()[1-i];
+    if(!enemy?.alive||enemy.invuln>0||enemy.root.position.distanceTo(player.root.position)>4.6)return;
+    damage(1-i,42,i,'scatter',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false});
+    if(!enemy.alive)return;
+    const away=enemy.root.position.clone().sub(player.root.position).setY(0);
+    if(away.lengthSq()<.01)away.set(i===0?1:-1,0,0);
+    const next=enemy.root.position.clone().addScaledVector(away.normalize(),1.35);
+    if(canMoveTo(next,enemy.radius))enemy.root.position.copy(next);
   }
 
   function activateSuper(i){
@@ -297,25 +413,13 @@ export function createCombatController({
       superFlash(player,0x8fd7ff);
       showBanner(`P${i+1} OVERDRIVE!`,520);
       tone(360,.08,'square',.035,280);
-      const baseDamage=Math.max(8,player.cfg.damage*.78);
-      for(let k=0;k<12;k++){
-        matchLater(()=>{
-          if(!isRunning()||!player.alive)return;
-          const dir=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
-          superShot(i,dir,baseDamage,16.5,'rapid',.11,1.4);
-          weaponEffects.muzzle('rapid',getMuzzlePosition(player,new THREE.Vector3()),dir,player.powerBuff>0);
-          tone(285,.025,'square',.014,80);
-        },k*62);
-      }
+      activateOverdrive(i,player);
     }else if(type==='blast'){
       superPulse(player,0xffb05a,1.25);
       superFlash(player,0xffb05a);
-      showBanner(`P${i+1} BLAST RING!`,520);
+      showBanner(`P${i+1} REPULSE RING!`,520);
       tone(105,.12,'sawtooth',.045,80);
-      for(let k=0;k<18;k++){
-        const a=(Math.PI*2*k)/18;
-        superShot(i,new THREE.Vector3(Math.sin(a),0,Math.cos(a)),17,11.2,'scatter',.14,1.15);
-      }
+      activateBlastRing(i,player);
     }else if(type==='dash'){
       const dir=new THREE.Vector3(player.aim.x,0,player.aim.y);
       if(dir.lengthSq()<.01)dir.set(0,0,i===0?-1:1);
@@ -336,39 +440,35 @@ export function createCombatController({
     }else if(type==='nova'){
       superPulse(player,0x5be0d0,1.35);
       superFlash(player,0x5be0d0);
-      showBanner(`P${i+1} NOVA!`,520);
+      showBanner(`P${i+1} SANCTUARY!`,520);
       tone(460,.12,'sine',.04,360);
-      player.hp=Math.min(player.maxHp,player.hp+24);
-      for(let k=0;k<20;k++){
-        const a=Math.PI*2*k/20;
-        superShot(i,new THREE.Vector3(Math.sin(a),0,Math.cos(a)),19,9.6,'arcane',.21,2.0);
-      }
+      createNovaField(i);
     }else if(type==='fan'){
       const base=new THREE.Vector3(player.aim.x,0,player.aim.y);
       if(base.lengthSq()<.01)base.set(0,0,i===0?-1:1);
       base.normalize();
       superPulse(player,0xff7fb5,1.0);
       superFlash(player,0xff7fb5);
-      showBanner(`P${i+1} BLADE FAN!`,520);
+      showBanner(`P${i+1} BLADE WALL!`,520);
       tone(290,.07,'triangle',.035,240);
-      for(let k=-5;k<=5;k++){
-        superShot(i,base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),k*.105),18,15.5,'bladegun',.14,1.5);
+      for(let k=-4;k<=4;k++){
+        superShot(i,base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),k*.14),18,8.8,'bladegun',.16,2.8,{ricochetMax:2});
       }
     }else if(type==='boneStorm'){
       superPulse(player,0xff6a54,1.25);
       superFlash(player,0xff6a54);
-      showBanner(`P${i+1} STORM!`,520);
+      showBanner(`P${i+1} BONE RAIN!`,520);
       tone(120,.1,'square',.04,210);
-      for(let wave=0;wave<2;wave++){
-        matchLater(()=>{
-          if(!isRunning()||!player.alive)return;
-          superPulse(player,wave===0?0xff6a54:0xffffff,1.0+wave*.18);
-          for(let k=0;k<16;k++){
-            const a=Math.PI*2*k/16+wave*.095;
-            superShot(i,new THREE.Vector3(Math.sin(a),0,Math.cos(a)),20,10.5,'cannon',.19,1.75);
-          }
-          tone(wave===0?125:165,.07,'square',.03,90);
-        },wave*220);
+      const enemy=getPlayers()[1-i];
+      const center=enemy.root.position.clone();
+      for(let k=0;k<7;k++){
+        const position=center.clone();
+        if(k>0){
+          const angle=Math.PI*2*(k-1)/6;
+          position.x+=Math.cos(angle)*1.7;
+          position.z+=Math.sin(angle)*1.7;
+        }
+        queueBoneStrike(i,position,.48+k*.12);
       }
     }
 
@@ -386,7 +486,7 @@ export function createCombatController({
     return true;
   }
 
-  function damage(victim,amount,attacker,style='rifle',impactPosition=null,bounces=0){
+  function damage(victim,amount,attacker,style='rifle',impactPosition=null,bounces=0,options={}){
     const players=getPlayers();
     const player=players[victim];
     if(!player.alive||player.invuln>0)return;
@@ -428,7 +528,9 @@ export function createCombatController({
     player.hp=Math.max(0,player.hp-finalDamage);
     onDamage?.(finalDamage);
     damagePop(finalDamage);
-    if(players[attacker])players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*superGainMul(players[attacker]));
+    if(players[attacker]&&options.grantAttackerSuper!==false){
+      players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*superGainMul(players[attacker]));
+    }
     player.super=Math.min(100,player.super+finalDamage*.35*superGainMul(player));
 
     flashPlayer(player,.11);
@@ -513,6 +615,7 @@ export function createCombatController({
   }
 
   function updateProjectiles(dt){
+    updateSuperEffects(dt);
     const players=getPlayers();
     for(let i=bullets.length-1;i>=0;i--){
       const bullet=bullets[i];
@@ -556,7 +659,7 @@ export function createCombatController({
             parryBullet(enemy,bullet);
             remove=false;
           }else{
-            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner,bullet.style,bullet.mesh.position,bullet.bounces);
+            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner,bullet.style,bullet.mesh.position,bullet.bounces,{grantAttackerSuper:!bullet.isSuper});
             remove=true;
           }
         }
@@ -572,6 +675,8 @@ export function createCombatController({
   function clearProjectiles(){
     bullets.forEach(disposeBullet);
     bullets.length=0;
+    superEffects.forEach(disposeSuperEffect);
+    superEffects.length=0;
     weaponEffects.clear();
   }
 

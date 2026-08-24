@@ -7,7 +7,7 @@ import {
   PASSIVES,
   BODY_META,
   WEAPON_INFO
-} from './loadout-config.js?v=6130';
+} from './loadout-config.js?v=6180';
 import { ARENA_OPTIONS } from './arena-config.js?v=695';
 import { vibrate } from './feedback.js?v=6160';
 
