@@ -16,7 +16,8 @@ check() {
 for file in \
   src/main.js src/game.js src/input.js src/controls.js src/hud-ui.js src/camera.js \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
-  src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js; do
+  src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
+  src/pause-ui.js src/match-scheduler.js src/weapon-effects.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -28,6 +29,9 @@ check "player controller exported" grep -Fq 'export function createPlayerControl
 check "combat controller exported" grep -Fq 'export function createCombatController' src/combat.js
 check "audio controller exported" grep -Fq 'export function createAudioController' src/audio.js
 check "projectile visual controller exported" grep -Fq 'export function createProjectileVisualController' src/projectile-visuals.js
+check "weapon effects controller exported" grep -Fq 'export function createWeaponEffectsController' src/weapon-effects.js
+check "pause UI controller exported" grep -Fq 'export function createPauseUI' src/pause-ui.js
+check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
@@ -75,7 +79,10 @@ check "projectile visuals delegated" grep -Fq 'projectileVisuals.update(bullet,d
 check "shoot animation delegated" grep -Fq "playPlayerAction(player,'shoot');" src/combat.js
 check "death animation delegated" grep -Fq "playPlayerAction(player,'death');" src/game.js
 check "hit reaction always triggered" grep -Fq "if(name==='hit')" src/player.js
-check "hit reaction moves visual rig" grep -Fq 'player.visualRig.position.z=.24*impulse;' src/player.js
+check "hit reaction moves visual rig" grep -Fq 'player.visualRig.position.z=.24*hitImpulse' src/player.js
+check "shot recoil animates weapon" grep -Fq 'player.weaponPivot.position.z=.22*shotImpulse' src/player.js
+check "projectiles start at muzzle anchor" grep -Fq 'getMuzzlePosition(player,new THREE.Vector3())' src/combat.js
+check "weapon impacts delegated" grep -Fq 'weaponEffects.impact(style' src/combat.js
 check "directional projectile planes" grep -Fq 'root.add(horizontal,vertical);' src/projectile-visuals.js
 check "directional projectile follows velocity" grep -Fq 'Math.atan2(-bullet.vel.z,bullet.vel.x)' src/projectile-visuals.js
 check "combat projectile update delegated" grep -Fq 'combatController.updateProjectiles(dt);' src/game.js
@@ -83,6 +90,10 @@ check "player visuals delegated" grep -Fq 'playerController.updatePlayerVisuals(
 check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMoveTo;' src/game.js
 check "camera render delegated" grep -Fq 'cameraController.render();' src/game.js
 check "input update delegated" grep -Fq 'input.update();' src/game.js
+check "pause UI delegated" grep -Fq 'createPauseUI({' src/game.js
+check "pause freezes match scheduler" grep -Fq 'isPaused:()=>paused' src/game.js
+check "split HUD uses camera projection" grep -Fq 'projectWorldToScreen(p.i,q)' src/hud-ui.js
+check "HUD no longer hidden in split mode" bash -c '! grep -Fq "classList.contains(\x27split-arena\x27)" src/hud-ui.js'
 
 for symbol in \
   projectileGeometryFor muzzleFlash weaponShotSound applyShotRecoil disposeBullet \

@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6120';
-import { createInputController } from './input.js?v=6120';
-import { createHudUI } from './hud-ui.js?v=6120';
-import { createCameraController } from './camera.js?v=6120';
+import { createInputController } from './input.js?v=6150';
+import { createHudUI } from './hud-ui.js?v=6150';
+import { createCameraController } from './camera.js?v=6150';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6141';
-import { createCombatController } from './combat.js?v=6141';
-import { createAudioController } from './audio.js?v=6140';
+import { createPlayerController, defenseLabel } from './player.js?v=6150';
+import { createCombatController } from './combat.js?v=6150';
+import { createAudioController } from './audio.js?v=6150';
+import { createPauseUI } from './pause-ui.js?v=6150';
+import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 
 const $ = s => document.querySelector(s);
@@ -150,7 +152,7 @@ function updateStartAvailability(){
 let arenaSelection='square';
 let players=[];
 let particles=[];
-let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
+let running=false, paused=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
 const arenaController=createArenaController({scene});
 const playerController=createPlayerController({scene});
@@ -161,6 +163,7 @@ const makePlayer=playerController.makePlayer;
 const flashPlayer=playerController.flashPlayer;
 const defenseTrail=playerController.defenseTrail;
 const playPlayerAction=playerController.playPlayerAction;
+const getMuzzlePosition=playerController.getMuzzlePosition;
 const audioController=createAudioController();
 const {
   unlock:unlockAudio,
@@ -168,10 +171,17 @@ const {
   playBattleBGM,
   playMenuBGM,
   stopAllBGM,
+  pauseBGM,
+  resumeBGM,
   synthKO,
   playCountdownVoice
 }=audioController;
 playMenuBGM();
+
+const matchScheduler=createMatchScheduler({
+  getGeneration:()=>matchGeneration,
+  isPaused:()=>paused
+});
 
 function particleBurst(pos,color=0xffffff,count=9,scale=.08){
   for(let i=0;i<count;i++){
@@ -187,11 +197,7 @@ function particleBurst(pos,color=0xffffff,count=9,scale=.08){
 }
 
 function matchLater(fn,ms){
-  const gen=matchGeneration;
-  return setTimeout(()=>{
-    if(gen!==matchGeneration)return;
-    fn();
-  },ms);
+  return matchScheduler.later(fn,ms);
 }
 
 function damagePop(amount){
@@ -205,7 +211,7 @@ function damagePop(amount){
 const combatController=createCombatController({
   scene,
   getPlayers:()=>players,
-  isRunning:()=>running,
+  isRunning:()=>running&&!paused,
   canMoveTo,
   hitObstacle,
   damageArenaObstacle:arenaController.damageObstacle,
@@ -216,8 +222,10 @@ const combatController=createCombatController({
   flashPlayer,
   defenseTrail,
   playPlayerAction,
+  getMuzzlePosition,
   damagePop,
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
+  cameraShake:(strength,duration)=>cameraController.addShake(strength,duration),
   onKO:ko
 });
 const shoot=combatController.shoot;
@@ -226,7 +234,7 @@ const activateSuper=combatController.activateSuper;
 
 const {updateHUD,updateWorldStatus,clearWorldStatus}=createHudUI({
   getPlayers:()=>players,
-  getCamera:()=>cameraController.getProjectionCamera(),
+  projectWorldToScreen:cameraController.projectWorldToScreen,
   defenseLabel
 });
 
@@ -263,6 +271,9 @@ function ko(victim,attacker){
 function finish(winner){
   matchGeneration++;
   running=false;
+  paused=false;
+  pauseUI.hide();
+  pauseUI.setAvailable(false);
   stopAllBGM();
   renderMatchResult(winner,players);
   $('#winner').textContent=`P${winner+1} WIN!`;
@@ -323,11 +334,17 @@ async function battleCountdown(generation){
   await new Promise(r=>setTimeout(r,350));
   if(generation!==matchGeneration)return;
   running=true;
+  pauseUI.setAvailable(true);
 }
 
 function startBattle(){
   hideMatchResult();
   matchGeneration++;
+  matchScheduler.clear();
+  paused=false;
+  pauseUI.hide();
+  pauseUI.setAvailable(false);
+  input.clear();
   const generation=matchGeneration;
   suddenDeath=false;
   clearWorldStatus();
@@ -353,6 +370,10 @@ function startBattle(){
 function fullReset(){
   hideMatchResult();
   matchGeneration++;
+  matchScheduler.clear();
+  paused=false;
+  pauseUI.hide();
+  input.clear();
   suddenDeath=false;
   clearPowerCore();
   powerCoreTimer=7;
@@ -366,6 +387,7 @@ function fullReset(){
   });
   matchTime=90;
   running=true;
+  pauseUI.setAvailable(true);
   result.hidden=true;
   playBattleBGM(arenaSelection==='hex'?'space':'normal');
   updateHUD();
@@ -373,20 +395,28 @@ function fullReset(){
 }
 
 $('#rematch').addEventListener('click',fullReset);
-$('#back-menu').addEventListener('click',()=>{
+function backToMenu(){
   hideMatchResult();
   matchGeneration++;
+  matchScheduler.clear();
   suddenDeath=false;
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
   running=false;
+  paused=false;
+  input.clear();
+  pauseUI.hide();
+  pauseUI.setAvailable(false);
+  clearWorldStatus();
   playMenuBGM();
   result.hidden=true;
   $('#hud').hidden=true;
   $('#controls').hidden=true;
   $('#menu').hidden=false;
-});
+}
+
+$('#back-menu').addEventListener('click',backToMenu);
 
 restoreLoadout(0);
 restoreLoadout(1);
@@ -435,6 +465,39 @@ const input=createInputController({
   screenVectorToWorld:cameraController.screenVectorToWorld,
   shoot,
   activateSuper
+});
+
+function canPauseBattle(){
+  return running&&!paused&&players.length===2&&$('#menu').hidden&&result.hidden;
+}
+
+function pauseBattle(){
+  if(!canPauseBattle())return false;
+  paused=true;
+  input.clear();
+  pauseBGM();
+  return true;
+}
+
+function resumeBattle(){
+  if(!paused)return;
+  paused=false;
+  pauseUI.hide();
+  pauseUI.setAvailable(running);
+  resumeBGM();
+  last=performance.now();
+}
+
+const pauseUI=createPauseUI({
+  canPause:canPauseBattle,
+  onPause:pauseBattle,
+  onResume:resumeBattle,
+  onRestart:fullReset,
+  onBackToMenu:backToMenu
+});
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&pauseBattle())pauseUI.show();
 });
 
 let powerCore=null;
@@ -554,7 +617,8 @@ function updatePowerCore(dt){
 }
 
 function update(dt){
-  if(!running)return;
+  if(!running||paused)return;
+  matchScheduler.update(dt);
   input.update();
   updatePowerCore(dt);
   matchTime=Math.max(0,matchTime-dt);
@@ -660,8 +724,10 @@ function update(dt){
 function loop(now){
   const dt=Math.min(.033,(now-last)/1000);
   last=now;
-  if(hitStop>0)hitStop=Math.max(0,hitStop-dt);
-  else update(dt);
+  if(!paused){
+    if(hitStop>0)hitStop=Math.max(0,hitStop-dt);
+    else update(dt);
+  }
   cameraController.render();
   requestAnimationFrame(loop);
 }

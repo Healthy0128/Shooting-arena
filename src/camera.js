@@ -17,6 +17,8 @@ export function createCameraController({renderer,scene,getPlayers}){
   const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let mode='top';
   let initialized=false;
+  let shakeUntil=0;
+  let shakeStrength=0;
 
   function getLayoutSize(){
     const canvas=renderer.domElement;
@@ -125,6 +127,45 @@ export function createCameraController({renderer,scene,getPlayers}){
     return controlMapper.mapStick(player,x,y);
   }
 
+  function projectWorldToScreen(player,worldPosition){
+    const {w,h}=getLayoutSize();
+    let camera=topCamera;
+    let viewportTop=0;
+    let viewportHeight=h;
+    if(mode==='arena'){
+      if(player!==0&&player!==1)return null;
+      camera=chaseCameras[player];
+      viewportHeight=h/2;
+      viewportTop=player===0?h/2:0;
+    }else updateTopCamera();
+
+    const q=worldPosition.clone().project(camera);
+    return {
+      x:(q.x*.5+.5)*w,
+      y:viewportTop+(-q.y*.5+.5)*viewportHeight,
+      visible:q.z>=-1&&q.z<=1&&q.x>=-1.15&&q.x<=1.15&&q.y>=-1.2&&q.y<=1.2
+    };
+  }
+
+  function addShake(strength=2,duration=90){
+    shakeStrength=Math.max(shakeStrength,strength);
+    shakeUntil=Math.max(shakeUntil,performance.now()+duration);
+  }
+
+  function updateShake(){
+    const canvas=renderer.domElement;
+    if(!canvas)return;
+    const remaining=shakeUntil-performance.now();
+    if(remaining<=0){
+      shakeStrength=0;
+      canvas.style.transform='';
+      return;
+    }
+    const x=(Math.random()-.5)*shakeStrength;
+    const y=(Math.random()-.5)*shakeStrength;
+    canvas.style.transform=`translate(${x}px,${y}px)`;
+  }
+
   function renderSplitArena(){
     const size=new THREE.Vector2();renderer.getSize(size);
     const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y));
@@ -155,6 +196,7 @@ export function createCameraController({renderer,scene,getPlayers}){
     const players=getPlayers();
     if(mode==='arena'&&players.length===2)renderSplitArena();
     else baseRender(scene,topCamera);
+    updateShake();
   }
 
   function init(){
@@ -183,6 +225,7 @@ export function createCameraController({renderer,scene,getPlayers}){
     getMode:()=>mode,
     getTpsBasis,
     isPortrait,
-    getProjectionCamera:()=>topCamera
+    projectWorldToScreen,
+    addShake
   };
 }

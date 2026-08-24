@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META } from './loadout-config.js?v=6120';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6141';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6150';
 
 export function createCombatController({
   scene,
@@ -17,12 +18,15 @@ export function createCombatController({
   flashPlayer,
   defenseTrail,
   playPlayerAction,
+  getMuzzlePosition,
   damagePop,
   addHitStop,
+  cameraShake,
   onKO
 }){
   const bullets=[];
   const projectileVisuals=createProjectileVisualController();
+  const weaponEffects=createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake});
 
   function bodyMeta(player){
     return BODY_META[player?.cfg?.bodyKey]||BODY_META.knight;
@@ -45,43 +49,6 @@ export function createCombatController({
     projectileVisuals.dispose(bullet.mesh);
   }
 
-  function muzzleFlash(player){
-    const flash=new THREE.Mesh(
-      new THREE.SphereGeometry(.12,6,4),
-      new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.9,depthWrite:false})
-    );
-    const dir=new THREE.Vector3(player.aim.x,0,player.aim.y);
-    if(dir.lengthSq()<.01)dir.set(0,0,player.i===0?-1:1);
-    dir.normalize();
-    flash.position.copy(player.root.position).addScaledVector(dir,.9);
-    flash.position.y=.86;
-    scene.add(flash);
-    matchLater(()=>{
-      scene.remove(flash);
-      flash.geometry.dispose();
-      flash.material.dispose();
-    },45);
-  }
-
-  function weaponShotSound(style){
-    if(style==='scatter'){
-      tone(92,.065,'square',.03,35);
-      matchLater(()=>tone(138,.04,'square',.018,-25),24);
-    }else if(style==='rapid'){
-      tone(245,.028,'square',.016,95);
-    }else if(style==='arcane'){
-      tone(410,.07,'sine',.028,180);
-      matchLater(()=>tone(620,.045,'sine',.016,-100),30);
-    }else if(style==='bladegun'){
-      tone(215,.04,'triangle',.02,120);
-    }else if(style==='cannon'){
-      tone(68,.11,'sawtooth',.04,22);
-      matchLater(()=>tone(105,.065,'square',.022,-35),36);
-    }else{
-      tone(180,.04,'square',.02,85);
-    }
-  }
-
   function applyShotRecoil(player){
     let recoil=player.cfg.recoil||0;
     recoil*=THREE.MathUtils.clamp(1-(player.cfg.recoilResist||0),.55,1.15);
@@ -99,10 +66,8 @@ export function createCombatController({
     const style=player?.cfg.weaponStyle||'rifle';
     const radius=player?.cfg.bulletRadius||.16;
     const mesh=projectileVisuals.create(style,radius,player?.powerBuff>0);
-    mesh.position.copy(player.root.position);
-    mesh.position.y=.82;
     const forward=dir.clone().normalize();
-    mesh.position.addScaledVector(forward,.82);
+    mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(forward,.08);
     scene.add(mesh);
 
     bullets.push({
@@ -142,9 +107,9 @@ export function createCombatController({
       const dir=base.clone().applyAxisAngle(new THREE.Vector3(0,1,0),ang);
       spawnBullet(i,dir,player.cfg.damage*attackMul,player.cfg.bulletSpeed);
     }
-    muzzleFlash(player);
+    weaponEffects.muzzle(player.cfg.weaponStyle||'rifle',getMuzzlePosition(player,new THREE.Vector3()),base,player.powerBuff>0);
     applyShotRecoil(player);
-    weaponShotSound(player.cfg.weaponStyle||'rifle');
+    weaponEffects.shotSound(player.cfg.weaponStyle||'rifle');
     if(navigator.vibrate)navigator.vibrate(player.cfg.weaponStyle==='cannon'?24:player.cfg.weaponStyle==='scatter'?14:8);
   }
 
@@ -290,10 +255,8 @@ export function createCombatController({
   function superShot(owner,dir,damage,speed,style,radius=.18,life=1.4){
     const player=getPlayers()[owner];
     const mesh=projectileVisuals.create(style,radius,true);
-    mesh.position.copy(player.root.position);
-    mesh.position.y=.9;
     const forward=dir.clone().normalize();
-    mesh.position.addScaledVector(forward,.9);
+    mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(forward,.08);
     scene.add(mesh);
     bullets.push({mesh,vel:forward.multiplyScalar(speed),owner,life,radius,damage:damage*bodyDamageMul(player),style,bounces:0,ricochetMax:0});
   }
@@ -321,7 +284,7 @@ export function createCombatController({
           if(!isRunning()||!player.alive)return;
           const dir=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
           superShot(i,dir,baseDamage,16.5,'rapid',.11,1.4);
-          muzzleFlash(player);
+          weaponEffects.muzzle('rapid',getMuzzlePosition(player,new THREE.Vector3()),dir,player.powerBuff>0);
           tone(285,.025,'square',.014,80);
         },k*62);
       }
@@ -393,10 +356,10 @@ export function createCombatController({
     if(navigator.vibrate)navigator.vibrate([20,18,35]);
   }
 
-  function damageObstacle(obstacle,amount,pos){
+  function damageObstacle(obstacle,amount,pos,style='rifle',bounces=0){
     const {handled,destroyed}=damageArenaObstacle(obstacle,amount);
     if(!handled)return false;
-    particleBurst(pos.clone().setY(.55),0xd6a05d,7,.065);
+    weaponEffects.impact(style,pos,'obstacle',bounces);
     if(destroyed){
       particleBurst(pos.clone().setY(.6),0xc58b4a,18,.09);
       tone(70,.12,'sawtooth',.035,-25);
@@ -404,7 +367,7 @@ export function createCombatController({
     return true;
   }
 
-  function damage(victim,amount,attacker){
+  function damage(victim,amount,attacker,style='rifle',impactPosition=null,bounces=0){
     const players=getPlayers();
     const player=players[victim];
     if(!player.alive||player.invuln>0)return;
@@ -450,6 +413,7 @@ export function createCombatController({
 
     flashPlayer(player,.11);
     playPlayerAction(player,'hit');
+    weaponEffects.impact(style,impactPosition||player.root.position.clone().setY(.9),'player',bounces);
     const src=players[attacker]?.root.position;
     if(src){
       const away=player.root.position.clone().sub(src);
@@ -466,7 +430,6 @@ export function createCombatController({
 
     addHitStop(.045);
     tone(85,.07,'sawtooth',.04,-30);
-    particleBurst(player.root.position.clone().setY(.9),0xffffff,10,.075);
     if(navigator.vibrate)navigator.vibrate(18);
     if(player.hp<=0)onKO(victim,attacker);
   }
@@ -542,7 +505,7 @@ export function createCombatController({
         const obstacle=hitObstacle(bullet.mesh.position,bullet.radius);
         if(obstacle){
           if(!reflectFromObstacle(bullet,obstacle)){
-            damageObstacle(obstacle,bullet.damage,bullet.mesh.position);
+            damageObstacle(obstacle,bullet.damage,bullet.mesh.position,bullet.style,bullet.bounces);
             remove=true;
           }
         }else if(
@@ -563,7 +526,7 @@ export function createCombatController({
             parryBullet(enemy,bullet);
             remove=false;
           }else{
-            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner);
+            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner,bullet.style,bullet.mesh.position,bullet.bounces);
             remove=true;
           }
         }
@@ -579,6 +542,7 @@ export function createCombatController({
   function clearProjectiles(){
     bullets.forEach(disposeBullet);
     bullets.length=0;
+    weaponEffects.clear();
   }
 
   return {shoot,defenseAction,activateSuper,updateProjectiles,clearProjectiles};

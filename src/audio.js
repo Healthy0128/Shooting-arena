@@ -18,6 +18,7 @@ export function createAudioController(){
   let synthMode=null;
   let synthStep=0;
   let desiredMode='menu';
+  let bgmPaused=false;
 
   function unlock(){
     try{
@@ -66,7 +67,7 @@ export function createAudioController(){
     const notes=menu?MENU_NOTES:BATTLE_NOTES;
     const interval=menu?520:240;
     synthTimer=setInterval(()=>{
-      if(desiredMode!==mode)return;
+      if(bgmPaused||desiredMode!==mode)return;
       const freq=notes[synthStep++%notes.length];
       tone(freq,menu?.34:.16,menu?'sine':'triangle',menu?.0045:.008,0);
       if(synthStep%4===1){
@@ -87,6 +88,7 @@ export function createAudioController(){
 
   function playRealTrack(mode,volume){
     desiredMode=mode;
+    bgmPaused=false;
     stopSynthBGM();
     if(realBGMMode===mode&&realBGM&&!realBGM.paused)return;
     const src=BGM_FILES[mode]||BGM_FILES.normal;
@@ -125,8 +127,24 @@ export function createAudioController(){
 
   function stopAllBGM(){
     desiredMode=null;
+    bgmPaused=false;
     stopSynthBGM();
     stopRealBGM();
+  }
+
+  function pauseBGM(){
+    bgmPaused=true;
+    realBGM?.pause();
+  }
+
+  function resumeBGM(){
+    if(!bgmPaused)return;
+    bgmPaused=false;
+    if(realBGM){
+      realBGM.play().catch(()=>startSynthBGM(desiredMode||'normal'));
+    }else if(desiredMode){
+      playRealTrack(desiredMode,desiredMode==='menu'?.16:.28);
+    }
   }
 
   function synthKO(){
@@ -150,5 +168,5 @@ export function createAudioController(){
   window.addEventListener('pointerdown',unlockAndRetry,{once:true,capture:true});
   window.addEventListener('keydown',unlockAndRetry,{once:true,capture:true});
 
-  return {unlock,tone,playBattleBGM,playMenuBGM,stopAllBGM,synthKO,playCountdownVoice};
+  return {unlock,tone,playBattleBGM,playMenuBGM,stopAllBGM,pauseBGM,resumeBGM,synthKO,playCountdownVoice};
 }
