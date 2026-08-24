@@ -1,5 +1,6 @@
-export function createInputController({getPlayers,mapStick,shoot,activateSuper}){
+export function createInputController({getPlayers,mapStick,screenVectorToWorld,shoot,activateSuper}){
   const activePointers=new Map();
+  const mapControl=mapStick||screenVectorToWorld;
 
   function clearTransientInput(){
     activePointers.clear();
@@ -26,7 +27,7 @@ export function createInputController({getPlayers,mapStick,shoot,activateSuper})
       knob.style.transform=`translate(calc(-50% + ${screenDx*k}px),calc(-50% + ${screenDy*k}px))`;
       let vx=screenDx/max,vy=screenDy/max;const mag=Math.hypot(vx,vy);
       if(mag>1){vx/=mag;vy/=mag} if(mag<.12){vx=0;vy=0}
-      const world=mapStick(player,vx,vy);
+      const world=mapControl(player,vx,vy);
       const vec=kind==='move'?players[player].move:players[player].aim;
       vec.copy(world);
       if(kind==='aim'){
@@ -76,14 +77,14 @@ export function createInputController({getPlayers,mapStick,shoot,activateSuper})
   function applyKeyboardMove(player,x,y){
     const players=getPlayers();
     if(!players[player])return;
-    if(x||y)players[player].move.copy(mapStick(player,x,y)).normalize();
+    if(x||y)players[player].move.copy(mapControl(player,x,y)).normalize();
     else if(![...activePointers.values()].some(v=>v.player===player&&v.kind==='move'))players[player].move.set(0,0);
   }
 
   function applyKeyboardAim(player,x,y){
     const players=getPlayers();
     if(!players[player])return;
-    players[player].aim.copy(mapStick(player,x,y));
+    players[player].aim.copy(mapControl(player,x,y));
     shoot(player);
   }
 
