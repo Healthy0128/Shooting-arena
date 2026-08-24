@@ -105,29 +105,17 @@ export function createCameraController({renderer,scene,getPlayers}){
     getPortrait:isPortrait
   });
 
-  function screenVectorToWorld(player,x,y){
-    return controlMapper.mapStick(player,x,y);
-  }
-
-  function screenPointToGround(player,clientX,clientY){
+  function screenPointToGround(player,ndcX,ndcY){
     if(mode!=='arena'||(player!==0&&player!==1))return null;
-    const canvas=renderer.domElement;
-    const rect=canvas?.getBoundingClientRect?.();
-    if(!rect?.width||!rect?.height)return null;
-    const half=rect.height/2;
-    const viewportTop=player===1?0:half;
-    const localX=clientX-rect.left;
-    const localY=clientY-rect.top-viewportTop;
-    if(localX<0||localX>rect.width||localY<0||localY>half)return null;
-
-    const ndc=new THREE.Vector2(
-      localX/rect.width*2-1,
-      1-localY/half*2
-    );
-    tapRaycaster.setFromCamera(ndc,chaseCameras[player]);
+    tapRaycaster.setFromCamera(new THREE.Vector2(ndcX,ndcY),chaseCameras[player]);
     const hit=new THREE.Vector3();
     if(!tapRaycaster.ray.intersectPlane(groundPlane,hit))return null;
     return {x:hit.x,z:hit.z};
+  }
+
+  function screenVectorToWorld(player,x,y,projection='vector'){
+    if(projection==='ground')return screenPointToGround(player,x,y);
+    return controlMapper.mapStick(player,x,y);
   }
 
   function renderSplitArena(){
@@ -185,7 +173,6 @@ export function createCameraController({renderer,scene,getPlayers}){
     init,
     render,
     screenVectorToWorld,
-    screenPointToGround,
     getMode:()=>mode,
     getTpsBasis,
     isPortrait,
