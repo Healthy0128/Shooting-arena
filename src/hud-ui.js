@@ -1,4 +1,4 @@
-export function createHudUI({getPlayers,getCamera,defenseLabel}){
+export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
   const $=s=>document.querySelector(s);
 
   function ensureWorldStatus(p){
@@ -6,6 +6,7 @@ export function createHudUI({getPlayers,getCamera,defenseLabel}){
     const el=document.createElement('div');
     el.className=`world-status p${p.i+1}`;
     el.innerHTML=`
+      <div class="world-status-head"><span>P${p.i+1}</span><strong class="world-heat-label">HEAT 0</strong></div>
       <div class="world-hp-track"><div class="world-hp-fill"></div></div>
       <div class="world-heat-track"><div class="world-heat-fill"></div></div>
       <div class="world-def-state"></div>
@@ -16,14 +17,6 @@ export function createHudUI({getPlayers,getCamera,defenseLabel}){
 
   function updateWorldStatus(){
     const players=getPlayers();
-    if(document.body.classList.contains('split-arena')){
-      players.forEach(p=>{
-        if(p.worldStatus)p.worldStatus.style.display='none';
-      });
-      return;
-    }
-
-    const camera=getCamera();
     players.forEach(p=>{
       ensureWorldStatus(p);
       const el=p.worldStatus;
@@ -31,11 +24,12 @@ export function createHudUI({getPlayers,getCamera,defenseLabel}){
       el.style.display='block';
 
       const q=p.root.position.clone();
-      q.y=2.35;
-      q.project(camera);
+      q.y=2.5;
+      const screen=projectWorldToScreen(p.i,q);
+      if(!screen?.visible){el.style.display='none';return}
 
-      el.style.left=`${(q.x*.5+.5)*100}%`;
-      el.style.top=`${(-q.y*.5+.5)*100}%`;
+      el.style.left=`${screen.x}px`;
+      el.style.top=`${screen.y}px`;
 
       const hp=el.querySelector('.world-hp-fill');
       const heat=el.querySelector('.world-heat-fill');
@@ -43,6 +37,9 @@ export function createHudUI({getPlayers,getCamera,defenseLabel}){
       heat.style.width=`${Math.max(0,Math.min(100,p.heat||0))}%`;
       heat.classList.toggle('warm',(p.heat||0)>=60);
       heat.classList.toggle('overheated',!!p.overheated);
+      const heatValue=Math.round(p.heat||0);
+      const heatLabel=el.querySelector('.world-heat-label');
+      heatLabel.textContent=p.overheated?'OVERHEAT':`HEAT ${heatValue}`;
       el.classList.toggle('is-overheated',!!p.overheated);
       el.classList.toggle('is-recovering',(p.recovery||0)>0);
       el.classList.toggle('is-powered',(p.powerBuff||0)>0);

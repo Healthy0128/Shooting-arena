@@ -144,6 +144,9 @@ export function createPlayerController({scene}){
     );
     gun.position.z=-gunLen*.5;
     weaponPivot.add(gun);
+    const muzzleAnchor=new THREE.Group();
+    muzzleAnchor.position.z=-gunLen;
+    weaponPivot.add(muzzleAnchor);
 
     const x=i===0?-SPAWN_X:SPAWN_X;
     root.position.set(x,0,0);
@@ -179,14 +182,14 @@ export function createPlayerController({scene}){
     defenseFx.add(parryRing);
 
     const player={
-      i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,weaponPrimitive:gun,weaponReal:null,
+      i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,muzzleAnchor,weaponPrimitive:gun,weaponReal:null,
       hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
       mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,
-      hitReaction:0,hitReactionDuration:.26,hitSide:1,bodyScale
+      hitReaction:0,hitReactionDuration:.26,hitSide:1,shotReaction:0,shotReactionDuration:.12,bodyScale
     };
     attachRealModel(player);
     attachWeaponModel(player);
@@ -210,8 +213,11 @@ export function createPlayerController({scene}){
     player.parryChain=0;
     player.flashTime=0;
     player.hitReaction=0;
+    player.shotReaction=0;
     player.visualRig.position.set(0,0,0);
     player.visualRig.rotation.set(0,0,0);
+    player.weaponPivot.position.z=0;
+    player.weaponPivot.rotation.x=0;
     player.actionTime=0;
     if(player.oneShotAction){
       player.oneShotAction.stop();
@@ -264,6 +270,10 @@ export function createPlayerController({scene}){
       player.hitReaction=player.hitReactionDuration||.26;
       player.hitSide=Math.random()<.5?-1:1;
     }
+    if(name==='shoot'){
+      player.shotReactionDuration=THREE.MathUtils.clamp(.085+(player.cfg.recoil||0)*.18,.09,.17);
+      player.shotReaction=player.shotReactionDuration;
+    }
     const action=player?.actionAnimations?.[name];
     if(!action)return false;
     if(player.oneShotAction&&player.oneShotAction!==action){
@@ -283,18 +293,24 @@ export function createPlayerController({scene}){
     if(!player.guardShield)return;
     player.flashTime=Math.max(0,(player.flashTime||0)-dt);
     player.hitReaction=Math.max(0,(player.hitReaction||0)-dt);
+    player.shotReaction=Math.max(0,(player.shotReaction||0)-dt);
+    let hitImpulse=0;
     if(player.hitReaction>0){
       const duration=player.hitReactionDuration||.26;
       const phase=1-player.hitReaction/duration;
-      const impulse=Math.sin(THREE.MathUtils.clamp(phase,0,1)*Math.PI);
-      player.visualRig.position.z=.24*impulse;
-      player.visualRig.rotation.x=-.2*impulse;
-      player.visualRig.rotation.z=(player.hitSide||1)*.09*impulse;
-    }else{
-      player.visualRig.position.z=0;
-      player.visualRig.rotation.x=0;
-      player.visualRig.rotation.z=0;
+      hitImpulse=Math.sin(THREE.MathUtils.clamp(phase,0,1)*Math.PI);
     }
+    let shotImpulse=0;
+    if(player.shotReaction>0){
+      const phase=1-player.shotReaction/(player.shotReactionDuration||.12);
+      shotImpulse=Math.sin(THREE.MathUtils.clamp(phase,0,1)*Math.PI);
+    }
+    const recoilScale=THREE.MathUtils.clamp((player.cfg.recoil||.08)*1.8,.08,.62);
+    player.visualRig.position.z=.24*hitImpulse+.09*shotImpulse*recoilScale;
+    player.visualRig.rotation.x=-.2*hitImpulse+.06*shotImpulse*recoilScale;
+    player.visualRig.rotation.z=(player.hitSide||1)*.09*hitImpulse;
+    player.weaponPivot.position.z=.22*shotImpulse*recoilScale;
+    player.weaponPivot.rotation.x=.16*shotImpulse*recoilScale;
 
     const guardOn=player.guarding&&player.alive;
     player.guardShield.material.opacity=guardOn?.42:0;
@@ -358,5 +374,11 @@ export function createPlayerController({scene}){
     players.forEach(player=>scene.remove(player.root));
   }
 
-  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,playPlayerAction,updatePlayerVisuals,removePlayers};
+  function getMuzzlePosition(player,target=new THREE.Vector3()){
+    if(!player?.muzzleAnchor)return target.copy(player?.root?.position||new THREE.Vector3());
+    player.root.updateMatrixWorld(true);
+    return player.muzzleAnchor.getWorldPosition(target);
+  }
+
+  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,playPlayerAction,updatePlayerVisuals,removePlayers,getMuzzlePosition};
 }

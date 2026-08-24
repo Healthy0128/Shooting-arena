@@ -192,5 +192,5 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   }
 
   syncInputMode();
-  return {update};
+  return {update,clear:clearTransientInput};
 }
