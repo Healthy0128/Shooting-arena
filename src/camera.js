@@ -106,8 +106,15 @@ export function createCameraController({renderer,scene,getPlayers}){
   });
 
   function screenPointToGround(player,ndcX,ndcY){
-    if(mode!=='arena'||(player!==0&&player!==1))return null;
-    tapRaycaster.setFromCamera(new THREE.Vector2(ndcX,ndcY),chaseCameras[player]);
+    let camera;
+    if(mode==='arena'){
+      if(player!==0&&player!==1)return null;
+      camera=chaseCameras[player];
+    }else{
+      updateTopCamera();
+      camera=topCamera;
+    }
+    tapRaycaster.setFromCamera(new THREE.Vector2(ndcX,ndcY),camera);
     const hit=new THREE.Vector3();
     if(!tapRaycaster.ray.intersectPlane(groundPlane,hit))return null;
     return {x:hit.x,z:hit.z};
