@@ -18,7 +18,7 @@ for file in \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
   src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
-  src/field-weapons.js; do
+  src/field-weapons.js src/help-ui.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -36,6 +36,7 @@ check "match scheduler exported" grep -Fq 'export function createMatchScheduler'
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "field weapon controller exported" grep -Fq 'export function createFieldWeaponController' src/field-weapons.js
+check "help UI exported" grep -Fq 'export function initHelpUI' src/help-ui.js
 check "input controller exported" grep -Fq 'export function createInputController' src/input.js
 check "control mapper exported" grep -Fq 'export function createControlMapper' src/controls.js
 check "HUD controller exported" grep -Fq 'export function createHudUI' src/hud-ui.js
@@ -112,6 +113,10 @@ check "field weapon homing exists" grep -Fq 'if(bullet.homing)' src/combat.js
 check "field projectiles have unique styles" grep -Fq "seeker:{color:" src/projectile-visuals.js
 check "stalemate accelerates pickup" grep -Fq 'quietTime>=7?2.5:1' src/field-weapons.js
 check "field weapon is shown over player" grep -Fq 'class="world-field-weapon"' src/hud-ui.js
+check "tutorial opens from initial menu" grep -Fq 'id="open-help"' index.html
+check "tutorial screenshot has annotations" grep -Fq 'help-pin pin-6' src/help-ui.js
+check "tutorial has four focused pages" grep -Fq "const HELP_PAGES=['controls','gauges','field','supers'];" src/help-ui.js
+check "tutorial logic stays out of game orchestrator" bash -c '! grep -Fq "initHelpUI" src/game.js'
 check "overdrive weapon profiles are centralized" grep -Fq 'export const OVERDRIVE_PROFILES=' src/loadout-config.js
 check "overdrive ignores temporary field weapon" grep -Fq 'OVERDRIVE_PROFILES[player.cfg.weaponStyle]' src/combat.js
 check "overdrive cannon total is normalized" grep -Fq "cannon:{bursts:2,pellets:1,interval:260,damage:85" src/loadout-config.js
