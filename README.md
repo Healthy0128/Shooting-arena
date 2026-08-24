@@ -20,6 +20,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 - `src/ui.js` — UIの薄い窓口。メニューUIを初期化し、試合UI APIを再公開する
 - `src/menu-ui.js` — ロードアウトUI初期化、アリーナ選択UI生成、ビルド上限表示
 - `src/match-ui.js` — バナー表示、試合結果統計
+- `src/input.js` — タッチ／キーボード入力。ゲーム状態や射撃処理は依存注入で受け取る
 - `style.css` — UI・画面レイアウト
 - `assets/models/characters/` — 使用中の6キャラクター
 - `assets/models/weapons/` — 使用中の6武器と依存ファイル
@@ -61,13 +62,16 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
    - バナーと試合結果統計を `match-ui.js` へ分離済み
    - 旧結果オーバーレイと追加結果カードの二重実装を統合済み
    - HUD / ワールドステータスはまだ `game.js` 側
-4. **入力処理 — 候補作成・未反映**
-   - `input.js` は依存注入型の候補を再設計・検証済み
+4. **入力処理 — 完了**
+   - タッチ／キーボード入力を `input.js` へ原子移動済み
    - `screenVectorToWorld()` はcamera境界として `game.js` に残す
-   - タッチ／キー入力だけを移し、旧入力実装と同一変更で置換できるまで `main` には追加しない
-5. **カメラ・レンダリング — 未着手**
-6. **ステージ生成 — 未着手**
-7. **プレイヤー・戦闘処理 — 未着手**
+   - `players` / `shoot` / `activateSuper` は直接importせず依存注入
+   - 旧 `activePointers` / `keys` / `keyboardInput()` は `game.js` から削除済み
+   - CIで旧入力実装の復活とinput import重複を禁止
+5. **HUD / ワールドステータス — 次**
+6. **カメラ・レンダリング — 未着手**
+7. **ステージ生成 — 未着手**
+8. **プレイヤー・戦闘処理 — 未着手**
 
 ※ 未完成の分割ファイルを旧実装と並存させることはしません。安全に旧定義を削除できる状態になってから同一変更で反映します。
 
@@ -131,7 +135,7 @@ Three.jsは`index.html`のimport map経由でjsDelivrから読み込みます。
 デプロイ前に少なくとも以下を確認します。
 
 - `src/main.js` の構文
-- `src/game.js` の構文
+- `src/game.js` / `src/input.js` の構文
 - `src/arena-config.js` の構文
 - `src/loadout-config.js` の構文
 - `src/ui.js` / `src/menu-ui.js` / `src/match-ui.js` の構文
