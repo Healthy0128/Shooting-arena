@@ -296,6 +296,7 @@ export function createCombatController({
     fill.rotation.x=-Math.PI/2;fill.position.copy(position).setY(.055);
     const border=makeGroundRing(position,2.85,3.35,0x5be0d0,.72);
     const mesh=new THREE.Group();mesh.add(fill);mesh.add(border);
+    scene.add(mesh);
     superEffects.push({type:'novaField',owner,position,radius:3.35,life:4,tick:.05,mesh,fill,border});
   }
 
