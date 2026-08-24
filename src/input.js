@@ -8,7 +8,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     inputMode=mode;
     document.body.classList.toggle('touch-input',mode==='touch');
     document.body.classList.toggle('keyboard-input',mode==='keyboard');
-    const hideAim=isTpsMode()&&mode==='touch';
+    const hideAim=mode==='touch';
     document.querySelectorAll('.stick-zone.aim').forEach(zone=>{
       zone.style.display=hideAim?'none':'';
     });
@@ -69,7 +69,9 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
       const vec=kind==='move'?players[player].move:players[player].aim;
       vec.copy(world);
       if(kind==='aim'){
-        if(isTpsMode()){
+        if(inputMode==='touch'){
+          players[player].fireHeld=false;
+        }else if(isTpsMode()){
           players[player].fireHeld=false;
         }else{
           players[player].fireHeld=mag>.35;
@@ -107,20 +109,24 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   canvas?.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse')return;
     syncInputMode('touch');
-    if(!isTpsMode())return;
     const players=getPlayers();
     if(players.length<2)return;
     const r=canvas.getBoundingClientRect();
+    const localX=e.clientX-r.left;
     const localY=e.clientY-r.top;
     const half=Math.max(1,r.height/2);
     const player=localY<half?1:0;
     const fighter=players[player];
     if(!fighter?.alive)return;
 
-    const localX=e.clientX-r.left;
-    const viewportY=player===1?localY:localY-half;
     const ndcX=localX/Math.max(1,r.width)*2-1;
-    const ndcY=1-viewportY/half*2;
+    let ndcY;
+    if(isTpsMode()){
+      const viewportY=player===1?localY:localY-half;
+      ndcY=1-viewportY/half*2;
+    }else{
+      ndcY=1-localY/Math.max(1,r.height)*2;
+    }
     const target=mapControl(player,ndcX,ndcY,'ground');
     if(!target)return;
 
