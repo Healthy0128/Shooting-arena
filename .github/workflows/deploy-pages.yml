@@ -43,6 +43,7 @@ jobs:
           check "input.js syntax" node --check src/input.js
           check "hud-ui.js syntax" node --check src/hud-ui.js
           check "camera.js syntax" node --check src/camera.js
+          check "arena.js syntax" node --check src/arena.js
           check "arena-config.js syntax" node --check src/arena-config.js
           check "ui.js syntax" node --check src/ui.js
           check "menu-ui.js syntax" node --check src/menu-ui.js
@@ -56,7 +57,7 @@ jobs:
           echo "CHECK: ui import count"
           test "$(grep -Fc "from './ui.js?v=695'" src/game.js)" -eq 1 || { echo '::error::ui import count'; exit 1; }
           echo "PASS: ui import count"
-          check "ui initializes menu UI" grep -Fq "from './menu-ui.js?v=695';" src/ui.js
+          check "ui exposes menu UI" grep -Fq "from './menu-ui.js?v=695';" src/ui.js
           check "ui re-exports match UI" grep -Fq "from './match-ui.js?v=695';" src/ui.js
 
           echo "CHECK: camera import count"
@@ -80,6 +81,33 @@ jobs:
             if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol camera state returned to game.js"; exit 1; fi
             echo "PASS: no local $symbol camera state in game.js"
           done
+
+          echo "CHECK: arena controller import count"
+          test "$(grep -Fc "from './arena.js?v=695'" src/game.js)" -eq 1 || { echo '::error::arena controller import count'; exit 1; }
+          echo "PASS: arena controller import count"
+          check "arena controller is created" grep -Fq 'const arenaController=createArenaController({scene});' src/game.js
+          check "arena controller is exported" grep -Fq 'export function createArenaController' src/arena.js
+          check "arena controller owns stage props" grep -Fq "import { ARENA, PROPS, STAGE_THEMES } from './arena-config.js?v=695';" src/arena.js
+          check "game uses arena build API" grep -Fq 'const buildArena=arenaController.build;' src/game.js
+          check "game uses arena movement API" grep -Fq 'const canMoveTo=arenaController.canMoveTo;' src/game.js
+          check "game uses arena hit API" grep -Fq 'const hitObstacle=arenaController.hitObstacle;' src/game.js
+          check "game uses arena bush API" grep -Fq 'arenaController.isInBush(p.root.position)' src/game.js
+
+          for symbol in getArenaTheme loadProp attachPropVisual clearGroup makeFallbackBox addRealBox addRealPillar addBush addWallRun addCrate addBarrel applyArenaTheme addPaintStripe addStageGlow addArenaPerimeter addArenaAccentLights addArenaScenery addCenterPattern addFloorVisual buildArena canMoveTo hitObstacle; do
+            echo "CHECK: no local $symbol arena implementation in game.js"
+            if grep -Fq "function $symbol" src/game.js; then echo "::error::$symbol arena implementation returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol arena implementation in game.js"
+          done
+
+          for symbol in arenaRoot obstacles bushes propCache arenaBuildId; do
+            echo "CHECK: no local $symbol arena state in game.js"
+            if grep -Eq "^(const|let|var) ${symbol}([ =]|$)" src/game.js; then echo "::error::$symbol arena state returned to game.js"; exit 1; fi
+            echo "PASS: no local $symbol arena state in game.js"
+          done
+
+          echo "CHECK: no stage prop/theme imports in game.js"
+          if grep -Eq '\b(PROPS|STAGE_THEMES)\b' src/game.js; then echo '::error::stage prop/theme ownership returned to game.js'; exit 1; fi
+          echo "PASS: no stage prop/theme imports in game.js"
 
           echo "CHECK: input import count"
           test "$(grep -Fc "from './input.js?v=695'" src/game.js)" -eq 1 || { echo '::error::input import count'; exit 1; }
