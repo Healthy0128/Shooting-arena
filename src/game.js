@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6104';
-import { createInputController } from './input.js?v=695';
-import { createHudUI } from './hud-ui.js?v=695';
-import { createCameraController } from './camera.js?v=695';
-import { createArenaController } from './arena.js?v=695';
-import { createPlayerController, defenseLabel } from './player.js?v=695';
-import { createCombatController } from './combat.js?v=695';
-import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6104';
+import { showBanner, renderMatchResult, hideMatchResult, renderLoadoutSummary } from './ui.js?v=6120';
+import { createInputController } from './input.js?v=6120';
+import { createHudUI } from './hud-ui.js?v=6120';
+import { createCameraController } from './camera.js?v=6120';
+import { createArenaController } from './arena.js?v=6120';
+import { createPlayerController, defenseLabel } from './player.js?v=6120';
+import { createCombatController } from './combat.js?v=6120';
+import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6120';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
