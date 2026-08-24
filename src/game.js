@@ -5,6 +5,7 @@ import { ARENA, SPAWN_X, PROPS, STAGE_THEMES } from './arena-config.js?v=695';
 import { showBanner, renderMatchResult, hideMatchResult } from './ui.js?v=695';
 import { createInputController } from './input.js?v=695';
 import { createHudUI } from './hud-ui.js?v=695';
+import { createCameraController } from './camera.js?v=695';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=695';
 
 const $ = s => document.querySelector(s);
@@ -17,13 +18,6 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1118);
 scene.fog = new THREE.Fog(0x0d1118, 36, 62);
-
-const topCamera=new THREE.OrthographicCamera(-12,12,18,-18,.1,100);
-topCamera.position.set(0,38,.01);topCamera.up.set(1,0,0);topCamera.lookAt(0,0,0);
-const chaseCameras=[new THREE.PerspectiveCamera(58,1,.1,120),new THREE.PerspectiveCamera(58,1,.1,120)];
-let camera=topCamera;
-let cameraMode='top';
-const _baseRender=renderer.render.bind(renderer);
 
 scene.add(new THREE.HemisphereLight(0xeaf2ff,0x202534,2.1));
 const sun = new THREE.DirectionalLight(0xffffff,2.2);
@@ -273,6 +267,7 @@ let players=[];
 let bullets=[];
 let particles=[];
 let running=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
+const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
 
 function clearGroup(g){
   // Cached GLTF clones share geometry/material resources. Removing a stage must
@@ -866,7 +861,7 @@ function defenseLabel(type){
 
 const {updateHUD,updateWorldStatus,clearWorldStatus}=createHudUI({
   getPlayers:()=>players,
-  getCamera:()=>camera,
+  getCamera:()=>cameraController.getProjectionCamera(),
   defenseLabel
 });
 
@@ -1384,23 +1379,9 @@ $$('.def-btn').forEach(b=>b.addEventListener('pointerdown',e=>{
 $$('.super-btn').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();activateSuper(Number(b.dataset.player))}));
 
 
-function screenVectorToWorld(player,x,y){
-  if(cameraMode==='arena'){
-    const cam=chaseCameras[player];
-    const fwd=new THREE.Vector3();cam.getWorldDirection(fwd);fwd.y=0;
-    if(fwd.lengthSq()<1e-6)fwd.set(player===0?1:-1,0,0);else fwd.normalize();
-    const right=new THREE.Vector3(fwd.z,0,-fwd.x);
-    if(player===1){x=-x;y=-y}
-    const world=right.multiplyScalar(x).add(fwd.multiplyScalar(-y));
-    return new THREE.Vector2(world.x,world.z);
-  }
-  const {w,h}=getLayoutSize(),portrait=h>=w;
-  return portrait?new THREE.Vector2(-y,x):new THREE.Vector2(x,y);
-}
-
 const input=createInputController({
   getPlayers:()=>players,
-  screenVectorToWorld,
+  screenVectorToWorld:cameraController.screenVectorToWorld,
   shoot,
   activateSuper
 });
@@ -1647,66 +1628,12 @@ function update(dt){
 }
 
 
-function getLayoutSize(){
-  const root=document.documentElement;
-  return {w:Math.max(1,root.clientWidth||innerWidth),h:Math.max(1,root.clientHeight||innerHeight)};
-}
-function updateTopCamera(){
-  if(cameraMode!=='top')return;
-  const {w,h}=getLayoutSize(),aspect=w/Math.max(1,h),portrait=h>=w;
-  topCamera.up.set(portrait?1:0,0,portrait?0:-1);
-  if(players.length===2&&players[0]?.root&&players[1]?.root){
-    const a=players[0].root.position,b=players[1].root.position;
-    const mx=(a.x+b.x)*.5,mz=(a.z+b.z)*.5;
-    const dx=Math.abs(a.x-b.x),dz=Math.abs(a.z-b.z);
-    const screenSpanX=portrait?dz:dx,screenSpanY=portrait?dx:dz;
-    const needW=screenSpanX+7.0,needH=screenSpanY+9.0;
-    let viewH=Math.max(portrait?34:19,needH,needW/Math.max(.25,aspect));
-    viewH=Math.min(viewH,portrait?42:27);
-    const viewW=viewH*aspect;
-    topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
-    topCamera.position.set(mx,38,mz+.01);topCamera.lookAt(mx,0,mz);
-  }else{
-    const viewH=h>=w?38:23,viewW=viewH*aspect;
-    topCamera.left=-viewW/2;topCamera.right=viewW/2;topCamera.top=viewH/2;topCamera.bottom=-viewH/2;
-    topCamera.position.set(0,38,.01);topCamera.lookAt(0,0,0);
-  }
-  topCamera.updateProjectionMatrix();
-}
-function updateChaseCamera(i,cam,aspect){
-  const me=players[i],op=players[1-i];if(!me?.root||!op?.root)return;
-  const a=me.root.position,b=op.root.position;
-  const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1;
-  const ux=dx/len,uz=dz/len,dist=THREE.MathUtils.clamp(len,3,28);
-  const back=THREE.MathUtils.clamp(4.8+dist*.09,5.0,7.3),height=THREE.MathUtils.clamp(6.8+dist*.08,7.0,9.5);
-  const target=new THREE.Vector3((a.x+b.x)*.5,.8,(a.z+b.z)*.5);
-  let cx=a.x-ux*back,cz=a.z-uz*back;
-  cx=THREE.MathUtils.clamp(cx,-ARENA.halfW+1.1,ARENA.halfW-1.1);cz=THREE.MathUtils.clamp(cz,-ARENA.halfH+1.1,ARENA.halfH-1.1);
-  cam.position.lerp(new THREE.Vector3(cx,height,cz),.24);cam.aspect=Math.max(.55,aspect);cam.fov=THREE.MathUtils.clamp(61+Math.max(0,8-dist)*.35,59,68);
-  cam.up.set(0,i===1?-1:1,0);cam.lookAt(target);cam.updateProjectionMatrix();
-}
-function renderSplitArena(){
-  const size=new THREE.Vector2();renderer.getDrawingBufferSize(size);
-  const w=Math.max(1,Math.floor(size.x)),h=Math.max(2,Math.floor(size.y)),lower=Math.floor(h/2),upper=h-lower;
-  renderer.setScissorTest(true);
-  updateChaseCamera(0,chaseCameras[0],w/lower);renderer.setViewport(0,0,w,lower);renderer.setScissor(0,0,w,lower);_baseRender(scene,chaseCameras[0]);
-  updateChaseCamera(1,chaseCameras[1],w/upper);renderer.setViewport(0,lower,w,upper);renderer.setScissor(0,lower,w,upper);_baseRender(scene,chaseCameras[1]);
-  renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);
-}
-function setCameraMode(mode){
-  cameraMode=mode==='arena'?'arena':'top';camera=topCamera;document.body.classList.toggle('split-arena',cameraMode==='arena');
-  document.querySelectorAll('.camera-buttons button').forEach(b=>b.classList.toggle('selected',b.dataset.mode===cameraMode));resize();
-}
-$('#camera-mode')?.addEventListener('click',()=>setCameraMode('top'));
-$('#camera-tilt-test')?.addEventListener('click',()=>setCameraMode('arena'));
-function resize(){const {w,h}=getLayoutSize();renderer.setSize(w,h,false);updateTopCamera()}
-addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,80));resize();
 function loop(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(hitStop>0)hitStop=Math.max(0,hitStop-dt);else update(dt);
-  updateTopCamera();
-  if(cameraMode==='arena'&&players.length===2)renderSplitArena();else _baseRender(scene,topCamera);
+  cameraController.render();
   requestAnimationFrame(loop);
 }
+cameraController.init();
 buildArena('square');requestAnimationFrame(loop);
 if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}));}
