@@ -119,6 +119,8 @@ check "field weapon homing exists" grep -Fq 'if(bullet.homing)' src/combat.js
 check "field projectiles have unique styles" grep -Fq "seeker:{color:" src/projectile-visuals.js
 check "stalemate accelerates pickup" grep -Fq 'quietTime>=7?2.5:1' src/field-weapons.js
 check "field weapon is shown over player" grep -Fq 'class="world-field-weapon"' src/hud-ui.js
+check "field direction rotates on the stage plane" grep -Fq 'indicator.group.rotation.y=Math.atan2(dx,dz)' src/field-weapons.js
+check "field direction stretches toward the pickup" grep -Fq 'indicator.ring.position.z=(stretch-1)*.54' src/field-weapons.js
 check "world status avoids ability buttons" grep -Fq 'keepWorldStatusClearOfButtons(el,p.i,screen.y)' src/hud-ui.js
 check "world status panel is translucent" grep -Fq 'background:#07101c73' style.css
 check "tutorial opens from initial menu" grep -Fq 'id="open-help"' index.html

@@ -7,7 +7,7 @@ export function isMovementGesture(dx,dy,threshold=MOVE_THRESHOLD){
   return Math.hypot(dx,dy)>=threshold;
 }
 
-export function createFloatingStickController({canvas,resolvePlayer,onMove,onMoveEnd,onTap,onFireStart,onFireMove,onFireEnd,onTouchInput}){
+export function createFloatingStickController({canvas,resolvePlayer,resolveFirePlayer,onMove,onMoveEnd,onTap,onFireStart,onFireMove,onFireEnd,onTouchInput}){
   const pointers=new Map();
   const movingPointerByPlayer=new Map();
   const layer=document.createElement('div');
@@ -41,7 +41,8 @@ export function createFloatingStickController({canvas,resolvePlayer,onMove,onMov
   function beginFire(state){
     if(state.mode!=='pending')return;
     state.mode='fire';
-    onFireStart(state.player,state.lastX,state.lastY);
+    state.firePlayer=resolveFirePlayer?.(state.lastX,state.lastY,state.player)??state.player;
+    onFireStart(state.firePlayer,state.lastX,state.lastY);
   }
 
   function applyMove(state){
@@ -83,9 +84,10 @@ export function createFloatingStickController({canvas,resolvePlayer,onMove,onMov
       if(movingPointerByPlayer.get(state.player)===state.pointerId)movingPointerByPlayer.delete(state.player);
       onMoveEnd(state.player);
     }else if(state.mode==='fire'){
-      onFireEnd(state.player);
+      onFireEnd(state.firePlayer);
     }else if(state.mode==='pending'&&!cancelled){
-      onTap(state.player,state.lastX,state.lastY);
+      const firePlayer=resolveFirePlayer?.(state.lastX,state.lastY,state.player)??state.player;
+      onTap(firePlayer,state.lastX,state.lastY);
     }
     state.visual?.remove();
   }
@@ -115,6 +117,7 @@ export function createFloatingStickController({canvas,resolvePlayer,onMove,onMov
       baseX:event.clientX,
       baseY:event.clientY,
       holdTimer:0,
+      firePlayer:null,
       visual:null,
       knob:null
     };
@@ -130,7 +133,7 @@ export function createFloatingStickController({canvas,resolvePlayer,onMove,onMov
     state.lastY=event.clientY;
     if(state.mode==='pending'&&isMovementGesture(state.lastX-state.startX,state.lastY-state.startY))beginMove(state);
     if(state.mode==='move')applyMove(state);
-    else if(state.mode==='fire')onFireMove(state.player,state.lastX,state.lastY);
+    else if(state.mode==='fire')onFireMove(state.firePlayer,state.lastX,state.lastY);
   });
 
   canvas?.addEventListener('pointerup',event=>endPointer(event));
