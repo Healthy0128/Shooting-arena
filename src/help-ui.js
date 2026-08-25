@@ -34,7 +34,7 @@ export function initHelpUI(){
             <ol class="help-legend">
               <li><b>1　P2ステータス</b><span>上側のプレイヤーは画面を反対向きに見ます。</span></li>
               <li><b>2　移動ぷにコン</b><span>画面をスワイプすると、触れた位置に移動スティックが現れます。</span></li>
-              <li><b>3　中央タイマー</b><span>先に3ポイント取るか、時間終了時に優勢なら勝利です。</span></li>
+              <li><b>3　中央タイマー</b><span>選んだルールの残り時間と、KO戦・ストック戦の種別を表示します。</span></li>
               <li><b>4　P1移動</b><span>下側もスワイプで移動。指を離すとスティックが消えます。</span></li>
               <li><b>5　防御・必殺</b><span>青が防御、紫が必殺。必殺はゲージ100で発動できます。</span></li>
               <li><b>6　P1ステータス</b><span>HP、必殺ゲージ、取得ポイントを確認できます。</span></li>
@@ -45,12 +45,12 @@ export function initHelpUI(){
 
         <article class="help-page" data-help-content="gauges" hidden>
           <div class="help-card-grid gauge-grid">
-            <section><em class="guide-color hp-color"></em><h2>HP</h2><p>0になるとK.O.。先に3回K.O.したプレイヤーが勝利します。</p></section>
+            <section><em class="guide-color hp-color"></em><h2>HP</h2><p>0になるとK.O.。KO戦では撃破数、ストック戦では残機が変化します。</p></section>
             <section><em class="guide-color heat-color"></em><h2>HEAT</h2><p>撃つほど増加。100でオーバーヒートし、35まで冷えると再射撃できます。</p></section>
             <section><em class="guide-color super-color"></em><h2>SUPER</h2><p>攻撃を当てる・受けると増加。100になったら紫の必殺ボタンが光ります。</p></section>
             <section><em class="guide-color defense-color"></em><h2>防御状態</h2><p>ガード耐久、バリア残量、パリィ回数、再使用までの時間を頭上に表示します。</p></section>
             <section><em class="guide-color core-color"></em><h2>パワーコア</h2><p>中央に出る黄色いコアを取ると、一時的に攻撃強化と必殺ゲージ25を得ます。</p></section>
-            <section><em class="guide-color timer-color"></em><h2>タイマー</h2><p>同点ならサドンデス。次のK.O.を取ったプレイヤーの勝利です。</p></section>
+            <section><em class="guide-color timer-color"></em><h2>タイマー</h2><p>KO戦は90秒、ストック戦は120秒。同条件なら次のK.O.で決着します。</p></section>
           </div>
           <p class="help-tip">キャラ頭上の小さいゲージなら、相手から目を離さずHP・HEAT・防御状態を確認できます。</p>
         </article>

@@ -1,4 +1,4 @@
-export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
+export function createHudUI({getPlayers,getMatchState,projectWorldToScreen,defenseLabel}){
   const $=s=>document.querySelector(s);
 
   function keepWorldStatusClearOfButtons(el,playerIndex,anchorY){
@@ -92,11 +92,14 @@ export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
   }
 
   function updateHUD(){
+    const match=getMatchState();
     getPlayers().forEach((p,i)=>{
       $(`#p${i+1}-name`).textContent=p.cfg.name;
       $(`#p${i+1}-hp`).style.width=`${(p.hp/p.maxHp)*100}%`;
       $(`#p${i+1}-super`).style.width=`${p.super}%`;
-      $(`#p${i+1}-score`).textContent=[0,1,2].map(n=>n<p.score?'●':'○').join(' ');
+      $(`#p${i+1}-score`).textContent=match.ruleKey==='stock'
+        ?[0,1,2].map(n=>n<match.stocks[i]?'●':'○').join(' ')
+        :`KO ${match.scores[i]}`;
       $(`.super-btn[data-player="${i}"]`).classList.toggle('ready',p.super>=100);
       const db=$(`.def-btn[data-player="${i}"]`);
       if(db){
@@ -105,6 +108,8 @@ export function createHudUI({getPlayers,projectWorldToScreen,defenseLabel}){
         db.classList.toggle('cooling',p.defenseCd>0&&!p.guarding);
       }
     });
+    $('#timer').textContent=Math.ceil(match.timeRemaining);
+    $('#match-rule-label').textContent=match.suddenDeath?'SUDDEN DEATH':match.shortLabel;
   }
 
   return {updateHUD,updateWorldStatus,clearWorldStatus};

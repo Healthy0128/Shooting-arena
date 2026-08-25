@@ -3,6 +3,10 @@ const resultStats=document.querySelector('#match-result-stats');
 const matchFinish=document.querySelector('#match-finish');
 const matchFinishTitle=document.querySelector('#match-finish-title');
 const matchFinishScore=document.querySelector('#match-finish-score');
+const matchFinishKicker=document.querySelector('.match-finish-kicker');
+const resultWinner=document.querySelector('#winner');
+const resultRule=document.querySelector('#result-rule');
+const resultScore=document.querySelector('#result-score');
 let bannerTimer=null;
 
 export function showBanner(text,ms=650){
@@ -19,8 +23,17 @@ function statRow(label,a,b,suffix=''){
   return `<div class="result-stat"><span>${Math.round(a)}${suffix}</span><b>${label}</b><span>${Math.round(b)}${suffix}</span></div>`;
 }
 
-export function renderMatchResult(_winner,players){
+function scoreText(match){
+  return match.ruleKey==='stock'
+    ?`${match.stocks[0]} - ${match.stocks[1]} STOCK`
+    :`${match.scores[0]} - ${match.scores[1]} KOs`;
+}
+
+export function renderMatchResult(winner,players,match){
   const a=players[0],b=players[1];
+  resultWinner.textContent=`P${winner+1} WIN!`;
+  resultRule.textContent=match.suddenDeath?`${match.ruleName}・サドンデス`:match.ruleName;
+  resultScore.textContent=scoreText(match);
   resultStats.innerHTML=`
     <div class="result-head"><span>P1</span><b>MATCH STATS</b><span>P2</span></div>
     ${statRow('DAMAGE',a.stats.damageDealt,b.stats.damageDealt)}
@@ -34,10 +47,11 @@ export function renderMatchResult(_winner,players){
 
 export function hideMatchResult(){resultStats.replaceChildren()}
 
-export function showMatchFinish(winner,players,suddenDeath=false){
+export function showMatchFinish(winner,match){
   if(!matchFinish)return;
-  matchFinishTitle.textContent=suddenDeath?'SUDDEN DEATH WIN':`P${winner+1} WIN`;
-  matchFinishScore.textContent=`${players[0].score} - ${players[1].score}`;
+  matchFinishKicker.textContent=match.suddenDeath?'SUDDEN DEATH':'FINAL K.O.';
+  matchFinishTitle.textContent=`P${winner+1} WIN`;
+  matchFinishScore.textContent=scoreText(match);
   matchFinish.hidden=false;
   requestAnimationFrame(()=>matchFinish.classList.add('show'));
 }
