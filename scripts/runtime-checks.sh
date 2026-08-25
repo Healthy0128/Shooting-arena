@@ -18,7 +18,7 @@ for file in \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
   src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
-  src/field-weapons.js src/help-ui.js src/floating-stick.js; do
+  src/field-weapons.js src/help-ui.js src/floating-stick.js src/match-rules.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -36,6 +36,8 @@ check "boomerang turns sharply after delay" grep -Fq 'bullet.curveComplete=true;
 check "katana slash effects are pooled" grep -Fq 'const slashEffects=new Map();' src/weapon-effects.js
 check "pause UI controller exported" grep -Fq 'export function createPauseUI' src/pause-ui.js
 check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
+check "match rules controller exported" grep -Fq 'export function createMatchRulesController' src/match-rules.js
+check "match rule behavior" node scripts/match-rules-check.mjs
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "field weapon controller exported" grep -Fq 'export function createFieldWeaponController' src/field-weapons.js
@@ -193,6 +195,10 @@ for symbol in buildArena canMoveTo hitObstacle renderSplitArena updateTopCamera 
 done
 
 check "match result stats host" grep -Fq 'id="match-result-stats"' index.html
+check "match rules stay out of game orchestrator" bash -c '! grep -Fq "players[attacker].score++" src/game.js'
+check "match score state is centralized" bash -c '! grep -Fq "score:0" src/player.js'
+check "KO rule selector exists" grep -Fq 'data-rule="ko"' index.html
+check "stock rule selector exists" grep -Fq 'data-rule="stock"' index.html
 
 if grep -Fq 'id="build-limit-value"' index.html || grep -Fq 'budget-legend' index.html; then
   echo '::error::build limit UI returned after cost restrictions were disabled'

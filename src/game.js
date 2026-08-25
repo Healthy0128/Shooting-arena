@@ -1,16 +1,17 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6210';
+import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6340';
 import { createInputController } from './input.js?v=6330';
-import { createHudUI } from './hud-ui.js?v=6170';
+import { createHudUI } from './hud-ui.js?v=6340';
 import { createCameraController } from './camera.js?v=6330';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6320';
+import { createPlayerController, defenseLabel } from './player.js?v=6340';
 import { createCombatController } from './combat.js?v=6320';
 import { createAudioController } from './audio.js?v=6210';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
 import { createFeedbackController } from './feedback.js?v=6160';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
+import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
 
 const $ = s => document.querySelector(s);
@@ -153,9 +154,11 @@ function updateStartAvailability(){
 }
 
 let arenaSelection='square';
+let ruleSelection='ko';
 let players=[];
 let particles=[];
-let running=false, paused=false, matchTime=90, last=performance.now(), hitStop=0, suddenDeath=false, matchGeneration=0;
+let running=false, paused=false, last=performance.now(), hitStop=0, matchGeneration=0;
+const matchRules=createMatchRulesController(ruleSelection);
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
 const feedbackController=createFeedbackController({cameraShake:(strength,duration)=>cameraController.addShake(strength,duration)});
 const arenaController=createArenaController({scene});
@@ -252,6 +255,7 @@ const activateSuper=combatController.activateSuper;
 
 const {updateHUD,updateWorldStatus,clearWorldStatus}=createHudUI({
   getPlayers:()=>players,
+  getMatchState:matchRules.getState,
   projectWorldToScreen:cameraController.projectWorldToScreen,
   defenseLabel
 });
@@ -270,23 +274,22 @@ function ko(victim,attacker){
   particleBurst(pos.clone(),player.cfg.color,32,.13);
   matchLater(()=>particleBurst(pos.clone().setY(1.05),0xffffff,18,.08),55);
   matchLater(()=>{player.root.visible=false},720);
-  players[attacker].score++;
+  const outcome=matchRules.onKO(victim,attacker);
   hitStop=Math.max(hitStop,.11);
   synthKO();
-  showBanner(suddenDeath?'FINAL K.O!':'K.O!',suddenDeath?900:700);
+  showBanner(outcome.finalKO?'FINAL K.O!':'K.O!',outcome.finalKO?900:700);
   feedbackController.vibrate([55,35,90]);
   updateHUD();
 
-  const finalKO=suddenDeath||players[attacker].score>=3;
-  if(finalKO){
-    showMatchFinish(attacker,players,suddenDeath);
-    matchLater(()=>finish(attacker),1500);
+  if(outcome.type==='finish'){
+    showMatchFinish(attacker,outcome.state);
+    matchLater(()=>finish(attacker,outcome.state),1500);
     return;
   }
   matchLater(()=>resetPlayer(victim),1100);
 }
 
-function finish(winner){
+function finish(winner,match=matchRules.getState()){
   matchGeneration++;
   running=false;
   paused=false;
@@ -295,9 +298,7 @@ function finish(winner){
   hideMatchFinish();
   stopAllBGM();
   fieldWeaponController.reset();
-  renderMatchResult(winner,players);
-  $('#winner').textContent=`P${winner+1} WIN!`;
-  $('#result-score').textContent=`${players[0].score} - ${players[1].score}`;
+  renderMatchResult(winner,players,match);
   result.hidden=false;
 }
 
@@ -367,7 +368,7 @@ function startBattle(){
   pauseUI.setAvailable(false);
   input.clear();
   const generation=matchGeneration;
-  suddenDeath=false;
+  matchRules.start(ruleSelection);
   clearWorldStatus();
   clearPowerCore();
   powerCoreTimer=7;
@@ -377,7 +378,6 @@ function startBattle(){
   clearProjectiles();
   buildArena(arenaSelection);
   players=[makePlayer(0,buildCustomConfig(0)),makePlayer(1,buildCustomConfig(1))];
-  matchTime=90;
   running=false;
   result.hidden=true;
   playBattleBGM(arenaSelection==='hex'?'space':'normal');
@@ -397,19 +397,17 @@ function fullReset(){
   paused=false;
   pauseUI.hide();
   input.clear();
-  suddenDeath=false;
+  matchRules.start(ruleSelection);
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
   fieldWeaponController.reset();
   clearProjectiles();
   players.forEach((p,i)=>{
-    p.score=0;
     p.super=0;
     p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0};
     resetPlayer(i);
   });
-  matchTime=90;
   running=true;
   pauseUI.setAvailable(true);
   result.hidden=true;
@@ -424,7 +422,6 @@ function backToMenu(){
   hideMatchFinish();
   matchGeneration++;
   matchScheduler.clear();
-  suddenDeath=false;
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
@@ -464,6 +461,13 @@ $('.arena-buttons').addEventListener('click',e=>{
   if(!button)return;
   arenaSelection=button.dataset.arena;
   $$('.arena-buttons button').forEach(x=>x.classList.toggle('selected',x===button));
+});
+
+$('.rule-buttons').addEventListener('click',e=>{
+  const button=e.target.closest('button[data-rule]');
+  if(!button)return;
+  ruleSelection=button.dataset.rule;
+  $$('.rule-buttons button').forEach(x=>x.classList.toggle('selected',x===button));
 });
 
 $('#start').addEventListener('click',()=>{
@@ -648,23 +652,17 @@ function update(dt){
   matchScheduler.update(dt);
   input.update();
   updatePowerCore(dt);
-  matchTime=Math.max(0,matchTime-dt);
-  if(matchTime<=0){
-    const a=players[0].score,b=players[1].score;
-    if(!suddenDeath){
-      if(a!==b){
-        finish(a>b?0:1);
-      }else{
-        suddenDeath=true;
-        matchTime=30;
-        playBattleBGM('sudden');
-        showBanner('SUDDEN DEATH! NEXT K.O WINS',1200);
-        tone(210,.12,'square',.035,260);
-      }
-    }else{
-      matchTime=30;
-      showBanner('KEEP FIGHTING!',500);
-    }
+  const ruleEvent=matchRules.update(dt);
+  if(ruleEvent?.type==='finish'){
+    finish(ruleEvent.winner,ruleEvent.state);
+    return;
+  }
+  if(ruleEvent?.type==='sudden-death'){
+    playBattleBGM('sudden');
+    showBanner('SUDDEN DEATH! NEXT K.O WINS',1200);
+    tone(210,.12,'square',.035,260);
+  }else if(ruleEvent?.type==='keep-fighting'){
+    showBanner('KEEP FIGHTING!',500);
   }
 
   players.forEach(p=>{
@@ -746,7 +744,6 @@ function update(dt){
 
   updateHUD();
   updateWorldStatus();
-  $('#timer').textContent=Math.ceil(matchTime);
 }
 
 function loop(now){

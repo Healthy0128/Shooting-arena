@@ -191,7 +191,7 @@ export function createPlayerController({scene}){
 
     const player={
       i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,muzzleAnchor,weaponPrimitive:gun,weaponReal:null,
-      hp:cfg.hp,maxHp:cfg.hp,score:0,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
+      hp:cfg.hp,maxHp:cfg.hp,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,superAura,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
