@@ -7,9 +7,8 @@ export function createControlMapper({getMode,getTpsBasis,getPortrait}){
   }
 
   function mapTopDown(player,x,y){
-    const local=normalizeFaceToFace(player,x,y);
-    if(getPortrait())return new THREE.Vector2(-local.y,local.x);
-    return new THREE.Vector2(local.x,local.y);
+    if(getPortrait())return new THREE.Vector2(-y,x);
+    return new THREE.Vector2(x,y);
   }
 
   function mapTps(player,x,y){

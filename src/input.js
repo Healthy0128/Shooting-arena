@@ -1,6 +1,6 @@
-import { createFloatingStickController } from './floating-stick.js?v=6200';
+import { createFloatingStickController } from './floating-stick.js?v=6330';
 
-export function createInputController({getPlayers,mapStick,screenVectorToWorld,shoot,activateSuper}){
+export function createInputController({getPlayers,mapStick,screenVectorToWorld,projectWorldToScreen,shoot,activateSuper}){
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
   const isTpsMode=()=>document.body.classList.contains('split-arena');
@@ -135,6 +135,23 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
     return fighter?.alive?player:null;
   }
 
+  function resolveFirePlayer(clientX,clientY,fallbackPlayer){
+    if(isTpsMode()||!projectWorldToScreen)return fallbackPlayer;
+    const fighters=getPlayers();
+    let targetPlayer=null;
+    let targetDistance=Infinity;
+    fighters.forEach((fighter,index)=>{
+      if(!fighter?.alive)return;
+      const screen=projectWorldToScreen(index,fighter.root.position);
+      if(!screen?.visible)return;
+      const distance=Math.hypot(clientX-screen.x,clientY-screen.y);
+      if(distance<targetDistance){targetDistance=distance;targetPlayer=index}
+    });
+    const bounds=canvas.getBoundingClientRect();
+    const targetRadius=Math.max(64,Math.min(104,Math.min(bounds.width,bounds.height)*.14));
+    return targetPlayer!==null&&targetDistance<=targetRadius?1-targetPlayer:fallbackPlayer;
+  }
+
   function aimAtScreen(player,clientX,clientY,showMarker=false){
     const players=getPlayers();
     const fighter=players[player];
@@ -167,6 +184,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,s
   floatingStick=createFloatingStickController({
     canvas,
     resolvePlayer:resolveTouchPlayer,
+    resolveFirePlayer,
     onTouchInput:()=>syncInputMode('touch'),
     onMove:(player,x,y)=>{
       const fighter=getPlayers()[player];

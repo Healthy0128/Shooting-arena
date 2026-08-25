@@ -22,6 +22,7 @@ check "controls normalizes face-to-face input" grep -Fq 'function normalizeFaceT
 check "controls separates top-down mapping" grep -Fq 'function mapTopDown' src/controls.js
 check "controls separates TPS mapping" grep -Fq 'function mapTps' src/controls.js
 check "controls switches by camera mode" grep -Fq "getMode()==='arena'" src/controls.js
+check "top-down P2 keeps direct stick axes" bash -c '! sed -n "/function mapTopDown/,/function mapTps/p" src/controls.js | grep -Fq "normalizeFaceToFace"'
 check "TPS uses camera basis" grep -Fq 'const basis=getTpsBasis(player);' src/controls.js
 check "TPS normalizes P2 physical orientation once" bash -c 'sed -n "/function mapTps/,/function mapStick/p" src/controls.js | grep -Fq "const local=normalizeFaceToFace(player,x,y);"'
 check "TPS maps normalized local axes" grep -Fq 'right.x*local.x+forward.x*(-local.y)' src/controls.js
@@ -35,6 +36,7 @@ check "input uses shared control mapping" grep -Fq 'const mapControl=mapStick||s
 check "input separates touch and keyboard modes" grep -Fq "let inputMode=matchMedia('(pointer:coarse)').matches?'touch':'keyboard';" src/input.js
 check "touch replaces fixed sticks in both camera modes" grep -Fq "const hideSticks=mode==='touch';" src/input.js
 check "tap assigns player by screen half" grep -Fq 'const player=localY<half?1:0;' src/input.js
+check "top-down fire can target the opposing player" grep -Fq 'targetDistance<=targetRadius?1-targetPlayer:fallbackPlayer' src/input.js
 check "TPS tap computes split-view NDC" grep -Fq 'ndcY=1-viewportY/half*2;' src/input.js
 check "top-down tap computes full-view NDC" grep -Fq 'ndcY=1-localY/Math.max(1,r.height)*2;' src/input.js
 check "tap requests ground projection" grep -Fq "const target=mapControl(player,ndcX,ndcY,'ground');" src/input.js

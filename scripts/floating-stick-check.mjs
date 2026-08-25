@@ -33,6 +33,7 @@ const calls={moves:[],moveEnds:[],taps:[],fireStarts:[],fireMoves:[],fireEnds:[]
 createFloatingStickController({
   canvas,
   resolvePlayer:()=>0,
+  resolveFirePlayer:()=>1,
   onTouchInput:()=>{},
   onMove:(...args)=>calls.moves.push(args),
   onMoveEnd:(...args)=>calls.moveEnds.push(args),
@@ -50,6 +51,7 @@ assert.equal(isMovementGesture(16,0),true);
 canvas.dispatch('pointerdown',pointer(1,100,100));
 canvas.dispatch('pointerup',pointer(1,104,103));
 assert.equal(calls.taps.length,1,'short touch must shoot once');
+assert.equal(calls.taps[0][0],1,'tap may be reassigned to the intended shooter');
 
 canvas.dispatch('pointerdown',pointer(2,100,100));
 canvas.dispatch('pointermove',pointer(2,120,100));
@@ -62,6 +64,7 @@ await new Promise(resolve=>setTimeout(resolve,160));
 canvas.dispatch('pointermove',pointer(3,106,104));
 canvas.dispatch('pointerup',pointer(3,106,104));
 assert.equal(calls.fireStarts.length,1,'stationary hold must start continuous fire');
+assert.equal(calls.fireStarts[0][0],1,'held fire may be reassigned to the intended shooter');
 assert.equal(calls.fireMoves.length,1,'held aim must follow small finger movement');
 assert.equal(calls.fireEnds.length,1,'continuous fire must stop on release');
 

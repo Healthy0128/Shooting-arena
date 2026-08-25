@@ -156,8 +156,11 @@ export function createFieldWeaponController({scene,getPlayers,canMoveTo,showBann
       indicator.arrow.material.color.setHex(pickup.definition.color);
       indicator.ring.material.color.setHex(pickup.definition.color);
       indicator.arrow.visible=false;
-      indicator.ring.rotation.y=Math.atan2(dx,dz)-player.root.rotation.y;
-      indicator.ring.scale.set(1,THREE.MathUtils.clamp(1+Math.hypot(dx,dz)*.055,1,1.42),1);
+      const stretch=THREE.MathUtils.clamp(1+Math.hypot(dx,dz)*.055,1,1.42);
+      indicator.group.rotation.y=Math.atan2(dx,dz)-player.root.rotation.y;
+      indicator.ring.rotation.y=0;
+      indicator.ring.scale.set(1,stretch,1);
+      indicator.ring.position.z=(stretch-1)*.54;
       indicator.ring.material.opacity=.56+.16*Math.sin(performance.now()*.008);
       if(!player.alive)continue;
       const pdx=player.root.position.x-pickup.position.x;
