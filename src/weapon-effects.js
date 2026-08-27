@@ -11,6 +11,7 @@ const EFFECTS={
   shock:{color:0xffb14f,length:.4,radius:.15,impact:0xffc663,count:18,shake:3.5},
   rail:{color:0xff5e78,length:.95,radius:.11,impact:0xff7890,count:24,shake:6.2}
 };
+const IMPACT_SCALE={light:.72,normal:1,heavy:1.38,ko:1.72};
 
 export function createWeaponEffectsController({scene,matchLater,particleBurst,tone,cameraShake,shotSfx}){
   const transientMeshes=new Set();
@@ -49,11 +50,16 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
     cameraShake?.(cfg.shake,style==='cannon'||style==='rail'?150:85);
   }
 
-  function impact(style,position,kind='player',bounces=0){
+  function impact(style,position,kind='player',bounces=0,tier='normal'){
     const cfg=config(style);
+    const scale=kind==='player'?(IMPACT_SCALE[tier]||1):.78;
     const color=style==='bladegun'&&bounces>0?0xffffff:cfg.impact;
-    particleBurst(position.clone().setY(Math.max(.35,position.y||.75)),color,kind==='player'?cfg.count:Math.ceil(cfg.count*.65),(style==='cannon'||style==='rail') ? .105 : .065);
-    if(kind==='player')cameraShake?.(cfg.shake*.65,95);
+    particleBurst(
+      position.clone().setY(Math.max(.35,position.y||.75)),
+      color,
+      Math.max(5,Math.ceil(cfg.count*scale)),
+      ((style==='cannon'||style==='rail')?.105:.065)*Math.min(1.45,scale)
+    );
 
     const ring=new THREE.Mesh(
       new THREE.RingGeometry(cfg.radius*1.8,cfg.radius*3.7,24),
@@ -62,6 +68,7 @@ export function createWeaponEffectsController({scene,matchLater,particleBurst,to
     ring.rotation.x=-Math.PI/2;
     ring.position.copy(position);
     ring.position.y=Math.max(.06,position.y||.06);
+    ring.scale.setScalar(scale);
     scene.add(ring);
     transientMeshes.add(ring);
     matchLater(()=>disposeMesh(ring),105);

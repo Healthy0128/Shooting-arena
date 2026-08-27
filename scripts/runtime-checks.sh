@@ -40,6 +40,13 @@ check "match rules controller exported" grep -Fq 'export function createMatchRul
 check "match rule behavior" node scripts/match-rules-check.mjs
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
+check "impact tiers centralized" grep -Fq 'export const IMPACT_FEEDBACK=' src/feedback.js
+check "impact tier behavior" node --input-type=module -e "const {impactTier:t}=await import('./src/feedback.js');if(t({style:'rapid',damage:7})!=='light'||t({style:'rifle',damage:19})!=='normal'||t({style:'scatter',damage:11})!=='heavy'||t({style:'bladegun',damage:25,bounces:2})!=='heavy'||t({style:'rifle',damage:19,lethal:true})!=='ko')process.exit(1)"
+check "combat delegates impact feedback" grep -Fq 'const feedback=impactFeedback?.({' src/combat.js
+check "KO feedback delegated" grep -Fq 'feedbackController.ko({' src/game.js
+check "KO slow motion supported" grep -Fq 'slowMotionUntil=Math.max' src/game.js
+check "impact audio controller" grep -Fq 'function playImpactSfx' src/audio.js
+check "KO BGM ducking" grep -Fq 'duckBGM?.(' src/feedback.js
 check "field weapon controller exported" grep -Fq 'export function createFieldWeaponController' src/field-weapons.js
 check "help UI exported" grep -Fq 'export function initHelpUI' src/help-ui.js
 check "floating stick controller exported" grep -Fq 'export function createFloatingStickController' src/floating-stick.js
@@ -110,6 +117,7 @@ check "synth BGM uses BGM channel" grep -Fq "0,'bgm'" src/audio.js
 check "feedback setting gates vibration" grep -Fq '!getGameSettings().vibration' src/feedback.js
 check "feedback setting gates screen shake" grep -Fq '!getGameSettings().screenShake' src/feedback.js
 check "combat vibration delegated" grep -Fq 'vibrate(weapon.vibration??' src/combat.js
+check "legacy uniform hit feedback removed" bash -c '! grep -Fq "tone(85,.07" src/combat.js'
 check "pause settings persist through controller" grep -Fq 'updateGameSettings({bgmVolume:value/100})' src/pause-ui.js
 check "two pause buttons are created" grep -Fq 'const buttons=[0,1].map' src/pause-ui.js
 check "split HUD uses camera projection" grep -Fq 'projectWorldToScreen(p.i,q)' src/hud-ui.js
@@ -204,6 +212,13 @@ check "random stage resolver behavior" node --input-type=module -e "const m=awai
 check "random stage selector rendered" grep -Fq "randomArenaButton.dataset.arena='random'" src/menu-ui.js
 check "random stage resolved before arena build" grep -Fq 'activeArenaSelection=resolveArenaSelection(arenaSelection);' src/game.js
 check "menu respects top safe area" grep -Fq 'padding-top:max(54px,var(--ui-safe-top),env(safe-area-inset-top,0px))' menu-stats.css
+for impact_file in \
+  impactGeneric_light_000.ogg impactGeneric_light_002.ogg \
+  impactPunch_medium_000.ogg impactPunch_medium_003.ogg \
+  impactPunch_heavy_001.ogg impactPunch_heavy_003.ogg impactBell_heavy_001.ogg; do
+  check "impact asset $impact_file" test -s "assets/audio/sfx/$impact_file"
+done
+check "impact asset license documented" grep -Fq 'Kenney Impact Sounds' THIRD_PARTY_ASSETS.md
 
 if grep -Fq 'id="build-limit-value"' index.html || grep -Fq 'budget-legend' index.html; then
   echo '::error::build limit UI returned after cost restrictions were disabled'
