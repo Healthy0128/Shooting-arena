@@ -76,7 +76,8 @@ export function createPlayerController({scene}){
         hit:findClip(gltf.animations,['hit_a','hit_b','hit']),
         defense:findClip(gltf.animations,['roll','dodge','attack_spin']),
         super:findClip(gltf.animations,['attack_spinning','attack_spin','attack']),
-        death:findClip(gltf.animations,['death_a','death_b','death'])
+        death:findClip(gltf.animations,['death_a','death_b','death']),
+        victory:findClip(gltf.animations,['victory','cheer','interact','wave','attack_spinning','attack_spin'])
       };
       if(idle){const a=mixer.clipAction(idle);a.play();player.idleAction=a}
       if(walk){const a=mixer.clipAction(walk);a.play();a.enabled=false;player.walkAction=a}
@@ -189,15 +190,23 @@ export function createPlayerController({scene}){
     superAura.position.y=.08;
     defenseFx.add(superAura);
 
+    const invulnerabilityRing=new THREE.Mesh(
+      new THREE.TorusGeometry(.74,.055,8,48),
+      new THREE.MeshBasicMaterial({color:cfg.color,transparent:true,opacity:0,depthWrite:false})
+    );
+    invulnerabilityRing.rotation.x=-Math.PI/2;
+    invulnerabilityRing.position.y=.11;
+    defenseFx.add(invulnerabilityRing);
+
     const player={
       i,key,cfg,root,visualRig,primitive,modelHost,weaponPivot,muzzleAnchor,weaponPrimitive:gun,weaponReal:null,
       hp:cfg.hp,maxHp:cfg.hp,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
-      parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,superAura,flashTime:0,dashFx:0,
+      parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,superAura,invulnerabilityRing,flashTime:0,dashFx:0,
       stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,accuracyHits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),lastMoveSide:0,aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
       mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,fieldWeapon:null,
-      hitReaction:0,hitReactionDuration:.26,hitSide:1,shotReaction:0,shotReactionDuration:.12,bodyScale
+      hitReaction:0,hitReactionDuration:.26,hitSide:1,shotReaction:0,shotReactionDuration:.12,victoryTime:0,bodyScale,presentationHidden:false
     };
     attachRealModel(player);
     attachWeaponModel(player);
@@ -222,6 +231,7 @@ export function createPlayerController({scene}){
     player.flashTime=0;
     player.hitReaction=0;
     player.shotReaction=0;
+    player.victoryTime=0;
     player.visualRig.position.set(0,0,0);
     player.visualRig.rotation.set(0,0,0);
     player.weaponPivot.position.z=0;
@@ -237,6 +247,7 @@ export function createPlayerController({scene}){
     if(player.parryRing)player.parryRing.visible=false;
     player.fireCd=.18;
     player.root.visible=true;
+    player.presentationHidden=false;
     player.root.position.set(i===0?-SPAWN_X:SPAWN_X,0,0);
     player.move.set(0,0);
     player.aim.set(i===0?1:-1,0);
@@ -272,8 +283,35 @@ export function createPlayerController({scene}){
     requestAnimationFrame(fade);
   }
 
+  function playSpawnEffect(player){
+    if(!player?.root)return;
+    const ring=new THREE.Mesh(
+      new THREE.RingGeometry(.32,1.05,40),
+      new THREE.MeshBasicMaterial({color:player.cfg.color,transparent:true,opacity:.9,side:THREE.DoubleSide,depthWrite:false})
+    );
+    ring.rotation.x=-Math.PI/2;
+    ring.position.copy(player.root.position).setY(.08);
+    scene.add(ring);
+    const born=performance.now();
+    function animate(){
+      const t=(performance.now()-born)/520;
+      if(t>=1||!ring.parent){
+        scene.remove(ring);
+        ring.geometry.dispose();
+        ring.material.dispose();
+        return;
+      }
+      ring.scale.setScalar(.45+t*1.5);
+      ring.material.opacity=.9*(1-t);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+    playPlayerAction(player,'super');
+  }
+
   function playPlayerAction(player,name){
     if(!player)return false;
+    if(name==='victory')player.victoryTime=1.4;
     if(name==='hit'){
       player.hitReaction=player.hitReactionDuration||.26;
       player.hitSide=Math.random()<.5?-1:1;
@@ -283,7 +321,7 @@ export function createPlayerController({scene}){
       player.shotReaction=player.shotReactionDuration;
     }
     const action=player?.actionAnimations?.[name];
-    if(!action)return false;
+    if(!action)return name==='victory';
     if(player.oneShotAction&&player.oneShotAction!==action){
       player.oneShotAction.stop();
       player.oneShotAction.enabled=false;
@@ -302,6 +340,7 @@ export function createPlayerController({scene}){
     player.flashTime=Math.max(0,(player.flashTime||0)-dt);
     player.hitReaction=Math.max(0,(player.hitReaction||0)-dt);
     player.shotReaction=Math.max(0,(player.shotReaction||0)-dt);
+    player.victoryTime=Math.max(0,(player.victoryTime||0)-dt);
     let hitImpulse=0;
     if(player.hitReaction>0){
       const duration=player.hitReactionDuration||.26;
@@ -314,8 +353,11 @@ export function createPlayerController({scene}){
       shotImpulse=Math.sin(THREE.MathUtils.clamp(phase,0,1)*Math.PI);
     }
     const recoilScale=THREE.MathUtils.clamp((player.cfg.recoil||.08)*1.8,.08,.62);
+    const victoryImpulse=player.victoryTime>0?Math.sin((1.4-player.victoryTime)*Math.PI*2.2):0;
+    player.visualRig.position.y=Math.max(0,victoryImpulse)*.1;
     player.visualRig.position.z=.24*hitImpulse+.09*shotImpulse*recoilScale;
     player.visualRig.rotation.x=-.2*hitImpulse+.06*shotImpulse*recoilScale;
+    player.visualRig.rotation.y=victoryImpulse*.13;
     player.visualRig.rotation.z=(player.hitSide||1)*.09*hitImpulse;
     player.weaponPivot.position.z=.22*shotImpulse*recoilScale;
     player.weaponPivot.rotation.x=.16*shotImpulse*recoilScale;
@@ -351,6 +393,14 @@ export function createPlayerController({scene}){
       player.superAura.scale.setScalar(pulse);
     }
 
+    const protectedSpawn=player.invuln>0&&player.alive;
+    player.invulnerabilityRing.visible=protectedSpawn;
+    player.invulnerabilityRing.material.opacity=protectedSpawn?.42+.25*Math.sin(performance.now()*.018):0;
+    if(protectedSpawn){
+      player.invulnerabilityRing.rotation.z+=dt*2.5;
+      player.invulnerabilityRing.scale.setScalar(1+.1*Math.sin(performance.now()*.014));
+    }
+
     if(player.flashTime>0){
       player.primitive.visible=Math.floor(player.flashTime*70)%2===0;
       if(player.realModel)player.modelHost.visible=Math.floor(player.flashTime*70)%2===0;
@@ -381,9 +431,7 @@ export function createPlayerController({scene}){
       player.mixer.update(dt);
     }
 
-    if(player.alive){
-      player.root.visible=player.invuln>0?Math.floor(player.invuln*12)%2===0:true;
-    }
+    if(player.alive)player.root.visible=!player.presentationHidden;
     if(player.realModel)player.modelHost.scale.setScalar(player.bodyScale*(inBush?.96:1));
   }
 
@@ -397,5 +445,5 @@ export function createPlayerController({scene}){
     return player.muzzleAnchor.getWorldPosition(target);
   }
 
-  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,playPlayerAction,updatePlayerVisuals,removePlayers,getMuzzlePosition};
+  return {makePlayer,resetPlayer,flashPlayer,defenseTrail,playSpawnEffect,playPlayerAction,updatePlayerVisuals,removePlayers,getMuzzlePosition};
 }

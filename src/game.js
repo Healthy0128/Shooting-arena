@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6370';
-import { createInputController } from './input.js?v=6330';
+import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary, showVsIntro, hideVsIntro, showRespawnCue, hideRespawnCue } from './ui.js?v=6380';
+import { createInputController } from './input.js?v=6380';
 import { createHudUI } from './hud-ui.js?v=6340';
 import { createCameraController } from './camera.js?v=6330';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6370';
+import { createPlayerController, defenseLabel } from './player.js?v=6380';
 import { createCombatController } from './combat.js?v=6370';
 import { createAudioController } from './audio.js?v=6360';
 import { createPauseUI } from './pause-ui.js?v=6160';
@@ -13,7 +13,7 @@ import { createFeedbackController } from './feedback.js?v=6370';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
 import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
-import { resolveArenaSelection } from './arena-config.js?v=6350';
+import { ARENA_OPTIONS, resolveArenaSelection } from './arena-config.js?v=6350';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -160,6 +160,9 @@ let ruleSelection='ko';
 let players=[];
 let particles=[];
 let running=false, paused=false, last=performance.now(), hitStop=0, slowMotionUntil=0, slowMotionScale=1, matchGeneration=0;
+let matchPhase='menu';
+let input=null;
+document.body.dataset.matchPhase=matchPhase;
 const matchRules=createMatchRulesController(ruleSelection);
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
 const arenaController=createArenaController({scene});
@@ -170,6 +173,7 @@ const hitObstacle=arenaController.hitObstacle;
 const makePlayer=playerController.makePlayer;
 const flashPlayer=playerController.flashPlayer;
 const defenseTrail=playerController.defenseTrail;
+const playSpawnEffect=playerController.playSpawnEffect;
 const playPlayerAction=playerController.playPlayerAction;
 const getMuzzlePosition=playerController.getMuzzlePosition;
 const audioController=createAudioController();
@@ -204,6 +208,14 @@ const matchScheduler=createMatchScheduler({
   getGeneration:()=>matchGeneration,
   isPaused:()=>paused
 });
+
+function setMatchPhase(phase){
+  matchPhase=phase;
+  running=phase==='battle';
+  document.body.dataset.matchPhase=phase;
+  document.body.classList.toggle('presentation-active',!running&&phase!=='menu'&&phase!=='result');
+  if(!running)input?.clear();
+}
 
 function particleBurst(pos,color=0xffffff,count=9,scale=.08){
   for(let i=0;i<count;i++){
@@ -287,6 +299,8 @@ function resetPlayer(i){
 
 function ko(victim,attacker){
   const player=players[victim];
+  setMatchPhase('ko');
+  matchLater(()=>combatController.clearProjectiles(),0);
   player.alive=false;
   playPlayerAction(player,'death');
   const pos=player.root.position.clone().setY(.9);
@@ -302,16 +316,32 @@ function ko(victim,attacker){
   updateHUD();
 
   if(outcome.type==='finish'){
-    showMatchFinish(attacker,outcome.state);
-    matchLater(()=>finish(attacker,outcome.state),1500);
+    setMatchPhase('finish');
+    matchLater(()=>{
+      playPlayerAction(players[attacker],'victory');
+      particleBurst(players[attacker].root.position.clone().setY(1),players[attacker].cfg.color,30,.1);
+      showMatchFinish(attacker,players,outcome.state);
+    },620);
+    matchLater(()=>finish(attacker,outcome.state),2300);
     return;
   }
-  matchLater(()=>resetPlayer(victim),1100);
+  matchLater(()=>{
+    resetPlayer(victim);
+    showRespawnCue(players[victim]);
+    playSpawnEffect(players[victim]);
+    tone(560,.11,'sine',.028,190);
+    setMatchPhase('respawn');
+  },920);
+  matchLater(()=>{
+    hideRespawnCue();
+    showBanner('FIGHT!',420);
+    setMatchPhase('battle');
+  },1520);
 }
 
 function finish(winner,match=matchRules.getState()){
   matchGeneration++;
-  running=false;
+  setMatchPhase('result');
   paused=false;
   pauseUI.hide();
   pauseUI.setAvailable(false);
@@ -320,6 +350,17 @@ function finish(winner,match=matchRules.getState()){
   fieldWeaponController.reset();
   renderMatchResult(winner,players,match);
   result.hidden=false;
+}
+
+function finishByTime(winner,match){
+  setMatchPhase('finish');
+  combatController.clearProjectiles();
+  showBanner('TIME UP!',700);
+  playPlayerAction(players[winner],'victory');
+  particleBurst(players[winner].root.position.clone().setY(1),players[winner].cfg.color,30,.1);
+  showMatchFinish(winner,players,match,'TIME UP');
+  tone(420,.16,'sine',.04,240);
+  matchLater(()=>finish(winner,match),1900);
 }
 
 function removePlayers(){
@@ -337,50 +378,44 @@ function clearProjectiles(){
   particles=[];
 }
 
-function buildShortLabel(p){
-  const weapon=(p.cfg.weaponStyle||'rifle').toUpperCase();
-  const defense=defenseLabel(p.cfg.defense);
-  const passive=p.cfg.passiveName||'NONE';
-  return `${weapon} · ${defense} · ${passive}`;
-}
-
-function showVsIntro(){
-  let el=document.querySelector('#vs-intro');
-  if(!el){
-    el=document.createElement('div');
-    el.id='vs-intro';
-    el.className='vs-intro';
-    document.body.appendChild(el);
-  }
-  el.innerHTML=`
-    <div class="vs-side p1"><small>PLAYER 1</small><strong>${players[0].cfg.name}</strong><span>${buildShortLabel(players[0])}</span></div>
-    <div class="vs-mark">VS</div>
-    <div class="vs-side p2"><small>PLAYER 2</small><strong>${players[1].cfg.name}</strong><span>${buildShortLabel(players[1])}</span></div>`;
-  el.classList.add('show');
-  return new Promise(r=>setTimeout(()=>{el.classList.remove('show');r()},1050));
-}
+function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
 
 async function battleCountdown(generation){
-  running=false;
-  await showVsIntro();
+  setMatchPhase('intro');
+  players.forEach(player=>{player.presentationHidden=true});
+  showVsIntro(players,matchRules.getState(),ARENA_OPTIONS[activeArenaSelection]||activeArenaSelection);
+  await wait(1400);
   if(generation!==matchGeneration)return;
+  hideVsIntro();
+  setMatchPhase('entrance');
+  players.forEach((player,index)=>{
+    player.presentationHidden=false;
+    player.root.visible=true;
+    playSpawnEffect(player);
+    matchLater(()=>particleBurst(player.root.position.clone().setY(.8),player.cfg.color,18,.075),index*90);
+  });
+  tone(340,.12,'sine',.03,180);
+  await wait(520);
+  if(generation!==matchGeneration)return;
+  setMatchPhase('countdown');
   for(const n of [3,2,1]){
-    showBanner(String(n),700);
+    showBanner(String(n),560);
     playCountdownVoice('count_'+n);
-    await new Promise(r=>setTimeout(r,800));
+    await wait(650);
     if(generation!==matchGeneration)return;
   }
-  showBanner('GO!',700);
+  showBanner('FIGHT!',720);
   playCountdownVoice('go');
-  await new Promise(r=>setTimeout(r,350));
-  if(generation!==matchGeneration)return;
-  running=true;
+  cameraController.addShake(2.6,130);
+  setMatchPhase('battle');
   pauseUI.setAvailable(true);
 }
 
 function startBattle(){
   hideMatchResult();
   hideMatchFinish();
+  hideVsIntro();
+  hideRespawnCue();
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
@@ -401,7 +436,7 @@ function startBattle(){
   activeArenaSelection=resolveArenaSelection(arenaSelection);
   buildArena(activeArenaSelection);
   players=[makePlayer(0,buildCustomConfig(0)),makePlayer(1,buildCustomConfig(1))];
-  running=false;
+  setMatchPhase('intro');
   result.hidden=true;
   playBattleBGM(activeArenaSelection==='hex'?'space':'normal');
   $('#menu').hidden=true;
@@ -415,6 +450,8 @@ function startBattle(){
 function fullReset(){
   hideMatchResult();
   hideMatchFinish();
+  hideVsIntro();
+  hideRespawnCue();
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
@@ -422,6 +459,7 @@ function fullReset(){
   slowMotionScale=1;
   pauseUI.hide();
   input.clear();
+  const generation=matchGeneration;
   matchRules.start(ruleSelection);
   clearPowerCore();
   powerCoreTimer=7;
@@ -433,25 +471,28 @@ function fullReset(){
     p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,accuracyHits:0,supers:0,defenses:0,cores:0,parries:0};
     resetPlayer(i);
   });
-  running=true;
-  pauseUI.setAvailable(true);
+  setMatchPhase('intro');
+  pauseUI.setAvailable(false);
   result.hidden=true;
   playBattleBGM(activeArenaSelection==='hex'?'space':'normal');
   updateHUD();
-  showBanner('FIGHT!',900);
+  updateWorldStatus();
+  battleCountdown(generation);
 }
 
 $('#rematch').addEventListener('click',fullReset);
 function backToMenu(){
   hideMatchResult();
   hideMatchFinish();
+  hideVsIntro();
+  hideRespawnCue();
   matchGeneration++;
   matchScheduler.clear();
   clearPowerCore();
   powerCoreTimer=7;
   powerCoreOneSecondCue=false;
   fieldWeaponController.reset();
-  running=false;
+  setMatchPhase('menu');
   paused=false;
   slowMotionUntil=0;
   slowMotionScale=1;
@@ -517,12 +558,13 @@ $$('.super-btn').forEach(button=>button.addEventListener('pointerdown',e=>{
   activateSuper(Number(button.dataset.player));
 }));
 
-const input=createInputController({
+input=createInputController({
   getPlayers:()=>players,
   screenVectorToWorld:cameraController.screenVectorToWorld,
   projectWorldToScreen:cameraController.projectWorldToScreen,
   shoot,
-  activateSuper
+  activateSuper,
+  isEnabled:()=>matchPhase==='battle'&&!paused
 });
 
 function canPauseBattle(){
@@ -674,14 +716,40 @@ function updatePowerCore(dt){
   }
 }
 
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const particle=particles[i];
+    particle.life-=dt;
+    particle.mesh.position.addScaledVector(particle.vel,dt);
+    particle.vel.y-=6*dt;
+    if(particle.mesh.material?.opacity!==undefined)particle.mesh.material.opacity=Math.max(0,particle.life/particle.max);
+    if(particle.life<=0){
+      scene.remove(particle.mesh);
+      particle.mesh.geometry?.dispose?.();
+      particle.mesh.material?.dispose?.();
+      particles.splice(i,1);
+    }
+  }
+}
+
 function update(dt){
-  if(!running||paused)return;
+  if(paused)return;
   matchScheduler.update(dt);
+  players.forEach(player=>{
+    const inBush=player.alive&&arenaController.isInBush(player.root.position);
+    playerController.updatePlayerVisuals(player,dt,inBush);
+  });
+  updateParticles(dt);
+  if(!running){
+    updateHUD();
+    updateWorldStatus();
+    return;
+  }
   input.update();
   updatePowerCore(dt);
   const ruleEvent=matchRules.update(dt);
   if(ruleEvent?.type==='finish'){
-    finish(ruleEvent.winner,ruleEvent.state);
+    finishByTime(ruleEvent.winner,ruleEvent.state);
     return;
   }
   if(ruleEvent?.type==='sudden-death'){
@@ -706,8 +774,6 @@ function update(dt){
       showBanner(`P${p.i+1} READY`,260);
       tone(520,.06,'sine',.02,120);
     }
-    const inBush=p.alive&&arenaController.isInBush(p.root.position);
-    playerController.updatePlayerVisuals(p,dt,inBush);
     if(!p.alive)return;
     if(p.fireHeld&&p.aim.lengthSq()>.12)shoot(p.i);
 
@@ -754,20 +820,6 @@ function update(dt){
 
   fieldWeaponController.update(dt);
   combatController.updateProjectiles(dt);
-
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];
-    p.life-=dt;
-    p.mesh.position.addScaledVector(p.vel,dt);
-    p.vel.y-=6*dt;
-    if(p.mesh.material?.opacity!==undefined)p.mesh.material.opacity=Math.max(0,p.life/p.max);
-    if(p.life<=0){
-      scene.remove(p.mesh);
-      p.mesh.geometry?.dispose?.();
-      p.mesh.material?.dispose?.();
-      particles.splice(i,1);
-    }
-  }
 
   updateHUD();
   updateWorldStatus();

@@ -8,8 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Duel Arena" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Duel Arena v6.37.0</title>
-  <link rel="stylesheet" href="./style.css?v=6370" />
+  <title>Duel Arena v6.38.0</title>
+  <link rel="stylesheet" href="./style.css?v=6380" />
   <link rel="stylesheet" href="./menu-stats.css?v=6350" />
   <link rel="stylesheet" href="./help-ui.css?v=6191" />
   <link rel="manifest" href="./manifest.webmanifest" />
@@ -28,7 +28,7 @@
             <p class="sub">キャラクターと武器を組み合わせて戦おう</p>
           </div>
           <div class="build-badge">
-            <strong>v6.37.0</strong><span>命中判定・照準補助・命中統計 · 2026.08.27</span>
+            <strong>v6.38.0</strong><span>VS・登場・復活・勝利演出 · 2026.08.28</span>
           </div>
         </div>
 
@@ -107,10 +107,33 @@
     </section>
 
     <div id="banner"></div>
+    <section id="vs-intro" class="vs-intro" hidden aria-live="assertive">
+      <div class="vs-side p1">
+        <small>PLAYER 1</small>
+        <strong id="vs-p1-name">PLAYER 1</strong>
+        <span id="vs-p1-build">WEAPON · DEFENSE</span>
+      </div>
+      <div class="vs-center">
+        <div class="vs-mark">VS</div>
+        <b id="vs-rule">90秒KO戦</b>
+        <span id="vs-stage">スクエア</span>
+      </div>
+      <div class="vs-side p2">
+        <small>PLAYER 2</small>
+        <strong id="vs-p2-name">PLAYER 2</strong>
+        <span id="vs-p2-build">WEAPON · DEFENSE</span>
+      </div>
+    </section>
+
+    <div id="respawn-cue" class="respawn-cue" hidden aria-live="polite">
+      <small>RETURNING TO ARENA</small><strong>PLAYER 1</strong>
+    </div>
     <section id="match-finish" class="match-finish" hidden aria-live="assertive">
       <div class="match-finish-kicker">FINAL K.O.</div>
       <div id="match-finish-title">P1 WIN</div>
+      <div id="match-finish-name">CHARACTER / WEAPON</div>
       <div id="match-finish-score">3 - 0</div>
+      <div id="match-finish-award">SHARPSHOOTER</div>
     </section>
 
     <section id="controls" hidden>
@@ -130,6 +153,7 @@
         <h1 id="winner">プレイヤー1 勝利！</h1>
         <p id="result-rule">90秒KO戦</p>
         <p id="result-score">3 - 1</p>
+        <div id="result-highlights"></div>
         <div id="match-result-stats"></div>
         <div class="result-buttons">
           <button id="rematch" class="primary">もう一度</button>
@@ -147,6 +171,6 @@
     }
   }
   </script>
-  <script type="module" src="./src/main.js?v=6370"></script>
+  <script type="module" src="./src/main.js?v=6380"></script>
 </body>
 </html>
