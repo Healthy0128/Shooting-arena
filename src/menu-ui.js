@@ -8,7 +8,7 @@ import {
   BODY_META,
   WEAPON_INFO
 } from './loadout-config.js?v=6180';
-import { ARENA_OPTIONS } from './arena-config.js?v=695';
+import { ARENA_OPTIONS } from './arena-config.js?v=6350';
 import { vibrate } from './feedback.js?v=6160';
 
 function clamp01(value){
@@ -187,13 +187,19 @@ export function initMenuUI(){
     });
   });
 
-  arenaButtons.replaceChildren(...Object.entries(ARENA_OPTIONS).map(([value,label],index)=>{
+  const randomArenaButton=document.createElement('button');
+  randomArenaButton.dataset.arena='random';
+  randomArenaButton.textContent='🎲 ランダム';
+  randomArenaButton.className='random-arena';
+
+  const arenaOptionButtons=Object.entries(ARENA_OPTIONS).map(([value,label],index)=>{
     const button=document.createElement('button');
     button.dataset.arena=value;
     button.textContent=label;
     if(index===0)button.classList.add('selected');
     return button;
-  }));
+  });
+  arenaButtons.replaceChildren(randomArenaButton,...arenaOptionButtons);
 
   ensureDetailModal();
   installDetailInteraction();

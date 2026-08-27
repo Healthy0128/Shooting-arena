@@ -87,7 +87,7 @@ check "countdown generation guard" grep -Fq 'async function battleCountdown(gene
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
 check "BGM request guard" grep -Fq 'realBGMRequestId' src/audio.js
 check "menu BGM delegated" grep -Fq 'playMenuBGM();' src/game.js
-check "battle BGM delegated" grep -Fq "playBattleBGM(arenaSelection==='hex'?'space':'normal');" src/game.js
+check "battle BGM delegated" grep -Fq "playBattleBGM(activeArenaSelection==='hex'?'space':'normal');" src/game.js
 check "projectile visuals delegated" grep -Fq 'projectileVisuals.update(bullet,dt,performance.now());' src/combat.js
 check "shoot animation delegated" grep -Fq "playPlayerAction(player,'shoot');" src/combat.js
 check "death animation delegated" grep -Fq "playPlayerAction(player,'death');" src/game.js
@@ -199,6 +199,11 @@ check "match rules stay out of game orchestrator" bash -c '! grep -Fq "players[a
 check "match score state is centralized" bash -c '! grep -Fq "score:0" src/player.js'
 check "KO rule selector exists" grep -Fq 'data-rule="ko"' index.html
 check "stock rule selector exists" grep -Fq 'data-rule="stock"' index.html
+check "random stage resolver exported" grep -Fq 'export function resolveArenaSelection' src/arena-config.js
+check "random stage resolver behavior" node --input-type=module -e "const m=await import('./src/arena-config.js');if(m.resolveArenaSelection('random',()=>0)!=='square'||m.resolveArenaSelection('random',()=>.999)!=='crates'||m.resolveArenaSelection('hex')!=='hex'||m.resolveArenaSelection('missing')!=='square')process.exit(1)"
+check "random stage selector rendered" grep -Fq "randomArenaButton.dataset.arena='random'" src/menu-ui.js
+check "random stage resolved before arena build" grep -Fq 'activeArenaSelection=resolveArenaSelection(arenaSelection);' src/game.js
+check "menu respects top safe area" grep -Fq 'padding-top:max(54px,var(--ui-safe-top),env(safe-area-inset-top,0px))' menu-stats.css
 
 if grep -Fq 'id="build-limit-value"' index.html || grep -Fq 'budget-legend' index.html; then
   echo '::error::build limit UI returned after cost restrictions were disabled'

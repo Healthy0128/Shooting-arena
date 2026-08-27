@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6340';
+import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6350';
 import { createInputController } from './input.js?v=6330';
 import { createHudUI } from './hud-ui.js?v=6340';
 import { createCameraController } from './camera.js?v=6330';
@@ -13,6 +13,7 @@ import { createFeedbackController } from './feedback.js?v=6160';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
 import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
+import { resolveArenaSelection } from './arena-config.js?v=6350';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -154,6 +155,7 @@ function updateStartAvailability(){
 }
 
 let arenaSelection='square';
+let activeArenaSelection='square';
 let ruleSelection='ko';
 let players=[];
 let particles=[];
@@ -376,11 +378,12 @@ function startBattle(){
   fieldWeaponController.reset();
   removePlayers();
   clearProjectiles();
-  buildArena(arenaSelection);
+  activeArenaSelection=resolveArenaSelection(arenaSelection);
+  buildArena(activeArenaSelection);
   players=[makePlayer(0,buildCustomConfig(0)),makePlayer(1,buildCustomConfig(1))];
   running=false;
   result.hidden=true;
-  playBattleBGM(arenaSelection==='hex'?'space':'normal');
+  playBattleBGM(activeArenaSelection==='hex'?'space':'normal');
   $('#menu').hidden=true;
   $('#hud').hidden=false;
   $('#controls').hidden=false;
@@ -411,7 +414,7 @@ function fullReset(){
   running=true;
   pauseUI.setAvailable(true);
   result.hidden=true;
-  playBattleBGM(arenaSelection==='hex'?'space':'normal');
+  playBattleBGM(activeArenaSelection==='hex'?'space':'normal');
   updateHUD();
   showBanner('FIGHT!',900);
 }

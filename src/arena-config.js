@@ -32,3 +32,9 @@ export const ARENA_OPTIONS={
   bush:'ブッシュフィールド',
   crates:'クレートヤード'
 };
+
+export function resolveArenaSelection(selection,random=Math.random){
+  if(selection!=='random')return selection in ARENA_OPTIONS?selection:'square';
+  const arenas=Object.keys(ARENA_OPTIONS);
+  return arenas[Math.min(arenas.length-1,Math.floor(random()*arenas.length))];
+}
