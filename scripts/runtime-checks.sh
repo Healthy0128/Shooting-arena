@@ -18,7 +18,7 @@ for file in \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
   src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
-  src/field-weapons.js src/help-ui.js src/floating-stick.js src/match-rules.js; do
+  src/field-weapons.js src/help-ui.js src/floating-stick.js src/match-rules.js src/hit-detection.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -38,11 +38,20 @@ check "pause UI controller exported" grep -Fq 'export function createPauseUI' sr
 check "match scheduler exported" grep -Fq 'export function createMatchScheduler' src/match-scheduler.js
 check "match rules controller exported" grep -Fq 'export function createMatchRulesController' src/match-rules.js
 check "match rule behavior" node scripts/match-rules-check.mjs
+check "swept hit and aim assist behavior" node scripts/hit-detection-check.mjs
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "impact tiers centralized" grep -Fq 'export const IMPACT_FEEDBACK=' src/feedback.js
 check "impact tier behavior" node --input-type=module -e "const {impactTier:t}=await import('./src/feedback.js');if(t({style:'rapid',damage:7})!=='light'||t({style:'rifle',damage:19})!=='normal'||t({style:'scatter',damage:11})!=='heavy'||t({style:'bladegun',damage:25,bounces:2})!=='heavy'||t({style:'rifle',damage:19,lethal:true})!=='ko')process.exit(1)"
 check "combat delegates impact feedback" grep -Fq 'const feedback=impactFeedback?.({' src/combat.js
+check "projectiles use swept collision" grep -Fq 'const hit=segmentCircleHit(' src/combat.js
+check "hitbox receives restrained forgiveness" grep -Fq 'player.radius*1.1+bullet.radius' src/combat.js
+check "aim assist capped by weapon" grep -Fq "weapon.weaponStyle==='sniper'?3.5:5" src/combat.js
+check "weapon faces final shot direction before muzzle lookup" grep -Fq 'player.root.rotation.y=Math.atan2(base.x,base.z)+Math.PI;' src/combat.js
+check "shot denominator counts projectiles" grep -Fq 'player.stats.shots++;' src/combat.js
+check "accuracy excludes super damage" grep -Fq 'countAccuracy:!bullet.isSuper' src/combat.js
+check "result shows fired shots" grep -Fq "statRow('SHOTS'" src/match-ui.js
+check "hit confirmation delegated" grep -Fq 'feedbackController.hitConfirm' src/game.js
 check "KO feedback delegated" grep -Fq 'feedbackController.ko({' src/game.js
 check "KO slow motion supported" grep -Fq 'slowMotionUntil=Math.max' src/game.js
 check "impact audio controller" grep -Fq 'function playImpactSfx' src/audio.js

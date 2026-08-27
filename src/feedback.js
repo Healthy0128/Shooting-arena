@@ -36,6 +36,20 @@ function ensureKOFlash(){
   return flash;
 }
 
+function showHitConfirm({x,y,player=0,tier='normal'}){
+  if(!Number.isFinite(x)||!Number.isFinite(y))return;
+  const marker=document.createElement('div');
+  marker.className=`hit-confirm ${tier}`;
+  marker.textContent='×';
+  marker.setAttribute('aria-hidden','true');
+  marker.style.left=`${x}px`;
+  marker.style.top=`${y}px`;
+  if(player===1)marker.style.setProperty('--hit-rotation','180deg');
+  document.body.appendChild(marker);
+  requestAnimationFrame(()=>marker.classList.add('show'));
+  setTimeout(()=>marker.remove(),220);
+}
+
 export function createFeedbackController({cameraShake,addHitStop,slowMotion,playImpactSfx,playKOSfx,duckBGM}){
   let lastImpactAt=0;
   let lastImpactRank=-1;
@@ -81,5 +95,5 @@ export function createFeedbackController({cameraShake,addHitStop,slowMotion,play
     },final?430:300);
   }
 
-  return {vibrate,shake,impact,ko};
+  return {vibrate,shake,impact,ko,hitConfirm:showHitConfirm};
 }
