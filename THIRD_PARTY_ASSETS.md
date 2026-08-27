@@ -42,3 +42,10 @@ Local files:
 - `assets/audio/voice/count_2.ogg`
 - `assets/audio/voice/count_1.ogg`
 - `assets/audio/voice/go.ogg`
+
+## Kenney Impact Sounds
+Creator: Kenney
+License: CC0 1.0 Universal
+Source: https://kenney.nl/assets/impact-sounds
+
+The repository keeps seven short OGG samples used for light, normal, heavy, and KO impact feedback in `assets/audio/sfx/`.

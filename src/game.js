@@ -5,11 +5,11 @@ import { createHudUI } from './hud-ui.js?v=6340';
 import { createCameraController } from './camera.js?v=6330';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6340';
-import { createCombatController } from './combat.js?v=6320';
-import { createAudioController } from './audio.js?v=6210';
+import { createCombatController } from './combat.js?v=6360';
+import { createAudioController } from './audio.js?v=6360';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
-import { createFeedbackController } from './feedback.js?v=6160';
+import { createFeedbackController } from './feedback.js?v=6360';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
 import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
@@ -159,10 +159,9 @@ let activeArenaSelection='square';
 let ruleSelection='ko';
 let players=[];
 let particles=[];
-let running=false, paused=false, last=performance.now(), hitStop=0, matchGeneration=0;
+let running=false, paused=false, last=performance.now(), hitStop=0, slowMotionUntil=0, slowMotionScale=1, matchGeneration=0;
 const matchRules=createMatchRulesController(ruleSelection);
 const cameraController=createCameraController({renderer,scene,getPlayers:()=>players});
-const feedbackController=createFeedbackController({cameraShake:(strength,duration)=>cameraController.addShake(strength,duration)});
 const arenaController=createArenaController({scene});
 const playerController=createPlayerController({scene});
 const buildArena=arenaController.build;
@@ -183,9 +182,22 @@ const {
   stopAllBGM,
   pauseBGM,
   resumeBGM,
-  synthKO,
+  playImpactSfx,
+  playKOSfx,
+  duckBGM,
   playCountdownVoice
 }=audioController;
+const feedbackController=createFeedbackController({
+  cameraShake:(strength,duration)=>cameraController.addShake(strength,duration),
+  addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
+  slowMotion:(duration,scale)=>{
+    slowMotionUntil=Math.max(slowMotionUntil,performance.now()+duration+hitStop*1000);
+    slowMotionScale=Math.min(slowMotionScale,scale);
+  },
+  playImpactSfx,
+  playKOSfx,
+  duckBGM
+});
 playMenuBGM();
 
 const matchScheduler=createMatchScheduler({
@@ -210,9 +222,9 @@ function matchLater(fn,ms){
   return matchScheduler.later(fn,ms);
 }
 
-function damagePop(amount){
+function damagePop(amount,tier='normal'){
   const el=document.createElement('div');
-  el.className='damage-pop';
+  el.className=`damage-pop ${tier}`;
   el.textContent=`-${Math.round(amount)}`;
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),480);
@@ -243,6 +255,7 @@ const combatController=createCombatController({
   playPlayerAction,
   getMuzzlePosition,
   damagePop,
+  impactFeedback:feedbackController.impact,
   addHitStop:amount=>{hitStop=Math.max(hitStop,amount)},
   cameraShake:feedbackController.shake,
   shotSfx,
@@ -277,10 +290,11 @@ function ko(victim,attacker){
   matchLater(()=>particleBurst(pos.clone().setY(1.05),0xffffff,18,.08),55);
   matchLater(()=>{player.root.visible=false},720);
   const outcome=matchRules.onKO(victim,attacker);
-  hitStop=Math.max(hitStop,.11);
-  synthKO();
   showBanner(outcome.finalKO?'FINAL K.O!':'K.O!',outcome.finalKO?900:700);
-  feedbackController.vibrate([55,35,90]);
+  feedbackController.ko({
+    final:outcome.finalKO,
+    color:`#${(players[attacker]?.cfg.color??player.cfg.color).toString(16).padStart(6,'0')}`
+  });
   updateHUD();
 
   if(outcome.type==='finish'){
@@ -366,6 +380,8 @@ function startBattle(){
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
+  slowMotionUntil=0;
+  slowMotionScale=1;
   pauseUI.hide();
   pauseUI.setAvailable(false);
   input.clear();
@@ -398,6 +414,8 @@ function fullReset(){
   matchGeneration++;
   matchScheduler.clear();
   paused=false;
+  slowMotionUntil=0;
+  slowMotionScale=1;
   pauseUI.hide();
   input.clear();
   matchRules.start(ruleSelection);
@@ -431,6 +449,8 @@ function backToMenu(){
   fieldWeaponController.reset();
   running=false;
   paused=false;
+  slowMotionUntil=0;
+  slowMotionScale=1;
   input.clear();
   pauseUI.hide();
   pauseUI.setAvailable(false);
@@ -754,7 +774,11 @@ function loop(now){
   last=now;
   if(!paused){
     if(hitStop>0)hitStop=Math.max(0,hitStop-dt);
-    else update(dt);
+    else{
+      const slowed=now<slowMotionUntil;
+      update(dt*(slowed?slowMotionScale:1));
+      if(!slowed)slowMotionScale=1;
+    }
   }
   cameraController.render();
   requestAnimationFrame(loop);

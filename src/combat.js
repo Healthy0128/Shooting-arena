@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6310';
-import { createWeaponEffectsController } from './weapon-effects.js?v=6320';
+import { createWeaponEffectsController } from './weapon-effects.js?v=6360';
 
 export function createCombatController({
   scene,
@@ -20,6 +20,7 @@ export function createCombatController({
   playPlayerAction,
   getMuzzlePosition,
   damagePop,
+  impactFeedback,
   addHitStop,
   cameraShake,
   shotSfx,
@@ -566,15 +567,21 @@ export function createCombatController({
     }
     player.hp=Math.max(0,player.hp-finalDamage);
     onDamage?.(finalDamage);
-    damagePop(finalDamage);
     if(players[attacker]&&options.grantAttackerSuper!==false){
       players[attacker].super=Math.min(100,players[attacker].super+finalDamage*.9*superGainMul(players[attacker]));
     }
     player.super=Math.min(100,player.super+finalDamage*.35*superGainMul(player));
 
-    flashPlayer(player,.11);
+    const feedback=impactFeedback?.({
+      damage:finalDamage,
+      style,
+      bounces,
+      lethal:player.hp<=0
+    })||{tier:'normal',flash:.11};
+    damagePop(finalDamage,feedback.tier);
+    flashPlayer(player,feedback.flash);
     playPlayerAction(player,'hit');
-    weaponEffects.impact(style,impactPosition||player.root.position.clone().setY(.9),'player',bounces);
+    weaponEffects.impact(style,impactPosition||player.root.position.clone().setY(.9),'player',bounces,feedback.tier);
     const src=players[attacker]?.root.position;
     if(src){
       const away=player.root.position.clone().sub(src);
@@ -589,9 +596,6 @@ export function createCombatController({
       }
     }
 
-    addHitStop(.045);
-    tone(85,.07,'sawtooth',.04,-30);
-    vibrate(18);
     if(player.hp<=0)onKO(victim,attacker);
   }
 
