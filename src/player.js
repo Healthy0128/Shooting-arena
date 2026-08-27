@@ -194,7 +194,7 @@ export function createPlayerController({scene}){
       hp:cfg.hp,maxHp:cfg.hp,alive:true,invuln:0,fireCd:0,recovery:0,super:0,heat:0,
       overheated:false,fireHeld:false,powerBuff:0,defenseCd:0,guard:100,guarding:false,barrier:0,
       parryActive:0,parryChain:0,defenseFx,guardShield,barrierShell,parryRing,superAura,flashTime:0,dashFx:0,
-      stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0},
+      stats:{damageDealt:0,damageTaken:0,shots:0,hits:0,accuracyHits:0,supers:0,defenses:0,cores:0,parries:0},
       move:new THREE.Vector2(),lastMoveSide:0,aim:new THREE.Vector2(i===0?1:-1,0),radius:cfg.radius||.58,
       mixer:null,realModel:false,actionAnimations:{},oneShotAction:null,actionTime:0,fieldWeapon:null,
       hitReaction:0,hitReactionDuration:.26,hitSide:1,shotReaction:0,shotReactionDuration:.12,bodyScale

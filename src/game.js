@@ -1,15 +1,15 @@
 import * as THREE from 'three';
-import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6350';
+import { showBanner, renderMatchResult, hideMatchResult, showMatchFinish, hideMatchFinish, renderLoadoutSummary } from './ui.js?v=6370';
 import { createInputController } from './input.js?v=6330';
 import { createHudUI } from './hud-ui.js?v=6340';
 import { createCameraController } from './camera.js?v=6330';
 import { createArenaController } from './arena.js?v=6120';
-import { createPlayerController, defenseLabel } from './player.js?v=6340';
-import { createCombatController } from './combat.js?v=6360';
+import { createPlayerController, defenseLabel } from './player.js?v=6370';
+import { createCombatController } from './combat.js?v=6370';
 import { createAudioController } from './audio.js?v=6360';
 import { createPauseUI } from './pause-ui.js?v=6160';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
-import { createFeedbackController } from './feedback.js?v=6360';
+import { createFeedbackController } from './feedback.js?v=6370';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
 import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
@@ -262,6 +262,10 @@ const combatController=createCombatController({
   vibrate:feedbackController.vibrate,
   consumeFieldWeapon:fieldWeaponController.consume,
   onDamage:fieldWeaponController.noteDamage,
+  onHit:(attacker,victim,tier,position)=>{
+    const point=cameraController.projectWorldToScreen(attacker,position||players[victim]?.root.position);
+    if(point?.visible)feedbackController.hitConfirm({x:point.x,y:point.y,player:attacker,tier});
+  },
   onKO:ko
 });
 const shoot=combatController.shoot;
@@ -426,7 +430,7 @@ function fullReset(){
   clearProjectiles();
   players.forEach((p,i)=>{
     p.super=0;
-    p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,supers:0,defenses:0,cores:0,parries:0};
+    p.stats={damageDealt:0,damageTaken:0,shots:0,hits:0,accuracyHits:0,supers:0,defenses:0,cores:0,parries:0};
     resetPlayer(i);
   });
   running=true;

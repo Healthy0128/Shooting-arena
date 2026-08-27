@@ -3,6 +3,7 @@ import { ARENA } from './arena-config.js?v=695';
 import { BODY_META, OVERDRIVE_PROFILES } from './loadout-config.js?v=6180';
 import { createProjectileVisualController } from './projectile-visuals.js?v=6310';
 import { createWeaponEffectsController } from './weapon-effects.js?v=6360';
+import { assistedAimDirection, segmentCircleHit } from './hit-detection.js?v=6370';
 
 export function createCombatController({
   scene,
@@ -27,6 +28,7 @@ export function createCombatController({
   vibrate,
   consumeFieldWeapon,
   onDamage,
+  onHit,
   onKO
 }){
   const bullets=[];
@@ -84,6 +86,7 @@ export function createCombatController({
     if(curveDirection)launch.applyAxisAngle(new THREE.Vector3(0,1,0),curveDirection*Math.PI*40/180);
     mesh.position.copy(getMuzzlePosition(player,new THREE.Vector3())).addScaledVector(launch,.08);
     scene.add(mesh);
+    player.stats.shots++;
 
     bullets.push({
       mesh,
@@ -102,6 +105,23 @@ export function createCombatController({
       curveDelay:style==='boomerang'?.3:0,
       curveComplete:false
     });
+  }
+
+  function assistedShotDirection(owner,player,base,weapon){
+    if(weapon.pattern==='radial')return base;
+    const target=getPlayers()[1-owner];
+    if(!target?.alive)return base;
+    const muzzle=getMuzzlePosition(player,new THREE.Vector3());
+    const maxDegrees=weapon.weaponStyle==='sniper'?3.5:5;
+    const corrected=assistedAimDirection({
+      aim:{x:base.x,z:base.z},
+      origin:{x:muzzle.x,z:muzzle.z},
+      target:{x:target.root.position.x,z:target.root.position.z},
+      maxAngleRad:THREE.MathUtils.degToRad(maxDegrees)
+    });
+    if(!corrected.assisted)return base;
+    player.aim.set(corrected.x,corrected.z);
+    return new THREE.Vector3(corrected.x,0,corrected.z);
   }
 
   function bladeAttack(i,player,amount){
@@ -135,7 +155,6 @@ export function createCombatController({
     const weapon=activeWeapon(player);
     player.fireCd=weapon.fireCd;
     player.recovery=weapon.recovery||0;
-    player.stats.shots++;
     playPlayerAction(player,'shoot');
     const heatGain=weapon.heatGain??(weapon.pellets>1?30:weapon.fireCd<.12?9:weapon.fireCd>.75?42:18);
     player.heat=Math.min(100,(player.heat||0)+heatGain);
@@ -145,9 +164,12 @@ export function createCombatController({
       tone(120,.11,'sawtooth',.03,-45);
       vibrate([20,30,20]);
     }
-    const base=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
+    const rawAim=new THREE.Vector3(player.aim.x,0,player.aim.y).normalize();
+    const base=assistedShotDirection(i,player,rawAim,weapon);
+    player.root.rotation.y=Math.atan2(base.x,base.z)+Math.PI;
     const attackMul=bodyDamageMul(player)*(player.powerBuff>0?1.18:1);
     if(weapon.weaponStyle==='katana'){
+      player.stats.shots++;
       bladeAttack(i,player,weapon.damage*attackMul);
       return;
     }
@@ -357,7 +379,7 @@ export function createCombatController({
           const ownerDistance=owner.root.position.distanceTo(effect.position);
           if(ownerDistance<=effect.radius)owner.hp=Math.min(owner.maxHp,owner.hp+3);
           if(enemy?.alive&&enemy.root.position.distanceTo(effect.position)<=effect.radius){
-            damage(1-effect.owner,3,effect.owner,'arcane',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false});
+            damage(1-effect.owner,3,effect.owner,'arcane',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false,countAccuracy:false});
           }
         }
         if(effect.life<=0)remove=true;
@@ -371,7 +393,7 @@ export function createCombatController({
           weaponEffects.impact('cannon',effect.position.clone().setY(.1),'obstacle');
           tone(82,.09,'square',.032,-30);
           if(enemy?.alive&&enemy.root.position.distanceTo(effect.position)<=1.15){
-            damage(1-effect.owner,30,effect.owner,'cannon',effect.position.clone().setY(.9),0,{grantAttackerSuper:false});
+            damage(1-effect.owner,30,effect.owner,'cannon',effect.position.clone().setY(.9),0,{grantAttackerSuper:false,countAccuracy:false});
           }
           remove=true;
         }
@@ -429,7 +451,7 @@ export function createCombatController({
     }
     const enemy=getPlayers()[1-i];
     if(!enemy?.alive||enemy.invuln>0||enemy.root.position.distanceTo(player.root.position)>4.6)return;
-    damage(1-i,42,i,'scatter',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false});
+    damage(1-i,42,i,'scatter',enemy.root.position.clone().setY(.9),0,{grantAttackerSuper:false,countAccuracy:false});
     if(!enemy.alive)return;
     const away=enemy.root.position.clone().sub(player.root.position).setY(0);
     if(away.lengthSq()<.01)away.set(i===0?1:-1,0,0);
@@ -564,6 +586,7 @@ export function createCombatController({
     if(players[attacker]){
       players[attacker].stats.damageDealt+=finalDamage;
       players[attacker].stats.hits++;
+      if(options.countAccuracy!==false)players[attacker].stats.accuracyHits++;
     }
     player.hp=Math.max(0,player.hp-finalDamage);
     onDamage?.(finalDamage);
@@ -582,6 +605,7 @@ export function createCombatController({
     flashPlayer(player,feedback.flash);
     playPlayerAction(player,'hit');
     weaponEffects.impact(style,impactPosition||player.root.position.clone().setY(.9),'player',bounces,feedback.tier);
+    onHit?.(attacker,victim,feedback.tier,impactPosition||player.root.position);
     const src=players[attacker]?.root.position;
     if(src){
       const away=player.root.position.clone().sub(src);
@@ -681,6 +705,7 @@ export function createCombatController({
         }
       }
       bullet.life-=dt;
+      const previousPosition=bullet.mesh.position.clone();
       bullet.mesh.position.addScaledVector(bullet.vel,dt);
       projectileVisuals.update(bullet,dt,performance.now());
 
@@ -703,14 +728,23 @@ export function createCombatController({
       if(!remove){
         const enemy=1-bullet.owner;
         const player=players[enemy];
-        const dx=bullet.mesh.position.x-player.root.position.x;
-        const dz=bullet.mesh.position.z-player.root.position.z;
-        if(player.alive&&dx*dx+dz*dz<(player.radius+bullet.radius)**2){
+        const hit=segmentCircleHit(
+          previousPosition,
+          bullet.mesh.position,
+          player.root.position,
+          player.radius*1.1+bullet.radius
+        );
+        if(player.alive&&hit.hit){
+          bullet.mesh.position.x=hit.x;
+          bullet.mesh.position.z=hit.z;
           if(player.cfg.defense==='parry'&&player.parryActive>0&&sourceFrontDot(player,bullet.mesh.position)>-.15){
             parryBullet(enemy,bullet);
             remove=false;
           }else{
-            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner,bullet.style,bullet.mesh.position,bullet.bounces,{grantAttackerSuper:!bullet.isSuper});
+            damage(enemy,bullet.damage*ricochetMultiplier(bullet),bullet.owner,bullet.style,bullet.mesh.position,bullet.bounces,{
+              grantAttackerSuper:!bullet.isSuper,
+              countAccuracy:!bullet.isSuper
+            });
             remove=true;
           }
         }

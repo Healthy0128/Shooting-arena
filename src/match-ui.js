@@ -18,7 +18,7 @@ export function showBanner(text,ms=650){
   },ms);
 }
 
-function accuracyOf(p){return p.stats.shots>0?Math.round((p.stats.hits/p.stats.shots)*100):0}
+function accuracyOf(p){return p.stats.shots>0?Math.round((p.stats.accuracyHits/p.stats.shots)*100):0}
 function statRow(label,a,b,suffix=''){
   return `<div class="result-stat"><span>${Math.round(a)}${suffix}</span><b>${label}</b><span>${Math.round(b)}${suffix}</span></div>`;
 }
@@ -37,6 +37,7 @@ export function renderMatchResult(winner,players,match){
   resultStats.innerHTML=`
     <div class="result-head"><span>P1</span><b>MATCH STATS</b><span>P2</span></div>
     ${statRow('DAMAGE',a.stats.damageDealt,b.stats.damageDealt)}
+    ${statRow('SHOTS',a.stats.shots,b.stats.shots)}
     ${statRow('HITS',a.stats.hits,b.stats.hits)}
     ${statRow('ACCURACY',accuracyOf(a),accuracyOf(b),'%')}
     ${statRow('SUPER',a.stats.supers,b.stats.supers)}
