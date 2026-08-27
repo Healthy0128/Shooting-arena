@@ -101,6 +101,20 @@ check "stage visuals delegated" grep -Fq 'addStageVisuals({arenaRoot,type,theme,
 
 check "countdown generation guard" grep -Fq 'async function battleCountdown(generation)' src/game.js
 check "stale countdown abort" grep -Fq 'if(generation!==matchGeneration)return;' src/game.js
+check "match presentation phases centralized" grep -Fq "function setMatchPhase(phase)" src/game.js
+check "VS intro uses rule and resolved stage" grep -Fq 'showVsIntro(players,matchRules.getState(),ARENA_OPTIONS[activeArenaSelection]' src/game.js
+check "entrance effect delegated to player" grep -Fq 'playSpawnEffect(player);' src/game.js
+check "presentation keeps scheduler moving" grep -Fq 'matchScheduler.update(dt);' src/game.js
+check "gameplay stops after presentation update" grep -Fq 'if(!running){' src/game.js
+check "KO locks match phase" grep -Fq "setMatchPhase('ko');" src/game.js
+check "KO clears projectiles after collision iteration" grep -Fq 'matchLater(()=>combatController.clearProjectiles(),0);' src/game.js
+check "respawn has protected phase" grep -Fq "setMatchPhase('respawn');" src/game.js
+check "time finish uses presentation" grep -Fq 'finishByTime(ruleEvent.winner,ruleEvent.state);' src/game.js
+check "input controller accepts phase gate" grep -Fq 'isEnabled=()=>true' src/input.js
+check "game provides input phase gate" grep -Fq "isEnabled:()=>matchPhase==='battle'&&!paused" src/game.js
+check "spawn invulnerability is visible" grep -Fq 'player.invulnerabilityRing.visible=protectedSpawn;' src/player.js
+check "victory animation has primitive fallback" grep -Fq "if(name==='victory')player.victoryTime=1.4;" src/player.js
+check "result achievements rendered" grep -Fq 'result-award winner' src/match-ui.js
 check "BGM request guard" grep -Fq 'realBGMRequestId' src/audio.js
 check "menu BGM delegated" grep -Fq 'playMenuBGM();' src/game.js
 check "battle BGM delegated" grep -Fq "playBattleBGM(activeArenaSelection==='hex'?'space':'normal');" src/game.js
@@ -115,7 +129,7 @@ check "weapon impacts delegated" grep -Fq 'weaponEffects.impact(style' src/comba
 check "directional projectile planes" grep -Fq 'root.add(horizontal,vertical);' src/projectile-visuals.js
 check "directional projectile follows velocity" grep -Fq 'Math.atan2(-bullet.vel.z,bullet.vel.x)' src/projectile-visuals.js
 check "combat projectile update delegated" grep -Fq 'combatController.updateProjectiles(dt);' src/game.js
-check "player visuals delegated" grep -Fq 'playerController.updatePlayerVisuals(p,dt,inBush);' src/game.js
+check "player visuals delegated" grep -Fq 'playerController.updatePlayerVisuals(player,dt,inBush);' src/game.js
 check "arena movement delegated" grep -Fq 'const canMoveTo=arenaController.canMoveTo;' src/game.js
 check "camera render delegated" grep -Fq 'cameraController.render();' src/game.js
 check "input update delegated" grep -Fq 'input.update();' src/game.js

@@ -1,6 +1,6 @@
 import { createFloatingStickController } from './floating-stick.js?v=6330';
 
-export function createInputController({getPlayers,mapStick,screenVectorToWorld,projectWorldToScreen,shoot,activateSuper}){
+export function createInputController({getPlayers,mapStick,screenVectorToWorld,projectWorldToScreen,shoot,activateSuper,isEnabled=()=>true}){
   const activePointers=new Map();
   const mapControl=mapStick||screenVectorToWorld;
   const isTpsMode=()=>document.body.classList.contains('split-arena');
@@ -70,6 +70,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,p
     const player=Number(zone.dataset.player),kind=zone.dataset.kind;
 
     function apply(e){
+      if(!isEnabled())return;
       const players=getPlayers();
       if(!players[player])return;
       const r=base.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
@@ -96,6 +97,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,p
     }
 
     zone.addEventListener('pointerdown',e=>{
+      if(!isEnabled())return;
       syncInputMode('touch');
       e.preventDefault();
       zone.setPointerCapture(e.pointerId);
@@ -123,6 +125,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,p
   const canvas=document.querySelector('#game');
 
   function resolveTouchPlayer(clientX,clientY){
+    if(!isEnabled())return null;
     const players=getPlayers();
     if(players.length<2)return null;
     const r=canvas.getBoundingClientRect();
@@ -136,6 +139,7 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,p
   }
 
   function resolveFirePlayer(clientX,clientY,fallbackPlayer){
+    if(!isEnabled())return null;
     if(isTpsMode()||!projectWorldToScreen)return fallbackPlayer;
     const fighters=getPlayers();
     let targetPlayer=null;
@@ -244,6 +248,10 @@ export function createInputController({getPlayers,mapStick,screenVectorToWorld,p
 
   function update(){
     syncInputMode();
+    if(!isEnabled()){
+      clearTransientInput();
+      return;
+    }
     const players=getPlayers();
     if(!players.length)return;
 
