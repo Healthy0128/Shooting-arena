@@ -6,25 +6,28 @@ import { createCameraController } from './camera.js?v=6330';
 import { createArenaController } from './arena.js?v=6120';
 import { createPlayerController, defenseLabel } from './player.js?v=6380';
 import { createCombatController } from './combat.js?v=6370';
-import { createAudioController } from './audio.js?v=6360';
-import { createPauseUI } from './pause-ui.js?v=6160';
+import { createAudioController } from './audio.js?v=6390';
+import { createPauseUI } from './pause-ui.js?v=6390';
 import { createMatchScheduler } from './match-scheduler.js?v=6150';
-import { createFeedbackController } from './feedback.js?v=6370';
+import { createFeedbackController } from './feedback.js?v=6390';
 import { createFieldWeaponController } from './field-weapons.js?v=6330';
 import { createMatchRulesController } from './match-rules.js?v=6340';
 import { CHARACTERS, BODY_SOURCE, BODY_META, WEAPON_SOURCE, WEAPON_PROFILES, WEAPON_INFO, COLOR_VALUES, BUILD_LIMIT, PASSIVES, BUILD_COSTS } from './loadout-config.js?v=6260';
 import { ARENA_OPTIONS, resolveArenaSelection } from './arena-config.js?v=6350';
+import { createQualityController } from './quality-controller.js?v=6390';
+import { createParticleSystem } from './particle-system.js?v=6390';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const canvas = $('#game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0d1118);
 scene.fog = new THREE.Fog(0x0d1118, 36, 62);
+const qualityController=createQualityController({renderer});
+const particleSystem=createParticleSystem({scene,getQualityProfile:qualityController.getProfile});
 
 scene.add(new THREE.HemisphereLight(0xeaf2ff,0x202534,2.1));
 const sun = new THREE.DirectionalLight(0xffffff,2.2);
@@ -158,7 +161,6 @@ let arenaSelection='square';
 let activeArenaSelection='square';
 let ruleSelection='ko';
 let players=[];
-let particles=[];
 let running=false, paused=false, last=performance.now(), hitStop=0, slowMotionUntil=0, slowMotionScale=1, matchGeneration=0;
 let matchPhase='menu';
 let input=null;
@@ -218,16 +220,7 @@ function setMatchPhase(phase){
 }
 
 function particleBurst(pos,color=0xffffff,count=9,scale=.08){
-  for(let i=0;i<count;i++){
-    const mesh=new THREE.Mesh(
-      new THREE.SphereGeometry(scale,6,6),
-      new THREE.MeshBasicMaterial({color,transparent:true,opacity:1})
-    );
-    mesh.position.copy(pos);
-    scene.add(mesh);
-    const vel=new THREE.Vector3((Math.random()-.5)*4,Math.random()*2.8,(Math.random()-.5)*4);
-    particles.push({mesh,vel,life:.28,max:.28});
-  }
+  particleSystem.burst(pos,color,count,scale);
 }
 
 function matchLater(fn,ms){
@@ -370,12 +363,7 @@ function removePlayers(){
 
 function clearProjectiles(){
   combatController.clearProjectiles();
-  particles.forEach(p=>{
-    scene.remove(p.mesh);
-    p.mesh.geometry?.dispose?.();
-    p.mesh.material?.dispose?.();
-  });
-  particles=[];
+  particleSystem.clear();
 }
 
 function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
@@ -716,22 +704,6 @@ function updatePowerCore(dt){
   }
 }
 
-function updateParticles(dt){
-  for(let i=particles.length-1;i>=0;i--){
-    const particle=particles[i];
-    particle.life-=dt;
-    particle.mesh.position.addScaledVector(particle.vel,dt);
-    particle.vel.y-=6*dt;
-    if(particle.mesh.material?.opacity!==undefined)particle.mesh.material.opacity=Math.max(0,particle.life/particle.max);
-    if(particle.life<=0){
-      scene.remove(particle.mesh);
-      particle.mesh.geometry?.dispose?.();
-      particle.mesh.material?.dispose?.();
-      particles.splice(i,1);
-    }
-  }
-}
-
 function update(dt){
   if(paused)return;
   matchScheduler.update(dt);
@@ -739,7 +711,7 @@ function update(dt){
     const inBush=player.alive&&arenaController.isInBush(player.root.position);
     playerController.updatePlayerVisuals(player,dt,inBush);
   });
-  updateParticles(dt);
+  particleSystem.update(dt);
   if(!running){
     updateHUD();
     updateWorldStatus();
@@ -826,6 +798,7 @@ function update(dt){
 }
 
 function loop(now){
+  qualityController.sampleFrame(now,running&&!paused);
   const dt=Math.min(.033,(now-last)/1000);
   last=now;
   if(!paused){

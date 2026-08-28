@@ -3,7 +3,8 @@ const DEFAULTS={
   bgmVolume:1,
   seVolume:1,
   vibration:true,
-  screenShake:true
+  screenShake:true,
+  graphicsQuality:'auto'
 };
 
 function clampVolume(value,fallback){
@@ -12,11 +13,15 @@ function clampVolume(value,fallback){
 }
 
 function normalize(value={}){
+  const graphicsQuality=['auto','standard','low'].includes(value.graphicsQuality)
+    ?value.graphicsQuality
+    :DEFAULTS.graphicsQuality;
   return {
     bgmVolume:clampVolume(value.bgmVolume,DEFAULTS.bgmVolume),
     seVolume:clampVolume(value.seVolume,DEFAULTS.seVolume),
     vibration:typeof value.vibration==='boolean'?value.vibration:DEFAULTS.vibration,
-    screenShake:typeof value.screenShake==='boolean'?value.screenShake:DEFAULTS.screenShake
+    screenShake:typeof value.screenShake==='boolean'?value.screenShake:DEFAULTS.screenShake,
+    graphicsQuality
   };
 }
 

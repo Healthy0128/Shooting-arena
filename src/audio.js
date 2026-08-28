@@ -1,4 +1,4 @@
-import { getGameSettings, subscribeGameSettings } from './game-settings.js?v=6160';
+import { getGameSettings, subscribeGameSettings } from './game-settings.js?v=6390';
 
 const BGM_FILES={
   menu:'./assets/audio/bgm/00_menu_pulse.ogg',

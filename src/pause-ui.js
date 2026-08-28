@@ -1,4 +1,4 @@
-import { getGameSettings, updateGameSettings } from './game-settings.js?v=6160';
+import { getGameSettings, updateGameSettings } from './game-settings.js?v=6390';
 
 export function createPauseUI({canPause,onPause,onResume,onRestart,onBackToMenu}){
   const buttons=[0,1].map(player=>{
@@ -24,11 +24,12 @@ export function createPauseUI({canPause,onPause,onResume,onRestart,onBackToMenu}
       <div class="eyebrow">BATTLE PAUSED</div>
       <h1 id="pause-title">ポーズ</h1>
       <p>対戦時間・弾・演出タイマーを停止しています。</p>
-      <div class="pause-settings" aria-label="サウンドと振動の設定">
+      <div class="pause-settings" aria-label="サウンド・振動・画質の設定">
         <label class="volume-setting"><span>BGM音量 <output id="bgm-volume-value">100%</output></span><input id="bgm-volume" type="range" min="0" max="100" step="5"></label>
         <label class="volume-setting"><span>SE音量 <output id="se-volume-value">100%</output></span><input id="se-volume" type="range" min="0" max="100" step="5"></label>
         <label class="toggle-setting"><span>振動</span><input id="vibration-setting" type="checkbox"><i aria-hidden="true"></i></label>
         <label class="toggle-setting"><span>画面振動</span><input id="screen-shake-setting" type="checkbox"><i aria-hidden="true"></i></label>
+        <label class="quality-setting"><span>画質</span><select id="graphics-quality"><option value="auto">自動</option><option value="standard">標準</option><option value="low">軽量</option></select></label>
       </div>
       <div class="pause-actions">
         <button id="pause-resume" class="primary" type="button">対戦に戻る</button>
@@ -43,6 +44,7 @@ export function createPauseUI({canPause,onPause,onResume,onRestart,onBackToMenu}
   const seInput=overlay.querySelector('#se-volume');
   const vibrationInput=overlay.querySelector('#vibration-setting');
   const screenShakeInput=overlay.querySelector('#screen-shake-setting');
+  const graphicsQualityInput=overlay.querySelector('#graphics-quality');
 
   function syncSettings(){
     const settings=getGameSettings();
@@ -53,6 +55,7 @@ export function createPauseUI({canPause,onPause,onResume,onRestart,onBackToMenu}
     overlay.querySelector('#se-volume-value').value=`${se}%`;
     vibrationInput.checked=settings.vibration;
     screenShakeInput.checked=settings.screenShake;
+    graphicsQualityInput.value=settings.graphicsQuality;
   }
 
   function show(){
@@ -87,6 +90,7 @@ export function createPauseUI({canPause,onPause,onResume,onRestart,onBackToMenu}
   });
   vibrationInput.addEventListener('change',()=>updateGameSettings({vibration:vibrationInput.checked}));
   screenShakeInput.addEventListener('change',()=>updateGameSettings({screenShake:screenShakeInput.checked}));
+  graphicsQualityInput.addEventListener('change',()=>updateGameSettings({graphicsQuality:graphicsQualityInput.value}));
   overlay.querySelector('#pause-resume').addEventListener('click',()=>onResume());
   overlay.querySelector('#pause-restart').addEventListener('click',()=>onRestart());
   overlay.querySelector('#pause-back-menu').addEventListener('click',()=>onBackToMenu());
