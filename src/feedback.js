@@ -1,4 +1,4 @@
-import { getGameSettings } from './game-settings.js?v=6160';
+import { getGameSettings } from './game-settings.js?v=6390';
 
 export const IMPACT_FEEDBACK=Object.freeze({
   light:Object.freeze({rank:0,hitStop:0,shake:.35,shakeMs:45,vibration:0,flash:.07}),

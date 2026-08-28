@@ -18,7 +18,8 @@ for file in \
   src/arena.js src/stage-visuals.js src/player.js src/combat.js src/arena-config.js src/ui.js \
   src/menu-ui.js src/match-ui.js src/loadout-config.js src/audio.js src/projectile-visuals.js \
   src/pause-ui.js src/match-scheduler.js src/weapon-effects.js src/game-settings.js src/feedback.js \
-  src/field-weapons.js src/help-ui.js src/floating-stick.js src/match-rules.js src/hit-detection.js; do
+  src/field-weapons.js src/help-ui.js src/floating-stick.js src/match-rules.js src/hit-detection.js \
+  src/quality-controller.js src/particle-system.js; do
   check "$file syntax" node --check "$file"
 done
 
@@ -40,6 +41,19 @@ check "match rules controller exported" grep -Fq 'export function createMatchRul
 check "match rule behavior" node scripts/match-rules-check.mjs
 check "swept hit and aim assist behavior" node scripts/hit-detection-check.mjs
 check "game settings exported" grep -Fq 'export function updateGameSettings' src/game-settings.js
+check "quality controller exported" grep -Fq 'export function createQualityController' src/quality-controller.js
+check "quality controller behavior" node scripts/quality-controller-check.mjs
+check "quality reacts to WebGL context loss" grep -Fq "addEventListener('webglcontextlost'" src/quality-controller.js
+check "graphics quality persists through settings" grep -Fq "graphicsQuality:'auto'" src/game-settings.js
+check "pause UI exposes graphics quality" grep -Fq 'id="graphics-quality"' src/pause-ui.js
+check "renderer quality is delegated" grep -Fq 'createQualityController({renderer})' src/game.js
+check "particle system exported" grep -Fq 'export function createParticleSystem' src/particle-system.js
+check "particle geometry is shared" grep -Fq 'const geometry=new THREE.SphereGeometry(1,6,6);' src/particle-system.js
+check "particle meshes are pooled" grep -Fq 'if(available.length)return available.pop();' src/particle-system.js
+check "particle count follows quality cap" grep -Fq 'quality.maxParticles-particles.length' src/particle-system.js
+check "particle burst is delegated" grep -Fq 'particleSystem.burst(pos,color,count,scale);' src/game.js
+check "particle updates are delegated" grep -Fq 'particleSystem.update(dt);' src/game.js
+check "automatic background pause remains centralized" grep -Fq 'if(document.hidden&&pauseBattle())pauseUI.show();' src/game.js
 check "feedback controller exported" grep -Fq 'export function createFeedbackController' src/feedback.js
 check "impact tiers centralized" grep -Fq 'export const IMPACT_FEEDBACK=' src/feedback.js
 check "impact tier behavior" node --input-type=module -e "const {impactTier:t}=await import('./src/feedback.js');if(t({style:'rapid',damage:7})!=='light'||t({style:'rifle',damage:19})!=='normal'||t({style:'scatter',damage:11})!=='heavy'||t({style:'bladegun',damage:25,bounces:2})!=='heavy'||t({style:'rifle',damage:19,lethal:true})!=='ko')process.exit(1)"
